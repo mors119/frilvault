@@ -1,0 +1,47 @@
+version: 2
+
+updates:
+  - package-ecosystem: 'cargo'
+    directory: '/'
+    schedule:
+      interval: 'monthly'
+    open-pull-requests-limit: 3
+    groups:
+      rust-dependencies:
+        patterns:
+          - '*'
+    labels:
+      - 'dependencies'
+      - 'rust'
+    commit-message:
+      prefix: 'deps'
+
+  - package-ecosystem: 'npm'
+    directory: '/apps/vscode-extension'
+    schedule:
+      interval: 'monthly'
+    open-pull-requests-limit: 3
+    groups:
+      npm-dependencies:
+        patterns:
+          - '*'
+    labels:
+      - 'dependencies'
+      - 'vscode'
+    commit-message:
+      prefix: 'deps'
+
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'monthly'
+    open-pull-requests-limit: 3
+    groups:
+      github-actions:
+        patterns:
+          - '*'
+    labels:
+      - 'dependencies'
+      - 'ci'
+    commit-message:
+      prefix: 'deps'
