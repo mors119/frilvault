@@ -1,0 +1,10 @@
+notes:
+  - id: "4982741d-a48e-4212-a64a-7e23a8e5810c"
+    source_file: src/service.rs
+    anchor: 
+      type: Line
+      line: 25
+      column: 8
+    content: TODO cache optimization
+    created_at: "2026-06-03T17:42:24.547690Z"
+    updated_at: "2026-06-03T17:42:24.547690Z"
