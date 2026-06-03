@@ -5,10 +5,11 @@ pub mod parser;
 pub mod storage;
 pub mod workspace;
 
-pub use error::FrilVaultError;
+pub use error::*;
 pub use note::*;
-pub use storage::YamlNoteRepository;
-pub use workspace::{PathResolver, Workspace};
+pub use parser::*;
+pub use storage::*;
+pub use workspace::*;
 
 pub type FrilVaultResult<T> = Result<T, FrilVaultError>;
 

@@ -1,4 +1,5 @@
 use crate::FrilVaultResult;
+use crate::constants::VAULT_DIR_NAME;
 use crate::note::{Note, NoteFile};
 use crate::parser::{NoteParser, YamlParser};
 use crate::workspace::PathResolver;
@@ -12,6 +13,10 @@ pub struct YamlNoteRepository {
 }
 
 impl YamlNoteRepository {
+    fn vault_root(&self) -> PathBuf {
+        self.path_resolver.workspace_root().join(VAULT_DIR_NAME)
+    }
+
     // Create a YamlNoteRepository with the given PathResolver.
     pub fn new(path_resolver: PathResolver) -> Self {
         Self {
@@ -71,5 +76,44 @@ impl YamlNoteRepository {
         let note_file = NoteFile { notes };
 
         self.save_by_source_file(source_file, &note_file)
+    }
+
+    pub fn list_all_note_files(&self) -> FrilVaultResult<Vec<NoteFile>> {
+        let mut result = Vec::new();
+        let vault_root = self.vault_root();
+
+        if !vault_root.exists() {
+            return Ok(result);
+        }
+
+        self.collect_note_files(&vault_root, &mut result)?;
+
+        Ok(result)
+    }
+
+    fn collect_note_files(
+        &self,
+        directory: &Path,
+        result: &mut Vec<NoteFile>,
+    ) -> FrilVaultResult<()> {
+        for entry in fs::read_dir(directory)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.is_dir() {
+                self.collect_note_files(&path, result)?;
+                continue;
+            }
+
+            if path.extension().and_then(|ext| ext.to_str()) != Some("yml") {
+                continue;
+            }
+
+            let note_file = self.load_by_note_path(path)?;
+
+            result.push(note_file);
+        }
+
+        Ok(())
     }
 }

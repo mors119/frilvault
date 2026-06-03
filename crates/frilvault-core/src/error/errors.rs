@@ -1,4 +1,5 @@
 use thiserror::Error;
+use uuid::Uuid;
 
 #[derive(Debug, Error)]
 pub enum FrilVaultError {
@@ -8,6 +9,9 @@ pub enum FrilVaultError {
     #[error("yaml error: {0}")]
     Yaml(#[from] serde_yml::Error),
 
-    #[error("source file path is outside workspace root")]
+    #[error("source path is outside workspace")]
     SourcePathOutsideWorkspace,
+
+    #[error("note not found: {0}")]
+    NoteNotFound(Uuid),
 }
