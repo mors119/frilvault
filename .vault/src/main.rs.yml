@@ -5,6 +5,15 @@ notes:
       type: Line
       line: 10
       column: 5
-    content: new content
+    content: parser 구조 재설계 필요
     created_at: "2026-06-03T15:06:39.025847Z"
-    updated_at: "2026-06-03T15:09:37.992766Z"
+    updated_at: "2026-06-03T17:46:35.020863Z"
+  - id: "281aba1a-1773-4816-8a97-5c3aed2c7cb8"
+    source_file: src/main.rs
+    anchor: 
+      type: Line
+      line: 10
+      column: 5
+    content: parser 개선 필요
+    created_at: "2026-06-03T17:42:07.293178Z"
+    updated_at: "2026-06-03T17:42:07.293178Z"
