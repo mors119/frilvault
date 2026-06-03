@@ -1,0 +1,10 @@
+notes:
+  - id: "4c019c16-fbed-4374-99a4-7b508c1f801e"
+    source_file: src/main.rs
+    anchor: 
+      type: Line
+      line: 10
+      column: 5
+    content: new content
+    created_at: "2026-06-03T15:06:39.025847Z"
+    updated_at: "2026-06-03T15:09:37.992766Z"

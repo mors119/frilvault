@@ -6,7 +6,7 @@ pub mod storage;
 pub mod workspace;
 
 pub use error::FrilVaultError;
-pub use note::{AddNoteInput, Note, NoteFile, NoteService};
+pub use note::*;
 pub use storage::YamlNoteRepository;
 pub use workspace::{PathResolver, Workspace};
 

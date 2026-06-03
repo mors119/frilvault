@@ -66,4 +66,10 @@ impl YamlNoteRepository {
 
         Ok(note_file)
     }
+
+    pub fn replace_notes(&self, source_file: &Path, notes: Vec<Note>) -> FrilVaultResult<()> {
+        let note_file = NoteFile { notes };
+
+        self.save_by_source_file(source_file, &note_file)
+    }
 }

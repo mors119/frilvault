@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 
-members = ["apps/frivault-cli",
-    "crates/frilvault-core"
+members = [
+    "apps/frilvault-cli",
+    "crates/frilvault-core",
 ]
