@@ -11,9 +11,12 @@ Describe your changes.
 - [ ] test
 - [ ] chore
 
-## Testing
+### Required
 
-Describe testing performed.
+- [ ] cargo check passes
+- [ ] cargo fmt --check passes
+- [ ] cargo clippy --workspace --all-targets -- -D warnings passes
+- [ ] cargo test passes
 
 ## Checklist
 

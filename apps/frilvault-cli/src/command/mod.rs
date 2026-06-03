@@ -5,6 +5,7 @@ use frilvault_core::{NoteService, PathResolver, YamlNoteRepository};
 pub mod add;
 pub mod delete;
 pub mod list;
+pub mod search;
 pub mod update;
 
 pub fn create_note_service() -> Result<NoteService> {

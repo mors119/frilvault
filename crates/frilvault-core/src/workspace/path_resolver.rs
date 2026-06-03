@@ -20,6 +20,10 @@ impl PathResolver {
         format!("{}.{}", source_file.as_ref().display(), NOTE_FILE_EXTENSION)
     }
 
+    pub fn workspace_root(&self) -> &Path {
+        &self.workspace_root
+    }
+
     // Convert the relative path of the source file to the path '.vault/{source_file}.yml'
     pub fn resolve_note_path(&self, source_file: impl AsRef<Path>) -> PathBuf {
         let note_file_name = Self::note_file_name(source_file);

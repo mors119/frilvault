@@ -1,5 +1,6 @@
 mod cli;
 mod command;
+mod output;
 
 use anyhow::Result;
 use clap::Parser;
@@ -23,6 +24,10 @@ fn main() -> Result<()> {
 
         Commands::Delete(cmd) => {
             command::delete::execute(cmd)?;
+        }
+
+        Commands::Search(cmd) => {
+            command::search::execute(cmd)?;
         }
     }
 

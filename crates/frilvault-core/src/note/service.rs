@@ -4,7 +4,7 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use crate::{
-    FrilVaultResult,
+    FrilVaultError, FrilVaultResult,
     note::{AddNoteInput, Note},
     storage::YamlNoteRepository,
 };
@@ -46,7 +46,13 @@ impl NoteService {
 
         let mut notes = self.load_notes(source_file)?;
 
+        let before = notes.len();
+
         notes.retain(|note| note.id != note_id);
+
+        if notes.len() == before {
+            return Err(FrilVaultError::NoteNotFound(note_id));
+        }
 
         self.repository.replace_notes(source_file, notes)?;
 
@@ -63,14 +69,34 @@ impl NoteService {
 
         let mut notes = self.load_notes(source_file)?;
 
-        if let Some(note) = notes.iter_mut().find(|note| note.id == note_id) {
-            // TODO: FrilVaultError::NoteNotFound
-            note.content = content;
-            note.updated_at = Utc::now();
-        }
+        let note = notes
+            .iter_mut()
+            .find(|note| note.id == note_id)
+            .ok_or(FrilVaultError::NoteNotFound(note_id))?;
+
+        note.content = content;
+        note.updated_at = Utc::now();
 
         self.save_notes(source_file, notes)?;
 
         Ok(())
+    }
+
+    pub fn search_notes(&self, keyword: &str) -> FrilVaultResult<Vec<Note>> {
+        let note_files = self.repository.list_all_note_files()?;
+
+        let keyword = keyword.to_lowercase();
+
+        let mut matches = Vec::new();
+
+        for note_file in note_files {
+            for note in note_file.notes {
+                if note.content.to_lowercase().contains(&keyword) {
+                    matches.push(note);
+                }
+            }
+        }
+
+        Ok(matches)
     }
 }

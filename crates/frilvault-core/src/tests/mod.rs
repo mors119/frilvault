@@ -9,3 +9,6 @@ mod note_service_test;
 
 #[cfg(test)]
 mod yaml_parser_test;
+
+#[cfg(test)]
+mod yaml_repository_test;

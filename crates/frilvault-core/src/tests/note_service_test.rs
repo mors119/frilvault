@@ -1,5 +1,6 @@
 use crate::{
-    AddNoteInput, NoteService, PathResolver, YamlNoteRepository, constants::NOTE_FILE_EXTENSION,
+    AddNoteInput, LineAnchor, NoteAnchor, NoteService, PathResolver, YamlNoteRepository,
+    constants::NOTE_FILE_EXTENSION,
 };
 
 use std::fs;
@@ -171,6 +172,64 @@ fn update_note_changes_content() {
     assert_eq!(notes.len(), 1);
 
     assert_eq!(notes[0].content, "new content");
+
+    fs::remove_dir_all(workspace_root).unwrap();
+}
+
+#[test]
+fn search_notes_finds_matching_notes() {
+    let workspace_root =
+        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
+
+    fs::create_dir_all(&workspace_root).unwrap();
+
+    let resolver = PathResolver::new(&workspace_root);
+
+    let repository = YamlNoteRepository::new(resolver);
+
+    let service = NoteService::new(repository);
+
+    service
+        .add_note(AddNoteInput {
+            source_file: "src/main.rs".into(),
+
+            anchor: NoteAnchor::Line(LineAnchor {
+                line: 10,
+                column: 5,
+            }),
+
+            content: "parser 개선 필요".to_string(),
+        })
+        .unwrap();
+
+    service
+        .add_note(AddNoteInput {
+            source_file: "src/lib.rs".into(),
+
+            anchor: NoteAnchor::Line(LineAnchor { line: 3, column: 1 }),
+
+            content: "Parser trait 검토".to_string(),
+        })
+        .unwrap();
+
+    service
+        .add_note(AddNoteInput {
+            source_file: "src/mod.rs".into(),
+
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+
+            content: "hello world".to_string(),
+        })
+        .unwrap();
+
+    let notes = service.search_notes("parser").unwrap();
+
+    assert_eq!(notes.len(), 2,);
+
+    // case_insensitive
+    let notes = service.search_notes("PARSER").unwrap();
+
+    assert_eq!(notes.len(), 2,);
 
     fs::remove_dir_all(workspace_root).unwrap();
 }

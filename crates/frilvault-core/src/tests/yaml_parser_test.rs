@@ -1,7 +1,4 @@
-use crate::{
-    note::{LineAnchor, Note, NoteAnchor, NoteFile},
-    parser::{NoteParser, YamlParser},
-};
+use crate::{LineAnchor, Note, NoteAnchor, NoteFile, NoteParser, YamlParser};
 
 use chrono::Utc;
 use uuid::Uuid;
