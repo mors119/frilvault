@@ -3,12 +3,14 @@ use clap::{Parser, Subcommand};
 pub mod add;
 pub mod delete;
 pub mod list;
+pub mod repair;
 pub mod search;
 pub mod update;
 
 use add::AddCommand;
 use delete::DeleteCommand;
 use list::ListCommand;
+use repair::RepairCommand;
 use search::SearchCommand;
 use update::UpdateCommand;
 
@@ -26,5 +28,7 @@ pub enum Commands {
     Update(UpdateCommand),
     Delete(DeleteCommand),
     Search(SearchCommand),
+    Repair(RepairCommand),
     Doctor,
+    Stats,
 }

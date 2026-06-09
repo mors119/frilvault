@@ -1,7 +1,8 @@
-use std::fs;
+use std::{fs, path::Path};
 
 use crate::{
-    FrilVaultResult, IndexedFile, PathResolver, WorkspaceHealth, WorkspaceIndex, YamlNoteRepository,
+    FrilVaultResult, IndexedFile, NoteAnchor, PathResolver, RepairSuggestion, WorkspaceHealth,
+    WorkspaceIndex, WorkspaceStats, YamlNoteRepository,
 };
 
 #[derive(Debug, Clone)]
@@ -86,7 +87,9 @@ impl WorkspaceIndexRepository {
     }
 
     pub fn health_check(&self) -> FrilVaultResult<WorkspaceHealth> {
-        let index = self.load()?;
+        // TODO:
+        // Use cached index after index invalidation support is implemented.
+        let index = self.rebuild()?;
 
         let mut health = WorkspaceHealth::default();
 
@@ -97,5 +100,151 @@ impl WorkspaceIndexRepository {
         }
 
         Ok(health)
+    }
+
+    pub fn stats(&self) -> FrilVaultResult<WorkspaceStats> {
+        let note_repository = YamlNoteRepository::new(self.path_resolver.clone());
+
+        let records = note_repository.list_all_note_files()?;
+
+        let mut stats = WorkspaceStats {
+            file_count: records.len(),
+            ..Default::default()
+        };
+
+        for record in records {
+            if self
+                .path_resolver
+                .workspace_root()
+                .join(&record.source_file)
+                .exists()
+            {
+                stats.existing_files += 1;
+            } else {
+                stats.missing_files += 1;
+            }
+
+            for note in record.note_file.notes {
+                stats.total_notes += 1;
+
+                match note.anchor {
+                    NoteAnchor::Line(_) => {
+                        stats.line_notes += 1;
+                    }
+
+                    NoteAnchor::Symbol(_) => {
+                        stats.symbol_notes += 1;
+                    }
+                }
+            }
+        }
+
+        Ok(stats)
+    }
+
+    fn collect_workspace_files(
+        &self,
+        directory: &Path,
+        files: &mut Vec<String>,
+    ) -> FrilVaultResult<()> {
+        for entry in std::fs::read_dir(directory)? {
+            let entry = entry?;
+
+            let path = entry.path();
+
+            if path.is_dir() {
+                if path.file_name().and_then(|n| n.to_str()) == Some(".vault") {
+                    continue;
+                }
+
+                self.collect_workspace_files(&path, files)?;
+
+                continue;
+            }
+
+            let relative = path
+                .strip_prefix(self.path_resolver.workspace_root())
+                .unwrap();
+
+            files.push(relative.to_string_lossy().to_string());
+        }
+
+        Ok(())
+    }
+
+    fn scan_workspace_files(&self) -> FrilVaultResult<Vec<String>> {
+        let mut files = Vec::new();
+
+        self.collect_workspace_files(self.path_resolver.workspace_root(), &mut files)?;
+
+        Ok(files)
+    }
+
+    pub fn repair_suggestions(&self) -> FrilVaultResult<Vec<RepairSuggestion>> {
+        let health = self.health_check()?;
+
+        let workspace_files = self.scan_workspace_files()?;
+
+        let mut suggestions = Vec::new();
+
+        for missing_file in health.missing_source_files {
+            let missing_name = std::path::Path::new(&missing_file)
+                .file_name()
+                .and_then(|name| name.to_str());
+
+            let Some(missing_name) = missing_name else {
+                continue;
+            };
+
+            let candidates = workspace_files
+                .iter()
+                .filter(|candidate| {
+                    std::path::Path::new(candidate)
+                        .file_name()
+                        .and_then(|name| name.to_str())
+                        == Some(missing_name)
+                })
+                .cloned()
+                .collect();
+
+            suggestions.push(RepairSuggestion {
+                missing_file,
+                candidates,
+            });
+        }
+
+        Ok(suggestions)
+    }
+
+    fn move_note_file(&self, source_file: &str, target_file: &str) -> FrilVaultResult<()> {
+        let source_note = self.path_resolver.note_path_for_source_file(source_file);
+
+        let target_note = self.path_resolver.note_path_for_source_file(target_file);
+
+        if let Some(parent) = target_note.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        std::fs::rename(source_note, target_note)?;
+
+        Ok(())
+    }
+
+    pub fn apply_repairs(&self) -> FrilVaultResult<usize> {
+        let suggestions = self.repair_suggestions()?;
+
+        let mut repaired = 0;
+
+        for suggestion in suggestions {
+            let Some(candidate) = suggestion.best_candidate() else {
+                continue;
+            };
+
+            self.move_note_file(&suggestion.missing_file, candidate)?;
+
+            repaired += 1;
+        }
+
+        Ok(repaired)
     }
 }

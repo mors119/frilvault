@@ -4,7 +4,7 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use crate::{
-    FrilVaultError, FrilVaultResult, NoteView,
+    FrilVaultError, FrilVaultResult, NoteAnchor, NoteView,
     note::{AddNoteInput, Note},
 };
 
@@ -110,7 +110,15 @@ where
 
         for record in records {
             for note in record.note_file.notes {
-                if note.content.to_lowercase().contains(&keyword) {
+                let content_match = note.content.to_lowercase().contains(&keyword);
+
+                let symbol_match = match &note.anchor {
+                    NoteAnchor::Symbol(anchor) => anchor.name.to_lowercase().contains(&keyword),
+
+                    _ => false,
+                };
+
+                if content_match || symbol_match {
                     results.push(NoteView {
                         source_file: record.source_file.clone(),
                         note,

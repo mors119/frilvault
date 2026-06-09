@@ -7,8 +7,6 @@ use anyhow::Result;
 use clap::Parser;
 use cli::{Cli, Commands};
 
-use crate::command::doctor;
-
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
@@ -33,7 +31,13 @@ fn main() -> Result<()> {
             command::search::execute(cmd)?;
         }
         Commands::Doctor => {
-            doctor::execute()?;
+            command::doctor::execute()?;
+        }
+
+        Commands::Stats => command::stats::execute()?,
+
+        Commands::Repair(cmd) => {
+            command::repair::execute(cmd)?;
         }
     }
 

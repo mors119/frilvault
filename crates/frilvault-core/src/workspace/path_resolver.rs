@@ -79,4 +79,8 @@ impl PathResolver {
 
         Ok(relative.to_path_buf())
     }
+
+    pub fn note_path_for_source_file(&self, source_file: impl AsRef<Path>) -> PathBuf {
+        self.resolve_note_path(source_file)
+    }
 }

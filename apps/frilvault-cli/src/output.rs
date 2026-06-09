@@ -45,6 +45,8 @@ pub fn print_note_view(view: &NoteView) {
 
         NoteAnchor::Symbol(anchor) => {
             println!("Symbol: {}", anchor.name,);
+
+            println!("Kind: {:?}", anchor.kind,);
         }
     }
 
