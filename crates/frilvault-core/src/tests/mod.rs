@@ -15,3 +15,9 @@ mod yaml_repository_test;
 
 #[cfg(test)]
 mod workspace_repository_test;
+
+#[cfg(test)]
+mod workspace_index_test;
+
+#[cfg(test)]
+mod workspace_index_repository_test;

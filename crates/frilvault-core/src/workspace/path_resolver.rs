@@ -1,6 +1,8 @@
 use crate::{
     FrilVaultError, FrilVaultResult,
-    constants::{NOTE_FILE_EXTENSION, NOTES_DIR_NAME, VAULT_DIR_NAME, WORKSPACE_FILE_NAME},
+    constants::{
+        INDEX_DIR_NAME, NOTE_FILE_EXTENSION, NOTES_DIR_NAME, VAULT_DIR_NAME, WORKSPACE_FILE_NAME,
+    },
 };
 use std::path::{Path, PathBuf};
 
@@ -22,6 +24,22 @@ impl PathResolver {
 
     pub fn workspace_root(&self) -> &Path {
         &self.workspace_root
+    }
+
+    pub fn vault_root(&self) -> PathBuf {
+        self.workspace_root.join(VAULT_DIR_NAME)
+    }
+
+    pub fn notes_root(&self) -> PathBuf {
+        self.vault_root().join(NOTES_DIR_NAME)
+    }
+
+    pub fn workspace_metadata_path(&self) -> PathBuf {
+        self.vault_root().join(WORKSPACE_FILE_NAME)
+    }
+
+    pub fn workspace_index_path(&self) -> PathBuf {
+        self.vault_root().join(INDEX_DIR_NAME).join("workspace.yml")
     }
 
     // Convert the relative path of the source file to the path '.vault/notes/{source_file}.yml'
@@ -60,16 +78,5 @@ impl PathResolver {
             .map_err(|_| FrilVaultError::SourcePathOutsideWorkspace)?;
 
         Ok(relative.to_path_buf())
-    }
-
-    pub fn vault_root(&self) -> PathBuf {
-        self.workspace_root.join(VAULT_DIR_NAME)
-    }
-    pub fn notes_root(&self) -> PathBuf {
-        self.vault_root().join(NOTES_DIR_NAME)
-    }
-
-    pub fn workspace_metadata_path(&self) -> PathBuf {
-        self.vault_root().join(WORKSPACE_FILE_NAME)
     }
 }

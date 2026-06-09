@@ -26,4 +26,5 @@ pub enum Commands {
     Update(UpdateCommand),
     Delete(DeleteCommand),
     Search(SearchCommand),
+    Doctor,
 }
