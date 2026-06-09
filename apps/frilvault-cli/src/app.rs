@@ -1,6 +1,8 @@
 use anyhow::Result;
 
-use frilvault_core::{NoteService, PathResolver, WorkspaceRepository, YamlNoteRepository};
+use frilvault_core::{
+    NoteService, PathResolver, WorkspaceIndexRepository, WorkspaceRepository, YamlNoteRepository,
+};
 
 pub fn create_note_service() -> Result<NoteService<YamlNoteRepository>> {
     let workspace_root = std::env::current_dir()?;
@@ -13,4 +15,12 @@ pub fn create_note_service() -> Result<NoteService<YamlNoteRepository>> {
     let note_repository = YamlNoteRepository::new(resolver);
 
     Ok(NoteService::new(note_repository))
+}
+
+pub fn create_index_repository() -> Result<WorkspaceIndexRepository> {
+    let workspace_root = std::env::current_dir()?;
+
+    let resolver = PathResolver::new(workspace_root);
+
+    Ok(WorkspaceIndexRepository::new(resolver))
 }

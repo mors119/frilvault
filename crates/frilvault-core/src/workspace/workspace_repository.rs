@@ -43,9 +43,9 @@ impl WorkspaceRepository {
     pub fn create_if_missing(&self) -> FrilVaultResult<()> {
         let vault_root = self.path_resolver.vault_root();
 
-        fs::create_dir_all(vault_root.join(NOTES_DIR_NAME))?;
-        fs::create_dir_all(vault_root.join(CACHE_DIR_NAME))?;
-        fs::create_dir_all(vault_root.join(INDEX_DIR_NAME))?;
+        for directory in [NOTES_DIR_NAME, CACHE_DIR_NAME, INDEX_DIR_NAME] {
+            fs::create_dir_all(vault_root.join(directory))?;
+        }
 
         let path = self.path_resolver.workspace_metadata_path();
 
