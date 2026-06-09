@@ -3,7 +3,7 @@ use crate::parser::{NoteParser, YamlParser};
 use crate::workspace::PathResolver;
 use crate::{FrilVaultResult, NoteFileRecord, NoteRepository};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
 pub struct YamlNoteRepository {
@@ -117,6 +117,10 @@ impl YamlNoteRepository {
     fn is_note_file(path: &Path) -> bool {
         path.extension().and_then(|extension| extension.to_str())
             == Some(crate::constants::NOTE_FILE_EXTENSION)
+    }
+
+    pub fn resolve_note_path(&self, source_file: impl AsRef<Path>) -> PathBuf {
+        self.path_resolver.resolve_note_path(source_file)
     }
 }
 
