@@ -4,4 +4,7 @@ use clap::Args;
 pub struct ListCommand {
     #[arg(long)]
     pub file: String,
+
+    #[arg(long)]
+    pub json: bool,
 }

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use uuid::Uuid;
 
-use crate::{cli::delete::DeleteCommand, command::create_note_service};
+use crate::{app::create_note_service, cli::delete::DeleteCommand};
 
 pub fn execute(command: DeleteCommand) -> Result<()> {
     let service = create_note_service()?;

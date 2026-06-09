@@ -1,7 +1,7 @@
 use anyhow::Result;
 use uuid::Uuid;
 
-use crate::{cli::update::UpdateCommand, command::create_note_service};
+use crate::{app::create_note_service, cli::update::UpdateCommand};
 
 pub fn execute(command: UpdateCommand) -> Result<()> {
     let service = create_note_service()?;

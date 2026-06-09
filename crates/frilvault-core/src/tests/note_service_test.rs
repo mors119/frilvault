@@ -29,6 +29,7 @@ fn add_note_creates_yaml_file() {
 
     let note_path = workspace_root
         .join(".vault")
+        .join("notes")
         .join(format!("src/main.rs.{}", NOTE_FILE_EXTENSION));
 
     assert!(note_path.exists());
@@ -62,7 +63,7 @@ fn load_notes_from_existing_yaml() {
     let notes = service.list_notes("src/lib.rs").unwrap();
 
     assert_eq!(notes.len(), 1);
-    assert_eq!(notes[0].content, "lib 진입점");
+    assert_eq!(notes[0].note.content, "lib 진입점");
 
     fs::remove_dir_all(workspace_root).unwrap();
 }
@@ -93,9 +94,9 @@ fn add_note_and_load_note() {
 
     assert_eq!(notes.len(), 1);
 
-    assert_eq!(notes[0].content, "여기서 스캔 시작");
+    assert_eq!(notes[0].note.content, "여기서 스캔 시작");
 
-    match &notes[0].anchor {
+    match &notes[0].note.anchor {
         crate::note::NoteAnchor::Line(anchor) => {
             assert_eq!(anchor.line, 10);
             assert_eq!(anchor.column, 5);
@@ -171,7 +172,7 @@ fn update_note_changes_content() {
 
     assert_eq!(notes.len(), 1);
 
-    assert_eq!(notes[0].content, "new content");
+    assert_eq!(notes[0].note.content, "new content");
 
     fs::remove_dir_all(workspace_root).unwrap();
 }
@@ -225,6 +226,12 @@ fn search_notes_finds_matching_notes() {
     let notes = service.search_notes("parser").unwrap();
 
     assert_eq!(notes.len(), 2,);
+
+    assert!(
+        notes
+            .iter()
+            .any(|result| result.source_file == std::path::Path::new("src/main.rs"))
+    );
 
     // case_insensitive
     let notes = service.search_notes("PARSER").unwrap();

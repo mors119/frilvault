@@ -12,3 +12,6 @@ mod yaml_parser_test;
 
 #[cfg(test)]
 mod yaml_repository_test;
+
+#[cfg(test)]
+mod workspace_repository_test;

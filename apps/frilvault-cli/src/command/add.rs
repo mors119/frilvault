@@ -2,7 +2,7 @@ use anyhow::Result;
 
 use frilvault_core::{AddNoteInput, LineAnchor, NoteAnchor};
 
-use crate::{cli::add::AddCommand, command::create_note_service};
+use crate::{app::create_note_service, cli::add::AddCommand};
 
 pub fn execute(command: AddCommand) -> Result<()> {
     let service = create_note_service()?;

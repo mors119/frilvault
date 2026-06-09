@@ -1,14 +1,17 @@
 use crate::PathResolver;
 
+use std::path::PathBuf;
+
 #[test]
 fn resolve_note_path_returns_vault_path() {
     let resolver = PathResolver::new("/workspace");
 
     let path = resolver.resolve_note_path("src/main.rs");
 
-    assert!(path.ends_with(".vault/src/main.rs.yml"));
-}
+    let expected = PathBuf::from("/workspace/.vault/notes/src/main.rs.yml");
 
+    assert_eq!(path, expected);
+}
 #[test]
 fn workspace_relative_path() {
     let resolver = PathResolver::new("/workspace");
@@ -18,4 +21,15 @@ fn workspace_relative_path() {
         .unwrap();
 
     assert_eq!(relative.to_string_lossy(), "src/main.rs");
+}
+
+#[test]
+fn source_file_from_note_path_returns_source_path() {
+    let resolver = PathResolver::new("/workspace");
+
+    let source_file = resolver
+        .source_file_from_note_path("/workspace/.vault/notes/src/main.rs.yml")
+        .unwrap();
+
+    assert_eq!(source_file, PathBuf::from("src/main.rs"));
 }
