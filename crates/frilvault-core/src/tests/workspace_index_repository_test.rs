@@ -245,11 +245,11 @@ fn stats_counts_line_and_symbol_notes() {
         .unwrap();
 
     let stats = repository.stats().unwrap();
-
+    assert_eq!(stats.file_count, 1);
+    assert_eq!(stats.existing_files, 0);
+    assert_eq!(stats.missing_files, 1);
     assert_eq!(stats.total_notes, 2,);
-
     assert_eq!(stats.line_notes, 1,);
-
     assert_eq!(stats.symbol_notes, 1,);
 
     fs::remove_dir_all(workspace_root).unwrap();

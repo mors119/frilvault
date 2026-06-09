@@ -74,9 +74,21 @@ fn add_symbol_type_note_creates_yaml_file() {
 
     assert!(note_path.exists());
 
-    let content = fs::read_to_string(note_path).unwrap();
-
-    assert!(content.contains("symbol anchor test"));
+    let notes = service.list_notes("src/main.rs").unwrap();
+    assert_eq!(notes.len(), 1);
+    assert_eq!(notes[0].note.content, "symbol anchor test");
+    match &notes[0].note.anchor {
+        NoteAnchor::Symbol(anchor) => {
+            assert_eq!(anchor.name, "NoteService::add_note");
+            assert_eq!(anchor.kind, SymbolKind::Method);
+            assert_eq!(
+                anchor.signature.as_deref(),
+                Some("fn add_note(&self, input: AddNoteInput) -> FrilVaultResult<Note>")
+            );
+            assert_eq!(anchor.line_hint, Some(34));
+        }
+        _ => panic!("Expected SymbolAnchor"),
+    }
 
     fs::remove_dir_all(workspace_root).unwrap();
 }

@@ -47,6 +47,14 @@ pub fn print_note_view(view: &NoteView) {
             println!("Symbol: {}", anchor.name,);
 
             println!("Kind: {:?}", anchor.kind,);
+
+            if let Some(signature) = &anchor.signature {
+                println!("Signature: {}", signature);
+            }
+
+            if let Some(line_hint) = anchor.line_hint {
+                println!("Line hint: {}", line_hint);
+            }
         }
     }
 

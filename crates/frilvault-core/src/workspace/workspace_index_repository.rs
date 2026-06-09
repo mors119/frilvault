@@ -149,10 +149,14 @@ impl WorkspaceIndexRepository {
     ) -> FrilVaultResult<()> {
         for entry in std::fs::read_dir(directory)? {
             let entry = entry?;
-
+            let file_type = entry.file_type()?;
             let path = entry.path();
 
-            if path.is_dir() {
+            if file_type.is_symlink() {
+                continue;
+            }
+
+            if file_type.is_dir() {
                 if path.file_name().and_then(|n| n.to_str()) == Some(".vault") {
                     continue;
                 }
@@ -164,7 +168,7 @@ impl WorkspaceIndexRepository {
 
             let relative = path
                 .strip_prefix(self.path_resolver.workspace_root())
-                .unwrap();
+                .map_err(|_| crate::FrilVaultError::SourcePathOutsideWorkspace)?;
 
             files.push(relative.to_string_lossy().to_string());
         }
