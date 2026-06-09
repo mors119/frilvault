@@ -27,7 +27,7 @@ pub struct AddCommand {
     pub content: String,
 }
 
-#[derive(Debug, Clone, Copy, ValueEnum)]
+#[derive(Debug, Clone, ValueEnum)]
 pub enum SymbolKindArg {
     Function,
     Struct,
