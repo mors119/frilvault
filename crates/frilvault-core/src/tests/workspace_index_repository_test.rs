@@ -2,7 +2,7 @@ use std::fs;
 
 use crate::{
     AddNoteInput, LineAnchor, NoteAnchor, NoteService, PathResolver, SymbolAnchor, SymbolKind,
-    WorkspaceIndex, WorkspaceIndexRepository, YamlNoteRepository,
+    WorkspaceIndex, WorkspaceIndexRepository, WorkspaceService, YamlNoteRepository,
 };
 
 #[test]
@@ -179,7 +179,7 @@ fn health_check_detects_missing_files_from_note_repository() {
 
     let note_repository = YamlNoteRepository::new(resolver.clone());
 
-    let service = NoteService::new(note_repository);
+    let service = NoteService::new(note_repository.clone());
 
     service
         .add_note(AddNoteInput {
@@ -193,7 +193,9 @@ fn health_check_detects_missing_files_from_note_repository() {
 
     let repository = WorkspaceIndexRepository::new(resolver);
 
-    let health = repository.health_check().unwrap();
+    let workspace_service = WorkspaceService::new(note_repository, repository);
+
+    let health = workspace_service.health_check().unwrap();
 
     assert_eq!(health.missing_source_files.len(), 1,);
 
@@ -213,8 +215,11 @@ fn stats_counts_line_and_symbol_notes() {
 
     let repository = WorkspaceIndexRepository::new(resolver.clone());
 
-    let note_repository = YamlNoteRepository::new(resolver.clone());
-    let service = NoteService::new(note_repository);
+    let note_repository = YamlNoteRepository::new(resolver);
+
+    let service = NoteService::new(note_repository.clone());
+
+    let workspace_service = WorkspaceService::new(note_repository, repository);
 
     service
         .add_note(AddNoteInput {
@@ -244,13 +249,19 @@ fn stats_counts_line_and_symbol_notes() {
         })
         .unwrap();
 
-    let stats = repository.stats().unwrap();
+    let stats = workspace_service.stats().unwrap();
+
     assert_eq!(stats.file_count, 1);
+
     assert_eq!(stats.existing_files, 0);
+
     assert_eq!(stats.missing_files, 1);
-    assert_eq!(stats.total_notes, 2,);
-    assert_eq!(stats.line_notes, 1,);
-    assert_eq!(stats.symbol_notes, 1,);
+
+    assert_eq!(stats.total_notes, 2);
+
+    assert_eq!(stats.line_notes, 1);
+
+    assert_eq!(stats.symbol_notes, 1);
 
     fs::remove_dir_all(workspace_root).unwrap();
 }
@@ -266,9 +277,9 @@ fn repair_suggests_matching_file_names() {
 
     let resolver = PathResolver::new(&workspace_root);
 
-    let repository = YamlNoteRepository::new(resolver.clone());
+    let note_repository = YamlNoteRepository::new(resolver.clone());
 
-    let service = NoteService::new(repository);
+    let service = NoteService::new(note_repository.clone());
 
     service
         .add_note(AddNoteInput {
@@ -282,7 +293,9 @@ fn repair_suggests_matching_file_names() {
 
     let repository = WorkspaceIndexRepository::new(resolver);
 
-    let suggestions = repository.repair_suggestions().unwrap();
+    let workspace_service = WorkspaceService::new(note_repository, repository);
+
+    let suggestions = workspace_service.repair_suggestions().unwrap();
 
     assert_eq!(suggestions.len(), 1,);
 
@@ -304,9 +317,9 @@ fn apply_repairs_moves_note_file() {
 
     let resolver = PathResolver::new(&workspace_root);
 
-    let repository = YamlNoteRepository::new(resolver.clone());
+    let note_repository = YamlNoteRepository::new(resolver.clone());
 
-    let service = NoteService::new(repository);
+    let service = NoteService::new(note_repository.clone());
 
     service
         .add_note(AddNoteInput {
@@ -324,7 +337,9 @@ fn apply_repairs_moves_note_file() {
 
     let repository = WorkspaceIndexRepository::new(resolver.clone());
 
-    let repaired = repository.apply_repairs().unwrap();
+    let workspace_service = WorkspaceService::new(note_repository, repository);
+
+    let repaired = workspace_service.apply_repairs().unwrap();
 
     assert_eq!(repaired, 1,);
 
