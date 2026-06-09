@@ -2,7 +2,7 @@ use crate::{AddNoteInput, LineAnchor, NoteAnchor, NoteService, PathResolver, Yam
 
 use std::fs;
 
-fn create_service(workspace_root: &std::path::Path) -> NoteService {
+fn create_service(workspace_root: &std::path::Path) -> NoteService<YamlNoteRepository> {
     let resolver = PathResolver::new(workspace_root);
     let repository = YamlNoteRepository::new(resolver);
 

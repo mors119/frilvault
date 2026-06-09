@@ -9,7 +9,6 @@ fn serialize_note_file() {
 
     let note = Note {
         id: Uuid::new_v4(),
-        source_file: "src/main.rs".into(),
         anchor: NoteAnchor::Line(LineAnchor {
             line: 10,
             column: 5,
@@ -33,7 +32,6 @@ fn deserialize_note_file() {
     let yaml = r#"
 notes:
   - id: "550e8400-e29b-41d4-a716-446655440000"
-    source_file: src/main.rs
     anchor:
       type: Line
       line: 10

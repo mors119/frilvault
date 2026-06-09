@@ -1,10 +1,9 @@
-use crate::FrilVaultResult;
-use crate::constants::VAULT_DIR_NAME;
 use crate::note::{Note, NoteFile};
 use crate::parser::{NoteParser, YamlParser};
 use crate::workspace::PathResolver;
+use crate::{FrilVaultResult, NoteFileRecord, NoteRepository};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 #[derive(Debug, Clone)]
 pub struct YamlNoteRepository {
@@ -13,11 +12,6 @@ pub struct YamlNoteRepository {
 }
 
 impl YamlNoteRepository {
-    fn vault_root(&self) -> PathBuf {
-        self.path_resolver.workspace_root().join(VAULT_DIR_NAME)
-    }
-
-    // Create a YamlNoteRepository with the given PathResolver.
     pub fn new(path_resolver: PathResolver) -> Self {
         Self {
             path_resolver,
@@ -25,22 +19,20 @@ impl YamlNoteRepository {
         }
     }
 
-    // Read the existing note file, append the new note, and save it again.
-    pub fn append_note(&self, note: &Note) -> FrilVaultResult<()> {
-        let mut note_file = self.load_by_source_file(&note.source_file)?;
+    pub fn append_note(&self, source_file: &Path, note: &Note) -> FrilVaultResult<()> {
+        let mut note_file = self.load_by_source_file(source_file)?;
 
         note_file.notes.push(note.clone());
 
-        self.save_by_source_file(&note.source_file, &note_file)?;
+        self.save_by_source_file(source_file, &note_file)?;
 
         Ok(())
     }
 
-    // If the file does not exist, it returns an empty NoteFile.
     pub fn load_by_source_file(&self, source_file: &Path) -> FrilVaultResult<NoteFile> {
         let note_path = self.path_resolver.resolve_note_path(source_file);
 
-        self.load_by_note_path(note_path)
+        self.load_by_note_path(&note_path)
     }
 
     pub fn save_by_source_file(
@@ -61,7 +53,57 @@ impl YamlNoteRepository {
         Ok(())
     }
 
-    fn load_by_note_path(&self, note_path: PathBuf) -> FrilVaultResult<NoteFile> {
+    pub fn replace_notes(&self, source_file: &Path, notes: Vec<Note>) -> FrilVaultResult<()> {
+        let note_file = NoteFile { notes };
+
+        self.save_by_source_file(source_file, &note_file)
+    }
+
+    pub fn list_all_note_files(&self) -> FrilVaultResult<Vec<NoteFileRecord>> {
+        let notes_root = self.path_resolver.notes_root();
+
+        if !notes_root.exists() {
+            return Ok(Vec::new());
+        }
+
+        let mut records = Vec::new();
+
+        self.collect_note_files(&notes_root, &mut records)?;
+
+        Ok(records)
+    }
+
+    fn collect_note_files(
+        &self,
+        directory: &Path,
+        records: &mut Vec<NoteFileRecord>,
+    ) -> FrilVaultResult<()> {
+        for entry in fs::read_dir(directory)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.is_dir() {
+                self.collect_note_files(&path, records)?;
+                continue;
+            }
+
+            if !Self::is_note_file(&path) {
+                continue;
+            }
+
+            let source_file = self.path_resolver.source_file_from_note_path(&path)?;
+            let note_file = self.load_by_note_path(&path)?;
+
+            records.push(NoteFileRecord {
+                source_file,
+                note_file,
+            });
+        }
+
+        Ok(())
+    }
+
+    fn load_by_note_path(&self, note_path: &Path) -> FrilVaultResult<NoteFile> {
         if !note_path.exists() {
             return Ok(NoteFile::default());
         }
@@ -72,48 +114,26 @@ impl YamlNoteRepository {
         Ok(note_file)
     }
 
-    pub fn replace_notes(&self, source_file: &Path, notes: Vec<Note>) -> FrilVaultResult<()> {
-        let note_file = NoteFile { notes };
+    fn is_note_file(path: &Path) -> bool {
+        path.extension().and_then(|extension| extension.to_str())
+            == Some(crate::constants::NOTE_FILE_EXTENSION)
+    }
+}
 
-        self.save_by_source_file(source_file, &note_file)
+impl NoteRepository for YamlNoteRepository {
+    fn append_note(&self, source_file: &Path, note: &Note) -> FrilVaultResult<()> {
+        YamlNoteRepository::append_note(self, source_file, note)
     }
 
-    pub fn list_all_note_files(&self) -> FrilVaultResult<Vec<NoteFile>> {
-        let mut result = Vec::new();
-        let vault_root = self.vault_root();
-
-        if !vault_root.exists() {
-            return Ok(result);
-        }
-
-        self.collect_note_files(&vault_root, &mut result)?;
-
-        Ok(result)
+    fn load_by_source_file(&self, source_file: &Path) -> FrilVaultResult<NoteFile> {
+        YamlNoteRepository::load_by_source_file(self, source_file)
     }
 
-    fn collect_note_files(
-        &self,
-        directory: &Path,
-        result: &mut Vec<NoteFile>,
-    ) -> FrilVaultResult<()> {
-        for entry in fs::read_dir(directory)? {
-            let entry = entry?;
-            let path = entry.path();
+    fn replace_notes(&self, source_file: &Path, notes: Vec<Note>) -> FrilVaultResult<()> {
+        YamlNoteRepository::replace_notes(self, source_file, notes)
+    }
 
-            if path.is_dir() {
-                self.collect_note_files(&path, result)?;
-                continue;
-            }
-
-            if path.extension().and_then(|ext| ext.to_str()) != Some("yml") {
-                continue;
-            }
-
-            let note_file = self.load_by_note_path(path)?;
-
-            result.push(note_file);
-        }
-
-        Ok(())
+    fn list_all_note_files(&self) -> FrilVaultResult<Vec<NoteFileRecord>> {
+        YamlNoteRepository::list_all_note_files(self)
     }
 }

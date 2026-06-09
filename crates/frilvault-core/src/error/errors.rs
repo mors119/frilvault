@@ -14,4 +14,7 @@ pub enum FrilVaultError {
 
     #[error("note not found: {0}")]
     NoteNotFound(Uuid),
+
+    #[error("invalid note file path")]
+    InvalidNoteFilePath,
 }

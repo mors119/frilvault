@@ -1,17 +1,23 @@
 use anyhow::Result;
 
-use crate::{cli::list::ListCommand, command::create_note_service, output};
+use crate::{
+    app::create_note_service,
+    cli::list::ListCommand,
+    output::{OutputFormat, print_notes},
+};
 
 pub fn execute(command: ListCommand) -> Result<()> {
     let service = create_note_service()?;
 
     let notes = service.list_notes(&command.file)?;
 
-    output::print_note_count(notes.len());
+    let format = if command.json {
+        OutputFormat::Json
+    } else {
+        OutputFormat::Text
+    };
 
-    for note in notes {
-        output::print_note(&note);
-    }
+    print_notes(&notes, format)?;
 
     Ok(())
 }

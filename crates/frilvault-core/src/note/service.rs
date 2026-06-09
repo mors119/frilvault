@@ -4,17 +4,24 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use crate::{
-    FrilVaultError, FrilVaultResult,
+    FrilVaultError, FrilVaultResult, NoteView,
     note::{AddNoteInput, Note},
-    storage::YamlNoteRepository,
 };
 
-pub struct NoteService {
-    repository: YamlNoteRepository,
+use crate::note::NoteRepository;
+
+pub struct NoteService<R>
+where
+    R: NoteRepository,
+{
+    repository: R,
 }
 
-impl NoteService {
-    pub fn new(repository: YamlNoteRepository) -> Self {
+impl<R> NoteService<R>
+where
+    R: NoteRepository,
+{
+    pub fn new(repository: R) -> Self {
         Self { repository }
     }
 
@@ -30,15 +37,27 @@ impl NoteService {
     }
 
     pub fn add_note(&self, input: AddNoteInput) -> FrilVaultResult<Note> {
+        let source_file = input.source_file.clone();
         let note = Note::new(input);
 
-        self.repository.append_note(&note)?;
+        self.repository.append_note(&source_file, &note)?;
 
         Ok(note)
     }
 
-    pub fn list_notes(&self, source_file: impl AsRef<Path>) -> FrilVaultResult<Vec<Note>> {
-        self.load_notes(source_file)
+    pub fn list_notes(&self, source_file: impl AsRef<Path>) -> FrilVaultResult<Vec<NoteView>> {
+        let source_file = source_file.as_ref();
+
+        let notes = self.load_notes(source_file)?;
+
+        Ok(notes
+            .into_iter()
+            .map(|note| NoteView {
+                source_file: source_file.to_path_buf(),
+
+                note,
+            })
+            .collect())
     }
 
     pub fn delete_note(&self, source_file: impl AsRef<Path>, note_id: Uuid) -> FrilVaultResult<()> {
@@ -82,21 +101,24 @@ impl NoteService {
         Ok(())
     }
 
-    pub fn search_notes(&self, keyword: &str) -> FrilVaultResult<Vec<Note>> {
-        let note_files = self.repository.list_all_note_files()?;
+    pub fn search_notes(&self, keyword: &str) -> FrilVaultResult<Vec<NoteView>> {
+        let records = self.repository.list_all_note_files()?;
 
         let keyword = keyword.to_lowercase();
 
-        let mut matches = Vec::new();
+        let mut results = Vec::new();
 
-        for note_file in note_files {
-            for note in note_file.notes {
+        for record in records {
+            for note in record.note_file.notes {
                 if note.content.to_lowercase().contains(&keyword) {
-                    matches.push(note);
+                    results.push(NoteView {
+                        source_file: record.source_file.clone(),
+                        note,
+                    });
                 }
             }
         }
 
-        Ok(matches)
+        Ok(results)
     }
 }

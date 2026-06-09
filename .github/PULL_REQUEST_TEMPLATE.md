@@ -13,10 +13,10 @@ Describe your changes.
 
 ### Required
 
-- [ ] cargo check passes
-- [ ] cargo fmt --check passes
-- [ ] cargo clippy --workspace --all-targets -- -D warnings passes
-- [ ] cargo test passes
+- [ ] `cargo check` passes
+- [ ] `cargo fmt --all --check` passes
+- [ ] `cargo clippy --workspace --all-targets -- -D warnings` passes
+- [ ] `cargo test` passes
 
 ## Checklist
 

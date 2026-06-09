@@ -41,9 +41,6 @@ pub struct Note {
     /// id
     pub id: Uuid,
 
-    /// source_file
-    pub source_file: PathBuf,
-
     /// anchor: the position where the note is anchored. it can be either line-based or symbol-based.
     pub anchor: NoteAnchor,
 
@@ -80,7 +77,6 @@ impl Note {
 
         Self {
             id: Uuid::new_v4(),
-            source_file: input.source_file,
             anchor: input.anchor,
             content: input.content,
             created_at: now,

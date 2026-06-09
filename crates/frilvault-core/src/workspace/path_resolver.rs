@@ -1,6 +1,6 @@
 use crate::{
     FrilVaultError, FrilVaultResult,
-    constants::{NOTE_FILE_EXTENSION, VAULT_DIR_NAME},
+    constants::{NOTE_FILE_EXTENSION, NOTES_DIR_NAME, VAULT_DIR_NAME, WORKSPACE_FILE_NAME},
 };
 use std::path::{Path, PathBuf};
 
@@ -24,13 +24,31 @@ impl PathResolver {
         &self.workspace_root
     }
 
-    // Convert the relative path of the source file to the path '.vault/{source_file}.yml'
+    // Convert the relative path of the source file to the path '.vault/notes/{source_file}.yml'
     pub fn resolve_note_path(&self, source_file: impl AsRef<Path>) -> PathBuf {
-        let note_file_name = Self::note_file_name(source_file);
+        self.notes_root().join(Self::note_file_name(source_file))
+    }
 
-        self.workspace_root
-            .join(VAULT_DIR_NAME)
-            .join(note_file_name)
+    pub fn source_file_from_note_path(
+        &self,
+        note_path: impl AsRef<Path>,
+    ) -> FrilVaultResult<PathBuf> {
+        let note_path = note_path.as_ref();
+
+        let relative = note_path
+            .strip_prefix(self.notes_root())
+            .map_err(|_| FrilVaultError::SourcePathOutsideWorkspace)?;
+
+        let file_name = relative.to_string_lossy();
+
+        let suffix = format!(".{}", NOTE_FILE_EXTENSION);
+
+        let source_file = file_name
+            .strip_suffix(&suffix)
+            .ok_or(FrilVaultError::InvalidNoteFilePath)?
+            .to_string();
+
+        Ok(PathBuf::from(source_file))
     }
 
     // Converting an Absolute Path to a Relative Path
@@ -42,5 +60,16 @@ impl PathResolver {
             .map_err(|_| FrilVaultError::SourcePathOutsideWorkspace)?;
 
         Ok(relative.to_path_buf())
+    }
+
+    pub fn vault_root(&self) -> PathBuf {
+        self.workspace_root.join(VAULT_DIR_NAME)
+    }
+    pub fn notes_root(&self) -> PathBuf {
+        self.vault_root().join(NOTES_DIR_NAME)
+    }
+
+    pub fn workspace_metadata_path(&self) -> PathBuf {
+        self.vault_root().join(WORKSPACE_FILE_NAME)
     }
 }

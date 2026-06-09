@@ -40,7 +40,7 @@ FrilVault solves this by storing notes outside of the source code.
 Add a note:
 
 ```bash
-flv add \
+flvt add \
   --file src/main.rs \
   --line 10 \
   --column 5 \
@@ -50,20 +50,20 @@ flv add \
 List notes:
 
 ```bash
-flv list \
+flvt list \
   --file src/main.rs
 ```
 
 Search notes:
 
 ```bash
-flv search parser
+flvt search parser
 ```
 
 Update a note:
 
 ```bash
-flv update \
+flvt update \
   --file src/main.rs \
   --id <NOTE_ID> \
   --content "parser 구조 재설계 필요"
@@ -72,7 +72,7 @@ flv update \
 Delete a note:
 
 ```bash
-flv delete \
+flvt delete \
   --file src/main.rs \
   --id <NOTE_ID>
 ```
@@ -101,7 +101,7 @@ anchor:
 Search notes using keywords.
 
 ```bash
-flv search parser
+flvt search parser
 ```
 
 ### Local First
@@ -133,7 +133,7 @@ pub fn calculate_damage() {
 Personal note:
 
 ```bash
-flv add \
+flvt add \
   --file src/combat.rs \
   --line 1 \
   --column 1 \
