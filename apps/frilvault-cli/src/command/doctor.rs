@@ -1,11 +1,11 @@
 use anyhow::Result;
 
-use crate::app::create_index_repository;
+use crate::app::create_workspace_service;
 
 pub fn execute() -> Result<()> {
-    let repository = create_index_repository()?;
+    let service = create_workspace_service()?;
 
-    let health = repository.health_check()?;
+    let health = service.health_check()?;
 
     println!("Workspace Health Check\n");
 

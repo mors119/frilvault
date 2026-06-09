@@ -1,19 +1,19 @@
 use anyhow::Result;
 
-use crate::{app::create_index_repository, cli::repair::RepairCommand};
+use crate::{app::create_workspace_service, cli::repair::RepairCommand};
 
 pub fn execute(command: RepairCommand) -> Result<()> {
-    let repository = create_index_repository()?;
+    let service = create_workspace_service()?;
 
     if command.apply {
-        let repaired = repository.apply_repairs()?;
+        let repaired = service.apply_repairs()?;
 
         println!("Applied {} repair(s)", repaired,);
 
         return Ok(());
     }
 
-    let suggestions = repository.repair_suggestions()?;
+    let suggestions = service.repair_suggestions()?;
 
     if suggestions.is_empty() {
         println!("No repair suggestions.");
