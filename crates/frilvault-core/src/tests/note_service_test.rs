@@ -1,12 +1,12 @@
 use crate::{
-    AddNoteInput, LineAnchor, NoteAnchor, NoteService, PathResolver, YamlNoteRepository,
-    constants::NOTE_FILE_EXTENSION,
+    AddNoteInput, LineAnchor, NoteAnchor, NoteService, PathResolver, SymbolAnchor, SymbolKind,
+    YamlNoteRepository, constants::NOTE_FILE_EXTENSION,
 };
 
 use std::fs;
 
 #[test]
-fn add_note_creates_yaml_file() {
+fn add_line_type_note_creates_yaml_file() {
     let workspace_root =
         std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
 
@@ -37,6 +37,58 @@ fn add_note_creates_yaml_file() {
     let content = fs::read_to_string(note_path).unwrap();
 
     assert!(content.contains("여기서 스캔이 시작된다."));
+
+    fs::remove_dir_all(workspace_root).unwrap();
+}
+
+#[test]
+fn add_symbol_type_note_creates_yaml_file() {
+    let workspace_root =
+        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
+
+    fs::create_dir_all(&workspace_root).unwrap();
+
+    let resolver = PathResolver::new(&workspace_root);
+    let repository = YamlNoteRepository::new(resolver);
+    let service = NoteService::new(repository);
+
+    let input = AddNoteInput {
+        source_file: "src/main.rs".into(),
+        anchor: crate::note::NoteAnchor::Symbol(crate::note::SymbolAnchor {
+            name: "NoteService::add_note".to_string(),
+            kind: SymbolKind::Method,
+            signature: Some(
+                "fn add_note(&self, input: AddNoteInput) -> FrilVaultResult<Note>".to_owned(),
+            ),
+            line_hint: Some(34),
+        }),
+        content: "symbol anchor test".to_string(),
+    };
+
+    service.add_note(input).unwrap();
+
+    let note_path = workspace_root
+        .join(".vault")
+        .join("notes")
+        .join(format!("src/main.rs.{}", NOTE_FILE_EXTENSION));
+
+    assert!(note_path.exists());
+
+    let notes = service.list_notes("src/main.rs").unwrap();
+    assert_eq!(notes.len(), 1);
+    assert_eq!(notes[0].note.content, "symbol anchor test");
+    match &notes[0].note.anchor {
+        NoteAnchor::Symbol(anchor) => {
+            assert_eq!(anchor.name, "NoteService::add_note");
+            assert_eq!(anchor.kind, SymbolKind::Method);
+            assert_eq!(
+                anchor.signature.as_deref(),
+                Some("fn add_note(&self, input: AddNoteInput) -> FrilVaultResult<Note>")
+            );
+            assert_eq!(anchor.line_hint, Some(34));
+        }
+        _ => panic!("Expected SymbolAnchor"),
+    }
 
     fs::remove_dir_all(workspace_root).unwrap();
 }
@@ -237,6 +289,44 @@ fn search_notes_finds_matching_notes() {
     let notes = service.search_notes("PARSER").unwrap();
 
     assert_eq!(notes.len(), 2,);
+
+    fs::remove_dir_all(workspace_root).unwrap();
+}
+
+#[test]
+fn search_finds_symbol_anchor() {
+    let workspace_root =
+        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4(),));
+
+    fs::create_dir_all(&workspace_root).unwrap();
+
+    let resolver = PathResolver::new(&workspace_root);
+
+    let repository = YamlNoteRepository::new(resolver);
+
+    let service = NoteService::new(repository);
+
+    service
+        .add_note(AddNoteInput {
+            source_file: "src/service.rs".into(),
+
+            anchor: NoteAnchor::Symbol(SymbolAnchor {
+                name: "NoteService::add_note".to_string(),
+
+                kind: SymbolKind::Method,
+
+                signature: None,
+
+                line_hint: None,
+            }),
+
+            content: "service logic".to_string(),
+        })
+        .unwrap();
+
+    let results = service.search_notes("add_note").unwrap();
+
+    assert_eq!(results.len(), 1,);
 
     fs::remove_dir_all(workspace_root).unwrap();
 }

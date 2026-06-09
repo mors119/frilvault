@@ -77,6 +77,30 @@ flvt delete \
   --id <NOTE_ID>
 ```
 
+Viewing the status of the workspace:
+
+```bash
+flvt stats
+```
+
+Health check:
+
+```bash
+flvt doctor
+```
+
+Find files that need to be repaired:
+
+```bash
+flvt repair
+```
+
+Application of repair:
+
+```bash
+flvt repair --apply
+```
+
 ---
 
 ## Features
@@ -85,15 +109,18 @@ flvt delete \
 
 Store personal notes without modifying source code.
 
-### Line Anchors
-
-Attach notes to specific locations inside source files.
-
 ```yaml
 anchor:
   type: Line
   line: 10
   column: 5
+```
+
+```yaml
+anchor:
+  type: Symbol
+  name: NoteService::add_note
+  kind: Method
 ```
 
 ### Search
@@ -117,6 +144,22 @@ Keep repositories free from temporary comments and personal annotations.
 ### Developer Knowledge Base
 
 Build a personal knowledge layer on top of any codebase.
+
+### Workspace Index
+
+Build and maintain an index of note files for fast workspace analysis.
+
+### Workspace Statistics
+
+Analyze note usage across the workspace.
+
+### Workspace Health Check
+
+Detect missing source files and orphan note files.
+
+### Repair
+
+Suggest and apply repairs when source files are moved or renamed.
 
 ---
 
@@ -146,8 +189,6 @@ Stored note:
 notes:
   - id: '15b7c4b3-f4a6-4cc1-accb-428f344cc597'
 
-    source_file: src/combat.rs
-
     anchor:
       type: Line
       line: 1
@@ -170,10 +211,18 @@ project/
 ├── src/
 │
 └── .vault/
-    └── src/
-        ├── main.rs.yml
-        ├── lib.rs.yml
-        └── service.rs.yml
+    ├── workspace.yml
+    │
+    ├── notes/
+    │   └── src/
+    │       ├── main.rs.yml
+    │       ├── lib.rs.yml
+    │       └── service.rs.yml
+    │
+    ├── cache/
+    │
+    └── index/
+        └── workspace.yml
 ```
 
 Example:
@@ -203,8 +252,14 @@ notes:
 
 - YAML note storage
 - Line anchors
+- Symbol anchors
 - CRUD operations
-- Keyword search
+- Search
+- Workspace index
+- Workspace statistics
+- Workspace health check
+- Repair suggestions
+- Repair apply
 
 ### CLI
 
@@ -213,6 +268,9 @@ notes:
 - update
 - delete
 - search
+- stats
+- doctor
+- repair
 
 ---
 

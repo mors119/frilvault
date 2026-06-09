@@ -2,5 +2,7 @@ pub mod add;
 pub mod delete;
 pub mod doctor;
 pub mod list;
+pub mod repair;
 pub mod search;
+pub mod stats;
 pub mod update;
