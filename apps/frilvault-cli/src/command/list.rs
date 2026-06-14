@@ -2,7 +2,7 @@ use anyhow::Result;
 
 use crate::{
     app::create_note_service,
-    cli::list::ListCommand,
+    cli::list::{ListCommand, ListFormatArg},
     output::{OutputFormat, print_notes},
 };
 
@@ -11,10 +11,9 @@ pub fn execute(command: ListCommand) -> Result<()> {
 
     let notes = service.list_notes(&command.file)?;
 
-    let format = if command.json {
-        OutputFormat::Json
-    } else {
-        OutputFormat::Text
+    let format = match (command.format, command.json) {
+        (Some(ListFormatArg::Json), _) | (None, true) => OutputFormat::Json,
+        _ => OutputFormat::Text,
     };
 
     print_notes(&notes, format)?;

@@ -1,41 +1,48 @@
 # FrilVault
 
-> Your Personal Knowledge Vault for Code
+> Personal notes for source code, without modifying source files
 
-🚧 Early development stage
+FrilVault is a local-first knowledge layer for developers. It stores personal notes in a `.vault` directory instead of writing them into production code.
 
-FrilVault is a developer-focused personal knowledge vault that allows you to attach private notes to source code without modifying the code itself.
+## What It Does
 
-Instead of adding temporary comments, TODOs, research notes, debugging records, or learning materials directly into source files, FrilVault stores them separately inside a local `.vault` directory.
+- Attach notes to source files with line or symbol anchors
+- Keep personal context out of the repository code
+- Search notes across a workspace
+- Inspect workspace stats and health
+- Repair note files after file moves or renames
+- Surface notes inside VS Code
 
-This keeps source code clean while preserving valuable knowledge.
+## Repository Layout
 
----
+```text
+apps/
+├── frilvault-cli
+└── vscode-extension
 
-## Why?
+crates/
+├── frilvault-core
+└── frilvault-node
+```
 
-When studying large codebases, contributing to open source projects, or maintaining long-term software, developers often create personal notes such as:
+- `frilvault-core`: domain logic, repositories, workspace services
+- `frilvault-cli`: command-line interface for note and workspace operations
+- `frilvault-node`: Node-API bridge for editor integrations
+- `apps/vscode-extension`: VS Code UI layer
 
-- Architecture analysis
-- Research findings
-- Debugging records
-- TODO items
-- Learning notes
-- AI context
-- Reverse engineering notes
+## Storage Model
 
-Adding these notes directly into source files creates several problems:
+```text
+.vault/
+├── notes/
+├── cache/
+├── index/
+└── workspace.yml
+```
 
-- Pollutes the codebase
-- Causes merge conflicts
-- Makes upstream synchronization difficult
-- Mixes personal knowledge with production code
+Notes are stored separately from source files. FrilVault does not modify the source code it annotates.
 
-FrilVault solves this by storing notes outside of the source code.
-
----
-
-## Quick Start
+## CLI Examples
 
 Add a note:
 
@@ -44,14 +51,19 @@ flvt add \
   --file src/main.rs \
   --line 10 \
   --column 5 \
-  --content "parser 개선 필요"
+  --content "parser needs cleanup"
 ```
 
-List notes:
+List notes for one file:
 
 ```bash
-flvt list \
-  --file src/main.rs
+flvt list --file src/main.rs
+```
+
+List notes as JSON:
+
+```bash
+flvt list --file src/main.rs --format json
 ```
 
 Search notes:
@@ -60,282 +72,65 @@ Search notes:
 flvt search parser
 ```
 
-Update a note:
-
-```bash
-flvt update \
-  --file src/main.rs \
-  --id <NOTE_ID> \
-  --content "parser 구조 재설계 필요"
-```
-
-Delete a note:
-
-```bash
-flvt delete \
-  --file src/main.rs \
-  --id <NOTE_ID>
-```
-
-Viewing the status of the workspace:
+Workspace commands:
 
 ```bash
 flvt stats
-```
-
-Health check:
-
-```bash
 flvt doctor
-```
-
-Find files that need to be repaired:
-
-```bash
 flvt repair
-```
-
-Application of repair:
-
-```bash
 flvt repair --apply
 ```
 
----
+## VS Code Extension
 
-## Features
+Current extension scope:
 
-### Private Notes
+- `FrilVault: Add Note` command
+- `FrilVault Notes` side panel for the active editor
+- Gutter decorations for line notes
+- Edit and delete note flows
+- Workspace search, stats, health, and repair commands
 
-Store personal notes without modifying source code.
+Current integration model:
 
-```yaml
-anchor:
-  type: Line
-  line: 10
-  column: 5
-```
+- `Add Note`, notes panel, and gutter decorations use the CLI
+- edit/delete/search/stats/health/repair still use the Node bridge
 
-```yaml
-anchor:
-  type: Symbol
-  name: NoteService::add_note
-  kind: Method
-```
+This is an in-progress architecture and will continue moving toward shared `frilvault-core` behavior across surfaces.
 
-### Search
+## Build
 
-Search notes using keywords.
+Rust:
 
 ```bash
-flvt search parser
+cargo test -p frilvault-core
+cargo test -p frilvault-node
 ```
 
-### Local First
-
-All data is stored locally.
-
-No external services are required.
-
-### Clean Repository
-
-Keep repositories free from temporary comments and personal annotations.
-
-### Developer Knowledge Base
-
-Build a personal knowledge layer on top of any codebase.
-
-### Workspace Index
-
-Build and maintain an index of note files for fast workspace analysis.
-
-### Workspace Statistics
-
-Analyze note usage across the workspace.
-
-### Workspace Health Check
-
-Detect missing source files and orphan note files.
-
-### Repair
-
-Suggest and apply repairs when source files are moved or renamed.
-
----
-
-## Example
-
-Source code:
-
-```rust
-pub fn calculate_damage() {
-    // production code
-}
-```
-
-Personal note:
+VS Code extension:
 
 ```bash
-flvt add \
-  --file src/combat.rs \
-  --line 1 \
-  --column 1 \
-  --content "Consider SIMD optimization in the future"
+cd apps/vscode-extension
+npm run compile
+npm test
 ```
 
-Stored note:
+## Status
 
-```yaml
-notes:
-  - id: '15b7c4b3-f4a6-4cc1-accb-428f344cc597'
+Implemented:
 
-    anchor:
-      type: Line
-      line: 1
-      column: 1
-
-    content: Consider SIMD optimization in the future
-
-    created_at: '2026-06-03T17:42:17.853037Z'
-    updated_at: '2026-06-03T17:42:17.853037Z'
-```
-
----
-
-## Storage Structure
-
-Current storage layout:
-
-```text
-project/
-├── src/
-│
-└── .vault/
-    ├── workspace.yml
-    │
-    ├── notes/
-    │   └── src/
-    │       ├── main.rs.yml
-    │       ├── lib.rs.yml
-    │       └── service.rs.yml
-    │
-    ├── cache/
-    │
-    └── index/
-        └── workspace.yml
-```
-
-Example:
-
-```yaml
-notes:
-  - id: '15b7c4b3-f4a6-4cc1-accb-428f344cc597'
-
-    source_file: src/lib.rs
-
-    anchor:
-      type: Line
-      line: 3
-      column: 1
-
-    content: Parser trait 검토
-
-    created_at: '2026-06-03T17:42:17.853037Z'
-    updated_at: '2026-06-03T17:42:17.853037Z'
-```
-
----
-
-## Current Status
-
-### Core
-
-- YAML note storage
-- Line anchors
-- Symbol anchors
-- CRUD operations
+- Core note CRUD
 - Search
-- Workspace index
-- Workspace statistics
-- Workspace health check
-- Repair suggestions
-- Repair apply
+- Line and symbol anchors
+- Workspace index, stats, health, repair
+- Node bridge MVP
+- VS Code extension MVP
 
-### CLI
+Planned:
 
-- add
-- list
-- update
-- delete
-- search
-- stats
-- doctor
-- repair
-
----
-
-## Use Cases
-
-### Open Source Analysis
-
-Study libraries and frameworks without modifying upstream code.
-
-### Reverse Engineering
-
-Document control flow and implementation details.
-
-### Personal Documentation
-
-Store architecture notes and design decisions.
-
-### Learning Notes
-
-Record discoveries while exploring unfamiliar codebases.
-
-### AI-Assisted Development
-
-Build project-specific context for future AI workflows.
-
----
-
-## Roadmap
-
-### Phase 1 (Current)
-
-- Rust core library
-- YAML storage
-- CLI support
-- CRUD operations
-- Keyword search
-
-### Phase 2
-
-- Symbol anchors
-- JSON output
-- VSCode extension
-
-### Phase 3
-
-- Project indexing
-- Workspace explorer
-- Cached search
-
-### Phase 4
-
-- AI Context Engine
+- Watcher and cache invalidation
+- Richer symbol workflows
 - Semantic search
-- RAG integration
+- IntelliJ integration
 
-### Phase 5
-
-- JetBrains plugin
-- Desktop application
-- Team knowledge sharing
-
----
-
-## Philosophy
-
-Source code should remain clean.
-
-Knowledge belongs in the vault.
+See [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), and [docs/ROADMAP.md](docs/ROADMAP.md).

@@ -9,23 +9,140 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onView:frilvault.notes",
+    "onCommand:frilvault.addNote",
+    "onCommand:frilvault.notesPanel.openNote",
+    "onCommand:frilvault.searchNotes",
+    "onCommand:frilvault.showStats",
+    "onCommand:frilvault.showHealth",
+    "onCommand:frilvault.applyRepairs",
+    "onCommand:frilvault.refresh"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "id": "frilvault.notes",
+          "name": "FrilVault Notes"
+        }
+      ]
+    },
     "commands": [
       {
-        "command": "frilvault.helloWorld",
-        "title": "Hello World"
+        "command": "frilvault.addNote",
+        "title": "FrilVault: Add Note"
+      },
+      {
+        "command": "frilvault.editNote",
+        "title": "FrilVault: Edit Note"
+      },
+      {
+        "command": "frilvault.deleteNote",
+        "title": "FrilVault: Delete Note"
+      },
+      {
+        "command": "frilvault.searchNotes",
+        "title": "FrilVault: Search Notes"
+      },
+      {
+        "command": "frilvault.showStats",
+        "title": "FrilVault: Show Workspace Stats"
+      },
+      {
+        "command": "frilvault.showHealth",
+        "title": "FrilVault: Show Workspace Health"
+      },
+      {
+        "command": "frilvault.applyRepairs",
+        "title": "FrilVault: Apply Repairs"
+      },
+      {
+        "command": "frilvault.refresh",
+        "title": "FrilVault: Refresh"
       }
-    ]
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "frilvault.addNote",
+          "when": "view == frilvault.notes",
+          "group": "navigation"
+        },
+        {
+          "command": "frilvault.refresh",
+          "when": "view == frilvault.notes",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "frilvault.editNote",
+          "when": "view == frilvault.notes",
+          "group": "inline"
+        },
+        {
+          "command": "frilvault.deleteNote",
+          "when": "view == frilvault.notes",
+          "group": "inline"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "frilvault.addNote",
+          "when": "editorHasSelection || editorTextFocus",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "frilvault.addNote"
+        },
+        {
+          "command": "frilvault.searchNotes"
+        },
+        {
+          "command": "frilvault.showStats"
+        },
+        {
+          "command": "frilvault.showHealth"
+        },
+        {
+          "command": "frilvault.applyRepairs"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "FrilVault",
+      "properties": {
+        "frilvault.workspaceRoot": {
+          "type": "string",
+          "default": "",
+          "description": "Override the workspace root used by FrilVault. Leave empty to use the first open workspace folder."
+        },
+        "frilvault.cliPath": {
+          "type": "string",
+          "default": "flvt",
+          "description": "Path to the FrilVault CLI executable used by the Add Note command."
+        }
+      }
+    }
   },
+  "files": [
+    "dist/**",
+    "media/**",
+    "README.md",
+    "CHANGELOG.md"
+  ],
   "scripts": {
+    "build:native": "node scripts/build-native.js",
     "vscode:prepublish": "npm run package",
-    "compile": "npm run check-types && npm run lint && node esbuild.js",
+    "compile": "npm run build:native && npm run check-types && npm run lint && node esbuild.js",
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "package": "node scripts/build-native.js --production && npm run check-types && npm run lint && node esbuild.js --production",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",

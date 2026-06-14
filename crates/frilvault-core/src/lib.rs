@@ -1,3 +1,4 @@
+pub mod cache;
 pub mod constants;
 pub mod error;
 pub mod note;
@@ -5,6 +6,7 @@ pub mod parser;
 pub mod storage;
 pub mod workspace;
 
+pub use cache::*;
 pub use error::*;
 pub use note::*;
 pub use parser::*;

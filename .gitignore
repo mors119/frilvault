@@ -29,6 +29,7 @@ pnpm-debug.log*
 dist
 out
 coverage
+.vscode-test
 
 # VSCE package
 
