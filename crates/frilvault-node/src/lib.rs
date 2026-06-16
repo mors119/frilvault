@@ -2,10 +2,10 @@ use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Utc};
 use frilvault_core::{
-    AddNoteInput, FrilVaultError, LineAnchor, Note, NoteAnchor, NoteService, NoteView,
-    PathResolver, RepairSuggestion, SymbolAnchor, SymbolKind, WorkspaceHealth,
+    AddNoteInput, FrilVaultError, LineAnchor, Note, NoteAnchor, NoteService, PathResolver,
+    RepairSuggestion, SymbolAnchor, SymbolKind, VaultContext, WorkspaceHealth,
     WorkspaceIndexRepository, WorkspaceRepository, WorkspaceService, WorkspaceStats,
-    YamlNoteRepository,
+    YamlNoteRepository, note_view::NoteView,
 };
 use napi::bindgen_prelude::Error;
 use napi_derive::napi;
@@ -76,32 +76,8 @@ fn parse_uuid(note_id: &str) -> napi::Result<Uuid> {
     Uuid::parse_str(note_id).map_err(|error| Error::from_reason(error.to_string()))
 }
 
-fn note_service(workspace_root: &str) -> napi::Result<NoteService<YamlNoteRepository>> {
-    let resolver = PathResolver::new(workspace_root);
-    let workspace_repository = WorkspaceRepository::new(resolver.clone());
-    workspace_repository
-        .create_if_missing()
-        .map_err(napi_error)?;
-
-    let index_repository = WorkspaceIndexRepository::new(resolver.clone());
-    index_repository.create_if_missing().map_err(napi_error)?;
-
-    Ok(NoteService::new(YamlNoteRepository::new(resolver)))
-}
-
-fn workspace_service(workspace_root: &str) -> napi::Result<WorkspaceService> {
-    let resolver = PathResolver::new(workspace_root);
-    let workspace_repository = WorkspaceRepository::new(resolver.clone());
-    workspace_repository
-        .create_if_missing()
-        .map_err(napi_error)?;
-
-    let index_repository = WorkspaceIndexRepository::new(resolver.clone());
-    index_repository.create_if_missing().map_err(napi_error)?;
-
-    let note_repository = YamlNoteRepository::new(resolver);
-
-    Ok(WorkspaceService::new(note_repository, index_repository))
+fn serialize_json<T: Serialize>(value: &T) -> napi::Result<String> {
+    serde_json::to_string(value).map_err(|error| Error::from_reason(error.to_string()))
 }
 
 fn normalize_source_file(workspace_root: &str, source_file: &str) -> napi::Result<PathBuf> {
@@ -121,18 +97,47 @@ fn normalize_source_file(workspace_root: &str, source_file: &str) -> napi::Resul
     Ok(path)
 }
 
-fn serialize_json<T: Serialize>(value: &T) -> napi::Result<String> {
-    serde_json::to_string(value).map_err(|error| Error::from_reason(error.to_string()))
+fn build_vault_context(
+    workspace_root: &str,
+) -> napi::Result<(VaultContext, WorkspaceIndexRepository)> {
+    let resolver = PathResolver::new(workspace_root);
+    let workspace_repository = WorkspaceRepository::new(resolver.clone());
+    workspace_repository
+        .create_if_missing()
+        .map_err(napi_error)?;
+
+    let index_repository = WorkspaceIndexRepository::new(resolver.clone());
+    index_repository.create_if_missing().map_err(napi_error)?;
+
+    let note_repository = YamlNoteRepository::new(resolver);
+    let vault_context = VaultContext::new(note_repository, index_repository.clone());
+
+    Ok((vault_context, index_repository))
 }
 
-fn serialize_note(note: Note) -> SerializableNote {
-    SerializableNote {
-        id: note.id.to_string(),
-        anchor: serialize_anchor(note.anchor),
-        content: note.content,
-        created_at: note.created_at,
-        updated_at: note.updated_at,
+fn note_service(workspace_root: &str) -> napi::Result<NoteService> {
+    let (vault_context, _) = build_vault_context(workspace_root)?;
+
+    Ok(NoteService::new(vault_context))
+}
+
+fn workspace_service(workspace_root: &str) -> napi::Result<WorkspaceService> {
+    let (vault_context, index_repository) = build_vault_context(workspace_root)?;
+
+    Ok(WorkspaceService::new(vault_context, index_repository))
+}
+
+fn serialize_symbol_kind(kind: SymbolKind) -> String {
+    match kind {
+        SymbolKind::Function => "Function",
+        SymbolKind::Struct => "Struct",
+        SymbolKind::Enum => "Enum",
+        SymbolKind::Trait => "Trait",
+        SymbolKind::Impl => "Impl",
+        SymbolKind::Method => "Method",
+        SymbolKind::Unknown => "Unknown",
     }
+    .to_string()
 }
 
 fn serialize_anchor(anchor: NoteAnchor) -> SerializableAnchor {
@@ -152,24 +157,21 @@ fn serialize_anchor(anchor: NoteAnchor) -> SerializableAnchor {
     }
 }
 
+fn serialize_note(note: Note) -> SerializableNote {
+    SerializableNote {
+        id: note.id.to_string(),
+        anchor: serialize_anchor(note.anchor),
+        content: note.content,
+        created_at: note.created_at,
+        updated_at: note.updated_at,
+    }
+}
+
 fn serialize_note_view(view: NoteView) -> SerializableNoteView {
     SerializableNoteView {
         source_file: view.source_file.to_string_lossy().to_string(),
         note: serialize_note(view.note),
     }
-}
-
-fn serialize_symbol_kind(kind: SymbolKind) -> String {
-    match kind {
-        SymbolKind::Function => "Function",
-        SymbolKind::Struct => "Struct",
-        SymbolKind::Enum => "Enum",
-        SymbolKind::Trait => "Trait",
-        SymbolKind::Impl => "Impl",
-        SymbolKind::Method => "Method",
-        SymbolKind::Unknown => "Unknown",
-    }
-    .to_string()
 }
 
 fn serialize_stats(stats: WorkspaceStats) -> SerializableWorkspaceStats {
@@ -204,7 +206,7 @@ pub fn add_line_note(
     column: u32,
     content: String,
 ) -> napi::Result<String> {
-    let service = note_service(&workspace_root)?;
+    let mut service = note_service(&workspace_root)?;
     let source_file = normalize_source_file(&workspace_root, &source_file)?;
 
     let note = service
@@ -222,9 +224,8 @@ pub fn add_line_note(
 
 #[napi]
 pub fn list_notes(workspace_root: String, source_file: String) -> napi::Result<String> {
-    let service = note_service(&workspace_root)?;
+    let mut service = note_service(&workspace_root)?;
     let source_file = normalize_source_file(&workspace_root, &source_file)?;
-
     let views = service.list_notes(source_file).map_err(napi_error)?;
     let serialized: Vec<_> = views.into_iter().map(serialize_note_view).collect();
 
@@ -238,7 +239,7 @@ pub fn update_note(
     note_id: String,
     content: String,
 ) -> napi::Result<String> {
-    let service = note_service(&workspace_root)?;
+    let mut service = note_service(&workspace_root)?;
     let source_file = normalize_source_file(&workspace_root, &source_file)?;
     let note_id = parse_uuid(&note_id)?;
 
@@ -262,7 +263,7 @@ pub fn delete_note(
     source_file: String,
     note_id: String,
 ) -> napi::Result<()> {
-    let service = note_service(&workspace_root)?;
+    let mut service = note_service(&workspace_root)?;
     let source_file = normalize_source_file(&workspace_root, &source_file)?;
     let note_id = parse_uuid(&note_id)?;
 
@@ -273,7 +274,7 @@ pub fn delete_note(
 
 #[napi]
 pub fn search_notes(workspace_root: String, keyword: String) -> napi::Result<String> {
-    let service = note_service(&workspace_root)?;
+    let mut service = note_service(&workspace_root)?;
     let views = service.search_notes(&keyword).map_err(napi_error)?;
     let serialized: Vec<_> = views.into_iter().map(serialize_note_view).collect();
 
@@ -282,7 +283,7 @@ pub fn search_notes(workspace_root: String, keyword: String) -> napi::Result<Str
 
 #[napi]
 pub fn workspace_stats(workspace_root: String) -> napi::Result<String> {
-    let service = workspace_service(&workspace_root)?;
+    let mut service = workspace_service(&workspace_root)?;
     let stats = service.stats().map_err(napi_error)?;
 
     serialize_json(&serialize_stats(stats))
@@ -290,7 +291,7 @@ pub fn workspace_stats(workspace_root: String) -> napi::Result<String> {
 
 #[napi]
 pub fn workspace_health(workspace_root: String) -> napi::Result<String> {
-    let service = workspace_service(&workspace_root)?;
+    let mut service = workspace_service(&workspace_root)?;
     let health = service.health_check().map_err(napi_error)?;
 
     serialize_json(&serialize_health(health))
@@ -298,7 +299,7 @@ pub fn workspace_health(workspace_root: String) -> napi::Result<String> {
 
 #[napi]
 pub fn repair_suggestions(workspace_root: String) -> napi::Result<String> {
-    let service = workspace_service(&workspace_root)?;
+    let mut service = workspace_service(&workspace_root)?;
     let suggestions = service.repair_suggestions().map_err(napi_error)?;
     let serialized: Vec<_> = suggestions
         .into_iter()
@@ -310,7 +311,7 @@ pub fn repair_suggestions(workspace_root: String) -> napi::Result<String> {
 
 #[napi]
 pub fn apply_repairs(workspace_root: String) -> napi::Result<u32> {
-    let service = workspace_service(&workspace_root)?;
+    let mut service = workspace_service(&workspace_root)?;
     let repaired = service.apply_repairs().map_err(napi_error)?;
 
     Ok(repaired as u32)

@@ -35,14 +35,6 @@
         "title": "FrilVault: Add Note"
       },
       {
-        "command": "frilvault.editNote",
-        "title": "FrilVault: Edit Note"
-      },
-      {
-        "command": "frilvault.deleteNote",
-        "title": "FrilVault: Delete Note"
-      },
-      {
         "command": "frilvault.searchNotes",
         "title": "FrilVault: Search Notes"
       },
@@ -74,18 +66,6 @@
           "command": "frilvault.refresh",
           "when": "view == frilvault.notes",
           "group": "navigation"
-        }
-      ],
-      "view/item/context": [
-        {
-          "command": "frilvault.editNote",
-          "when": "view == frilvault.notes",
-          "group": "inline"
-        },
-        {
-          "command": "frilvault.deleteNote",
-          "when": "view == frilvault.notes",
-          "group": "inline"
         }
       ],
       "editor/context": [

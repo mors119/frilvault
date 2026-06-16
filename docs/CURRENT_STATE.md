@@ -1,167 +1,372 @@
-# FrilVault Current State
+# 📘 FrilVault Current State
 
-## Implemented
+## Version
 
-### Core
+v0.1 — Core + Runtime Transition Phase
 
-- Add note
-- Update note
-- Delete note
-- List notes
-- Search notes
-- Line anchors
-- Symbol anchors
-- YAML note storage
-- Workspace metadata
-- Workspace index
-- Workspace statistics
-- Workspace health check
-- Repair suggestions
-- Automatic repair apply
+---
 
-### CLI
+# 1. System Status Overview
 
-Available commands:
+FrilVault is currently in a **runtime transition stage**.
 
-```bash
-flvt add
-flvt list
-flvt update
-flvt delete
-flvt search
-flvt stats
-flvt doctor
-flvt repair
+The system has moved beyond a simple note storage tool and is evolving into a **runtime-based knowledge layer for codebases**.
+
+---
+
+## Current Stage Classification
+
+```text id="xk9v2p"
+✔ Core domain system: COMPLETED
+✔ Workspace system: COMPLETED
+✔ Repair system: COMPLETED
+✔ CLI interface: COMPLETED
+✔ Node bridge: MVP COMPLETED
+
+→ Runtime architecture (VaultContext): IN TRANSITION
+→ Cache system: PARTIALLY ACTIVE
+→ VSCode integration: TRANSITIONAL (CLI + Node hybrid)
 ```
 
-Notable current behavior:
+---
 
-- `flvt list` supports `--format json`
-- repair works with filename-based matching
+# 2. Core System Status (frilvault-core)
 
-### Node Bridge
+## 2.1 Completed Modules
 
-`frilvault-node` is implemented as a Node-API wrapper around `frilvault-core`.
+### Note System
 
-Currently exposed operations:
+- CRUD operations implemented
+- YAML-based storage
+- line anchors implemented
+- symbol anchors implemented
+- keyword + symbol search implemented
 
-- add line note
-- list notes
-- update note
-- delete note
-- search notes
-- workspace stats
-- workspace health
-- repair suggestions
-- apply repairs
+---
 
-### VS Code Extension
+### Workspace System
 
-Status:
+- workspace indexing implemented
+- workspace statistics implemented
+- health check system implemented
+- repair suggestion system implemented
+- repair execution system implemented
 
-MVP implemented.
+---
 
-Current scope:
+### Storage Layer
 
-- `FrilVault: Add Note`
-- `FrilVault Notes` side panel
-- gutter decorations for line notes
-- note open from TreeView
-- note edit flow
-- note delete flow
-- search notes
-- workspace stats
-- workspace health
-- repair apply
+- `.vault` directory structure implemented
+- YAML persistence implemented
+- note file structure stable
 
-Current implementation split:
+---
 
-- CLI-backed:
-  - add note
-  - notes side panel
-  - gutter decorations
-- Node-bridge-backed:
-  - edit note
-  - delete note
-  - search
-  - stats
-  - health
-  - repair
+### Parser Layer
 
-### Tests
+- YAML parser implemented
+- note serialization/deserialization stable
 
-Implemented test coverage:
+---
 
-- `frilvault-core` unit tests
-- `frilvault-node` compile-level test pass
-- VS Code integration tests for:
-  - add note command
-  - notes panel
-  - CLI JSON parsing path
+## 2.2 Runtime Layer (VaultContext)
 
-## Refactoring Completed
+### Status
 
-### Core Domain Split
+```text id="qv8m1z"
+VaultContext exists and is functional but not fully centralized
+```
 
-Separated:
+### Responsibilities (Current)
 
-- note entities
-- note repository
-- note service
-- workspace entities
-- workspace repositories
-- workspace service
+- Repository aggregation
+- Partial cache handling
+- Note loading coordination
 
-### VS Code Feature Split
+### Missing Full Adoption
 
-Separated:
+- Service layer still partially accesses repositories directly
+- Cache not fully integrated across all read paths
+- Invalidation not uniformly enforced
 
-- `features/add-note`
-- `features/notes-panel`
-- `features/decorations`
+---
 
-## In Progress
+## 2.3 Cache System
 
-### Editor Integration Cleanup
+### Status
 
-Goal:
+```text id="m3xk9v"
+Cache exists and works in isolated flows
+```
 
-- reduce mixed CLI and Node bridge usage
-- move toward a more consistent integration boundary
+### Implemented
 
-## Not Yet Implemented
+- NoteCache implemented
+- basic cache get/insert
+- manual invalidation hooks
 
-### Watcher
+### Missing
 
-Status:
+- full read-path integration (search/stats)
+- workspace index caching
+- watcher-driven invalidation
 
-Not started.
+---
 
-### Rich Symbol Workflows
+# 3. Service Layer Status
 
-Status:
+## 3.1 NoteService
 
-Not started.
+### Status
 
-Current limitation:
+- partially migrated to VaultContext
+- still contains repository-level interactions in some paths
 
-- symbol anchors exist in the core model
-- the VS Code UI is still primarily line-note oriented
+### Current Behavior
 
-### Semantic Search
+- note CRUD works
+- search works (hybrid repository + vault_context usage)
+- cache partially used
 
-Status:
+---
 
-Not started.
+## 3.2 WorkspaceService
 
-### AI Context Engine
+### Status
 
-Status:
+- mixed architecture (index + repository + vault_context hybrid)
 
-Not started.
+### Current Behavior
 
-### IntelliJ Integration
+- stats fully functional
+- health check functional
+- repair system functional
+- workspace file scanning implemented
 
-Status:
+---
 
-Not started.
+# 4. CLI Status (frilvault-cli)
+
+## Status: STABLE
+
+### Implemented Commands
+
+- add
+- list
+- update
+- delete
+- search
+- stats
+- health
+- repair
+
+### Characteristics
+
+- thin wrapper over core services
+- no business logic inside CLI
+- text + JSON output support
+
+---
+
+# 5. Node Bridge (frilvault-node)
+
+## Status: MVP COMPLETE
+
+### Role
+
+- exposes core functionality to Node-based environments
+
+### Current State
+
+- partial API coverage
+- used by VSCode extension for non-CLI operations
+- still evolving toward full replacement of CLI dependency in editor runtime
+
+---
+
+# 6. VSCode Extension Status
+
+## Status: TRANSITIONAL ARCHITECTURE
+
+### Current Integration Model
+
+```text id="v0m2qz"
+Hybrid system:
+- CLI-based calls (simple operations)
+- Node bridge calls (advanced operations)
+```
+
+---
+
+### Implemented Features
+
+- gutter decorations (partial)
+- add note command
+- active file notes panel
+- basic note visualization
+
+---
+
+### Partial Features
+
+- hover previews (incomplete / evolving)
+- search integration (mixed backend)
+- repair integration (node bridge dependent)
+
+---
+
+### Architectural Issue
+
+```text id="b9xk4z"
+Multiple execution paths:
+CLI path + Node bridge path
+```
+
+This is temporary and will be unified later.
+
+---
+
+# 7. Storage Model Status
+
+## Current Structure
+
+```text id="n3q8lm"
+.vault
+├── notes/
+├── cache/
+├── index/
+└── workspace.yml
+```
+
+---
+
+## Status
+
+- structure implemented
+- index and cache directories partially used
+- schema stable
+
+---
+
+# 8. Repair System Status
+
+## Status: FUNCTIONAL
+
+### Pipeline
+
+```text id="r8m2kv"
+health_check
+→ repair_suggestions
+→ apply_repairs
+```
+
+---
+
+### Current Behavior
+
+- filename-based matching
+- heuristic candidate detection
+- basic file move/rename support
+
+---
+
+### Limitations
+
+- no symbol-aware repair
+- no interactive confirmation flow
+- no similarity scoring engine
+
+---
+
+# 9. Architecture Stability Status
+
+## Stable Components
+
+- Note domain
+- Workspace domain
+- CLI
+- Storage layer
+- Parser layer
+
+---
+
+## Evolving Components
+
+- VaultContext (central runtime)
+- Cache system
+- Service layer (migration in progress)
+
+---
+
+## Unstable / Transitional
+
+- VSCode integration paths
+- Node bridge full coverage
+- cache invalidation consistency
+- repository access elimination
+
+---
+
+# 10. System Flow (Current Reality)
+
+## Read Flow
+
+```text id="c8m1zp"
+Service
+→ VaultContext (partial)
+→ Cache (partial)
+→ Repository (fallback)
+→ filesystem
+```
+
+---
+
+## Write Flow
+
+```text id="f7k2lm"
+Service
+→ Repository
+→ filesystem
+→ (manual cache invalidation)
+```
+
+---
+
+# 11. Target State (Reference Only)
+
+## Ideal Future Architecture
+
+```text id="p9m4xz"
+VSCode / CLI / Node
+        ↓
+     Service Layer
+        ↓
+   VaultContext (FULL CONTROL)
+        ↓
+ Cache + Index + Repository
+```
+
+---
+
+# 12. Key Insight
+
+FrilVault is currently in a **structural consolidation phase**:
+
+- core is stable
+- runtime layer is emerging
+- integration paths are being unified
+- cache system is being activated across system boundaries
+
+---
+
+# 13. Summary
+
+FrilVault is no longer a note tool.
+
+It is currently transitioning into:
+
+> a runtime knowledge system for codebases
+
+The critical missing step is:
+
+> full VaultContext centralization + cache-driven read path unification

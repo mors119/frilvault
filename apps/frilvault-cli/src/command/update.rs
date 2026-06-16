@@ -4,7 +4,7 @@ use uuid::Uuid;
 use crate::{app::create_note_service, cli::update::UpdateCommand};
 
 pub fn execute(command: UpdateCommand) -> Result<()> {
-    let service = create_note_service()?;
+    let mut service = create_note_service()?;
 
     service.update_note(
         &command.file,

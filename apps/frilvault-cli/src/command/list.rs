@@ -7,7 +7,7 @@ use crate::{
 };
 
 pub fn execute(command: ListCommand) -> Result<()> {
-    let service = create_note_service()?;
+    let mut service = create_note_service()?;
 
     let notes = service.list_notes(&command.file)?;
 

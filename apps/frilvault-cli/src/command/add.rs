@@ -8,7 +8,7 @@ use crate::{
 };
 
 pub fn execute(command: AddCommand) -> Result<()> {
-    let service = create_note_service()?;
+    let mut service = create_note_service()?;
 
     let anchor = create_anchor(&command)?;
 
@@ -52,6 +52,61 @@ impl From<SymbolKindArg> for SymbolKind {
             SymbolKindArg::Impl => SymbolKind::Impl,
             SymbolKindArg::Method => SymbolKind::Method,
             SymbolKindArg::Unknown => SymbolKind::Unknown,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn create_anchor_builds_line_anchor() {
+        let command = AddCommand {
+            file: "src/main.rs".to_string(),
+            line: Some(12),
+            column: Some(3),
+            symbol: None,
+            kind: SymbolKindArg::Unknown,
+            signature: None,
+            line_hint: None,
+            content: "note".to_string(),
+        };
+
+        let anchor = create_anchor(&command).unwrap();
+
+        match anchor {
+            NoteAnchor::Line(line) => {
+                assert_eq!(line.line, 12);
+                assert_eq!(line.column, 3);
+            }
+            _ => panic!("expected line anchor"),
+        }
+    }
+
+    #[test]
+    fn create_anchor_builds_symbol_anchor() {
+        let command = AddCommand {
+            file: "src/main.rs".to_string(),
+            line: None,
+            column: None,
+            symbol: Some("main".to_string()),
+            kind: SymbolKindArg::Function,
+            signature: Some("fn main()".to_string()),
+            line_hint: Some(1),
+            content: "note".to_string(),
+        };
+
+        let anchor = create_anchor(&command).unwrap();
+
+        match anchor {
+            NoteAnchor::Symbol(symbol) => {
+                assert_eq!(symbol.name, "main");
+                assert_eq!(symbol.kind, SymbolKind::Function);
+                assert_eq!(symbol.signature.as_deref(), Some("fn main()"));
+                assert_eq!(symbol.line_hint, Some(1));
+            }
+            _ => panic!("expected symbol anchor"),
         }
     }
 }

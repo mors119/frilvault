@@ -1,13 +1,8 @@
-import * as path from 'path';
+import * as path from 'node:path';
 import * as vscode from 'vscode';
 
-import type {
-  MutationResult,
-  NoteView,
-  RepairSuggestion,
-  WorkspaceHealth,
-  WorkspaceStats,
-} from './types';
+import type { MutationResult, RepairSuggestion, NoteView, WorkspaceHealth, WorkspaceStats } from '../types';
+import { parseJson } from '../utils/parser';
 
 interface NativeBinding {
   addLineNote(
@@ -18,12 +13,7 @@ interface NativeBinding {
     content: string,
   ): string;
   listNotes(workspaceRoot: string, sourceFile: string): string;
-  updateNote(
-    workspaceRoot: string,
-    sourceFile: string,
-    noteId: string,
-    content: string,
-  ): string;
+  updateNote(workspaceRoot: string, sourceFile: string, noteId: string, content: string): string;
   deleteNote(workspaceRoot: string, sourceFile: string, noteId: string): void;
   searchNotes(workspaceRoot: string, keyword: string): string;
   workspaceStats(workspaceRoot: string): string;
@@ -32,16 +22,11 @@ interface NativeBinding {
   applyRepairs(workspaceRoot: string): number;
 }
 
-function parseJson<T>(value: string): T {
-  return JSON.parse(value) as T;
-}
-
-export class FrilVaultNativeClient {
+export class NodeBridge {
   private readonly binding: NativeBinding;
 
-  public constructor(private readonly context: vscode.ExtensionContext) {
-    const modulePath = path.join(context.extensionPath, 'dist', 'frilvault.node');
-    this.binding = require(modulePath) as NativeBinding;
+  public constructor(context: vscode.ExtensionContext) {
+    this.binding = require(path.join(context.extensionPath, 'dist', 'frilvault.node')) as NativeBinding;
   }
 
   public addLineNote(

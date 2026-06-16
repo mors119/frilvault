@@ -1,5 +1,5 @@
 use anyhow::Result;
-use frilvault_core::{NoteAnchor, NoteView};
+use frilvault_core::{NoteAnchor, note_view::NoteView};
 
 #[derive(Debug, Clone, Copy)]
 pub enum OutputFormat {
