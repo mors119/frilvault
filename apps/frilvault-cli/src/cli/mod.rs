@@ -30,5 +30,6 @@ pub enum Commands {
     Search(SearchCommand),
     Repair(RepairCommand),
     Doctor,
+    Health,
     Stats,
 }

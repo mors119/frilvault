@@ -1,9 +1,7 @@
-import * as path from 'node:path';
-
-import { executeAddNoteCli } from './cli';
+import type { CliClient } from '../../core/cliClient';
+import { getRelativeFilePath } from '../../utils/file';
 
 export interface AddNoteRequest {
-  cliPath: string;
   workspaceRoot: string;
   sourceFile: string;
   line: number;
@@ -12,21 +10,12 @@ export interface AddNoteRequest {
 }
 
 export class AddNoteService {
+  public constructor(private readonly cliClient: CliClient) {}
+
   public async execute(request: AddNoteRequest): Promise<void> {
-    const relativeFilePath = path.relative(request.workspaceRoot, request.sourceFile);
-
-    if (
-      relativeFilePath.length === 0 ||
-      relativeFilePath.startsWith('..') ||
-      path.isAbsolute(relativeFilePath)
-    ) {
-      throw new Error('The active file must be inside the current workspace.');
-    }
-
-    await executeAddNoteCli({
-      cliPath: request.cliPath,
+    await this.cliClient.addLineNote({
       workspaceRoot: request.workspaceRoot,
-      relativeFilePath,
+      sourceFile: getRelativeFilePath(request.workspaceRoot, request.sourceFile),
       line: request.line,
       column: request.column,
       content: request.content,

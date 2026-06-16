@@ -6,7 +6,9 @@ import * as path from 'node:path';
 import { suite, test, teardown } from 'mocha';
 import * as vscode from 'vscode';
 
+import { CliClient } from '../core/cliClient';
 import { createAddNoteCommand } from '../features/add-note/command';
+import { AddNoteService } from '../features/add-note/service';
 import { FrilVaultNotesProvider } from '../features/notes-panel/provider';
 import { NotesPanelService } from '../features/notes-panel/service';
 
@@ -46,12 +48,9 @@ suite('Extension Test Suite', () => {
       createLineNoteView('src/sample.ts', 3, 5, 'service note'),
     ]);
 
-    const service = new NotesPanelService();
-    const notes = await service.listNotes({
-      cliPath: workspace.cliPath,
-      workspaceRoot: workspace.root,
-      sourceFile: workspace.sourceFile,
-    });
+    const cliClient = new CliClient(() => workspace.cliPath);
+    const service = new NotesPanelService(cliClient);
+    const notes = await service.listNotes(workspace.root, path.join('src', 'sample.ts'));
 
     assert.strictEqual(notes.length, 1);
     assert.strictEqual(notes[0]?.note.content, 'service note');
@@ -68,20 +67,26 @@ suite('Extension Test Suite', () => {
     await configureExtension(workspace);
     await openFile(workspace.sourceFile);
 
-    const provider = new FrilVaultNotesProvider(() => workspace.root);
+    const cliClient = new CliClient(() => workspace.cliPath);
+    const provider = new FrilVaultNotesProvider(new NotesPanelService(cliClient), () => workspace.root);
     const firstChildren = await provider.getChildren();
 
     assert.strictEqual(firstChildren.length, 1);
-    assert.strictEqual(firstChildren[0]?.label, 'first file note');
-    assert.strictEqual(firstChildren[0]?.description, 'L7');
+    assert.strictEqual(firstChildren[0]?.label, path.join('src', 'sample.ts'));
+    assert.strictEqual(firstChildren[0]?.description, '1 note');
+    const firstNotes = await provider.getChildren(firstChildren[0]);
+    assert.strictEqual(firstNotes[0]?.label, 'first file note');
+    assert.strictEqual(firstNotes[0]?.description, 'L7');
 
     await openFile(workspace.secondSourceFile);
 
     const secondChildren = await provider.getChildren();
 
     assert.strictEqual(secondChildren.length, 1);
-    assert.strictEqual(secondChildren[0]?.label, 'second file note');
-    assert.strictEqual(secondChildren[0]?.description, 'L2');
+    assert.strictEqual(secondChildren[0]?.label, path.join('src', 'other.ts'));
+    const secondNotes = await provider.getChildren(secondChildren[0]);
+    assert.strictEqual(secondNotes[0]?.label, 'second file note');
+    assert.strictEqual(secondNotes[0]?.description, 'L2');
   });
 
   test('Add Note command executes flvt add with relative file path and refreshes', async () => {
@@ -95,18 +100,16 @@ suite('Extension Test Suite', () => {
     let decorationRefreshCount = 0;
     let successMessage = '';
     let errorMessage = '';
+    const cliClient = new CliClient(() => workspace.cliPath);
 
     const command = createAddNoteCommand({
       getWorkspaceRoot: () => workspace.root,
-      noteTreeDataProvider: {
-        refresh() {
+      service: new AddNoteService(cliClient),
+      refreshNotesPanel: () => {
           treeRefreshCount += 1;
-        },
       },
-      decorationsProvider: {
-        async refresh() {
+      refreshDecorations: async () => {
           decorationRefreshCount += 1;
-        },
       },
       promptNoteContent: async () => 'added from command test',
       showInformationMessage: async (message) => {

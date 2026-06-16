@@ -1,30 +1,27 @@
 use std::path::Path;
 
 use crate::{
-    FrilVaultResult, NoteAnchor, RepairSuggestion, WorkspaceHealth, WorkspaceIndexRepository,
-    WorkspaceStats, YamlNoteRepository,
+    FrilVaultResult, NoteAnchor, RepairSuggestion, VaultContext, WorkspaceHealth,
+    WorkspaceIndexRepository, WorkspaceStats,
 };
 
 pub struct WorkspaceService {
-    note_repository: YamlNoteRepository,
-    index_repository: WorkspaceIndexRepository,
+    pub vault_context: VaultContext,
+    pub index_repository: WorkspaceIndexRepository,
 }
 
 impl WorkspaceService {
-    pub fn new(
-        note_repository: YamlNoteRepository,
-        index_repository: WorkspaceIndexRepository,
-    ) -> Self {
+    pub fn new(vault_context: VaultContext, index_repository: WorkspaceIndexRepository) -> Self {
         Self {
-            note_repository,
+            vault_context,
             index_repository,
         }
     }
 
-    pub fn stats(&self) -> FrilVaultResult<WorkspaceStats> {
+    pub fn stats(&mut self) -> FrilVaultResult<WorkspaceStats> {
         let index = self.index_repository.rebuild()?;
 
-        let records = self.note_repository.list_all_note_files()?;
+        let records = self.vault_context.note_repository.list_all_note_files()?;
 
         let mut stats = WorkspaceStats {
             file_count: index.files.len(),
@@ -44,13 +41,8 @@ impl WorkspaceService {
         for record in records {
             for note in record.note_file.notes {
                 match note.anchor {
-                    NoteAnchor::Line(_) => {
-                        stats.line_notes += 1;
-                    }
-
-                    NoteAnchor::Symbol(_) => {
-                        stats.symbol_notes += 1;
-                    }
+                    NoteAnchor::Line(_) => stats.line_notes += 1,
+                    NoteAnchor::Symbol(_) => stats.symbol_notes += 1,
                 }
             }
         }
@@ -58,10 +50,9 @@ impl WorkspaceService {
         Ok(stats)
     }
 
-    pub fn health_check(&self) -> FrilVaultResult<WorkspaceHealth> {
+    pub fn health_check(&mut self) -> FrilVaultResult<WorkspaceHealth> {
         let index = self.index_repository.rebuild()?;
-        // TODO:
-        // Use cached index after index invalidation support is implemented.
+
         let mut health = WorkspaceHealth::default();
 
         for file in index.files {
@@ -101,7 +92,6 @@ impl WorkspaceService {
                 }
 
                 self.collect_workspace_files(&path, files)?;
-
                 continue;
             }
 
@@ -115,9 +105,8 @@ impl WorkspaceService {
         Ok(())
     }
 
-    pub fn repair_suggestions(&self) -> FrilVaultResult<Vec<RepairSuggestion>> {
+    pub fn repair_suggestions(&mut self) -> FrilVaultResult<Vec<RepairSuggestion>> {
         let health = self.health_check()?;
-
         let workspace_files = self.scan_workspace_files()?;
 
         let mut suggestions = Vec::new();
@@ -151,7 +140,7 @@ impl WorkspaceService {
         Ok(suggestions)
     }
 
-    pub fn apply_repairs(&self) -> FrilVaultResult<usize> {
+    pub fn apply_repairs(&mut self) -> FrilVaultResult<usize> {
         let suggestions = self.repair_suggestions()?;
 
         let mut repaired = 0;
@@ -170,9 +159,15 @@ impl WorkspaceService {
     }
 
     fn move_note_file(&self, source_file: &str, target_file: &str) -> FrilVaultResult<()> {
-        let source_note = self.note_repository.resolve_note_path(source_file);
+        let source_note = self
+            .vault_context
+            .note_repository
+            .resolve_note_path(source_file);
 
-        let target_note = self.note_repository.resolve_note_path(target_file);
+        let target_note = self
+            .vault_context
+            .note_repository
+            .resolve_note_path(target_file);
 
         if let Some(parent) = target_note.parent() {
             std::fs::create_dir_all(parent)?;

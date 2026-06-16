@@ -1,12 +1,22 @@
-use crate::{AddNoteInput, LineAnchor, NoteAnchor, NoteService, PathResolver, YamlNoteRepository};
+use crate::{
+    AddNoteInput, LineAnchor, NoteAnchor, NoteService, PathResolver, VaultContext,
+    WorkspaceIndexRepository, WorkspaceRepository, YamlNoteRepository,
+};
 
 use std::fs;
 
-fn create_service(workspace_root: &std::path::Path) -> NoteService<YamlNoteRepository> {
+fn create_service(workspace_root: &std::path::Path) -> NoteService {
     let resolver = PathResolver::new(workspace_root);
-    let repository = YamlNoteRepository::new(resolver);
+    let workspace_repository = WorkspaceRepository::new(resolver.clone());
+    workspace_repository.create_if_missing().unwrap();
 
-    NoteService::new(repository)
+    let index_repository = WorkspaceIndexRepository::new(resolver.clone());
+    index_repository.create_if_missing().unwrap();
+
+    let repository = YamlNoteRepository::new(resolver);
+    let vault_context = VaultContext::new(repository, index_repository);
+
+    NoteService::new(vault_context)
 }
 
 fn create_repository(workspace_root: &std::path::Path) -> YamlNoteRepository {
@@ -22,7 +32,7 @@ fn list_all_note_files_returns_all_note_files() {
 
     fs::create_dir_all(&workspace_root).unwrap();
 
-    let service = create_service(&workspace_root);
+    let mut service = create_service(&workspace_root);
 
     service
         .add_note(AddNoteInput {

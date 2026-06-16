@@ -2,19 +2,27 @@ use anyhow::Result;
 
 use crate::{
     app::create_note_service,
-    cli::search::SearchCommand,
+    cli::search::{SearchCommand, SearchFormatArg},
     output::{OutputFormat, print_notes},
 };
 
 pub fn execute(command: SearchCommand) -> Result<()> {
-    let service = create_note_service()?;
+    let mut service = create_note_service()?;
 
-    let results = service.search_notes(&command.keyword)?;
+    let results = match (command.keyword.as_deref(), command.file.as_deref()) {
+        (Some(keyword), Some(file)) => service
+            .search_notes(keyword)?
+            .into_iter()
+            .filter(|note| note.source_file.to_string_lossy() == file)
+            .collect(),
+        (Some(keyword), None) => service.search_notes(keyword)?,
+        (None, Some(file)) => service.list_notes(file)?,
+        (None, None) => anyhow::bail!("search requires either a keyword or --file"),
+    };
 
-    let format = if command.json {
-        OutputFormat::Json
-    } else {
-        OutputFormat::Text
+    let format = match (command.format, command.json) {
+        (Some(SearchFormatArg::Json), _) | (None, true) => OutputFormat::Json,
+        _ => OutputFormat::Text,
     };
 
     print_notes(&results, format)?;

@@ -3,7 +3,7 @@ use anyhow::Result;
 use crate::{app::create_workspace_service, cli::repair::RepairCommand};
 
 pub fn execute(command: RepairCommand) -> Result<()> {
-    let service = create_workspace_service()?;
+    let mut service = create_workspace_service()?;
 
     if command.apply {
         let repaired = service.apply_repairs()?;

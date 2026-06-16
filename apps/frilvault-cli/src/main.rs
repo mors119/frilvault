@@ -34,6 +34,10 @@ fn main() -> Result<()> {
             command::doctor::execute()?;
         }
 
+        Commands::Health => {
+            command::doctor::execute()?;
+        }
+
         Commands::Stats => command::stats::execute()?,
 
         Commands::Repair(cmd) => {
@@ -43,3 +47,6 @@ fn main() -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests;

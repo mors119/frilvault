@@ -3,7 +3,7 @@ use anyhow::Result;
 use crate::app::create_workspace_service;
 
 pub fn execute() -> Result<()> {
-    let service = create_workspace_service()?;
+    let mut service = create_workspace_service()?;
 
     let stats = service.stats()?;
 

@@ -1,126 +1,207 @@
-# FrilVault Architecture
+# 📘 FrilVault Architecture
 
-## Vision
+## Version
 
-FrilVault is a personal knowledge vault for developers.
+v0.1 (Current Core + VaultContext + Cache Transition)
 
-The system should let a developer attach private notes to code without changing the code itself.
+---
 
-## Core Principles
+# 1. Vision
 
-### Local First
+FrilVault is a developer-focused personal knowledge vault.
 
-All data is stored locally.
+It allows developers to attach structured, persistent notes to source code without modifying the code itself.
 
-### Source Code Integrity
+The system acts as a **knowledge layer on top of codebases**, not a code annotation tool.
 
-FrilVault must not modify source files.
+---
 
-### Shared Core Logic
+# 2. Core Principles
 
-Editor integrations should reuse the same core behavior instead of reimplementing note logic.
+## 2.1 Local First
 
-### Editor-Agnostic Design
+All data is stored locally inside the `.vault` directory.
 
-VS Code is one integration surface, not the product boundary.
+No external service dependency exists.
 
-## Current Repository Architecture
+---
+
+## 2.2 Source Code Integrity
+
+FrilVault must never modify source files.
+
+All metadata and notes are stored externally.
+
+---
+
+## 2.3 Shared Core Logic
+
+All clients must reuse `frilvault-core` as the single source of truth.
+
+No business logic duplication in:
+
+- CLI
+- VSCode extension
+- Node bridge
+
+---
+
+## 2.4 Runtime-Centric Design
+
+The system introduces a runtime container:
+
+> VaultContext
+
+This is responsible for:
+
+- caching
+- repository coordination
+- index access
+- runtime optimization
+
+---
+
+## 2.5 Editor-Agnostic Design
+
+VSCode is an integration layer, not the system boundary.
+
+Future editors must be able to integrate without modifying core logic.
+
+---
+
+# 3. Repository Architecture
 
 ```text
 frilvault
 ├── crates
 │   ├── frilvault-core
 │   └── frilvault-node
+│
 └── apps
     ├── frilvault-cli
     └── vscode-extension
 ```
 
-## `frilvault-core`
+---
 
-`frilvault-core` owns domain behavior.
+# 4. Core Architecture (frilvault-core)
+
+## 4.1 Module Structure
 
 ```text
 frilvault-core
 ├── note
 │   ├── entity
 │   ├── repository
-│   └── service
+│   ├── service
+│   └── view
+│
 ├── workspace
 │   ├── entity
 │   ├── path
 │   ├── repository
 │   └── service
+│
 ├── storage
 ├── parser
-└── cache
+├── cache
+└── vault_context
 ```
 
-Responsibilities:
+---
 
-- note CRUD
-- search
-- YAML serialization
-- workspace metadata
+## 4.2 Responsibilities
+
+### Note Domain
+
+Responsible for:
+
+- CRUD operations
+- line-based anchors
+- symbol-based anchors
+- note search
+- YAML persistence
+
+---
+
+### Workspace Domain
+
+Responsible for:
+
 - workspace indexing
-- workspace health checks
-- repair suggestion and application
+- statistics
+- health checks
+- repair suggestions
+- repair execution
 
-## `frilvault-cli`
+---
 
-`frilvault-cli` is the command-line surface over `frilvault-core`.
+### VaultContext (Runtime Core)
+
+VaultContext is the runtime container of FrilVault.
+
+It owns:
+
+- YamlNoteRepository
+- WorkspaceIndexRepository
+- NoteCache
 
 Responsibilities:
 
-- parse user input
-- call core services
-- print text or JSON output
+- cache-aware note loading
+- cache invalidation
+- unified access layer for services
 
-Current notable interface:
+---
 
-- `flvt list --format json`
+### Cache Layer
 
-## `frilvault-node`
+In-memory optimization layer used only in long-running processes.
 
-`frilvault-node` is a Node-API bridge around `frilvault-core`.
+Current responsibilities:
 
-Purpose:
+- note caching
+- future: index cache, symbol cache
 
-- expose core operations to Node-based editor runtimes
-- avoid duplicating domain behavior in TypeScript
+Important:
 
-Current exposed operations are still selective rather than complete.
+CLI usage is short-lived; cache is primarily useful for VSCode and Node runtime.
 
-## VS Code Extension
+---
 
-The VS Code extension is the UI layer.
+# 5. Service Layer
 
-Current feature structure:
+## 5.1 NoteService
 
-```text
-src/features
-├── add-note
-├── decorations
-└── notes-panel
-```
+Responsible for:
 
-Current behavior split:
+- note CRUD orchestration
+- search coordination
+- interaction with VaultContext
 
-- CLI-backed flows:
-  - add note
-  - active-file notes panel
-  - gutter decorations
-- Node-bridge-backed flows:
-  - edit note
-  - delete note
-  - search
-  - stats
-  - health
-  - repair
+Important:
 
-This split works for the MVP, but it is transitional.
+- Must not directly access repositories
+- Must go through VaultContext
 
-## Storage Model
+---
+
+## 5.2 WorkspaceService
+
+Responsible for:
+
+- workspace statistics
+- health checking
+- repair system
+- file scanning
+
+Important:
+
+- Uses both index data and note data via VaultContext
+
+---
+
+# 6. Storage Model
 
 ```text
 .vault
@@ -130,7 +211,11 @@ This split works for the MVP, but it is transitional.
 └── workspace.yml
 ```
 
-## Repair Flow
+---
+
+# 7. Repair System
+
+## Flow
 
 ```text
 health_check
@@ -140,33 +225,147 @@ repair_suggestions
 apply_repairs
 ```
 
-Current repair implementation:
+---
 
-- filename-based candidate matching
+## Current Implementation
 
-Planned improvements:
+- filename-based matching
+- heuristic candidate selection
 
-- interactive candidate selection
-- stronger similarity heuristics
+---
+
+## Future Improvements
+
 - symbol-aware repair
+- interactive selection
+- semantic matching
 
-## Target Direction
+---
 
-Long-term direction:
+# 8. Runtime Data Flow
+
+## 8.1 Read Path
 
 ```text
-Editor UI
-   │
-   ├── CLI integration
-   │
-   └── Native bridge integration
-            │
-            ▼
-      frilvault-core
+Client (CLI / VSCode)
+↓
+Service
+↓
+VaultContext
+↓
+Cache (hit/miss)
+↓
+Repository (fallback)
+↓
+Filesystem (YAML)
 ```
 
-Desired properties:
+---
 
-- one source of truth for note behavior
-- reusable integration boundary for multiple editors
-- minimal UI-specific logic outside the editor surface
+## 8.2 Write Path
+
+```text
+Client
+↓
+Service
+↓
+Repository
+↓
+Filesystem
+↓
+Cache invalidation
+```
+
+---
+
+# 9. Editor Integration Model
+
+## 9.1 VSCode Architecture (Current Transition State)
+
+```text
+VSCode Extension
+├── CLI-based operations
+├── Node bridge operations
+└── Core-backed features
+```
+
+---
+
+## 9.2 Target Architecture
+
+```text
+VSCode Extension
+↓
+Node Bridge
+↓
+VaultContext
+↓
+frilvault-core
+```
+
+---
+
+## 9.3 Features Owned by VSCode Layer
+
+- gutter decorations
+- hover previews
+- sidebar panels
+- commands UI
+
+No business logic allowed here.
+
+---
+
+# 10. Key Design Constraints
+
+## 10.1 Single Source of Truth
+
+All logic must live in:
+
+> frilvault-core
+
+---
+
+## 10.2 No Repository Leakage
+
+Services must not directly depend on repositories.
+
+All access goes through VaultContext.
+
+---
+
+## 10.3 Cache Transparency
+
+Cache must be invisible to clients.
+
+Clients should not know whether data is cached or loaded from disk.
+
+---
+
+# 11. Target Evolution
+
+## Current State
+
+- Core fully functional
+- Cache introduced
+- VaultContext introduced
+- CLI stable
+- Repair system functional
+
+---
+
+## Next State
+
+- full VaultContext adoption
+- unified service layer
+- cache-driven reads
+- VSCode integration stabilization
+
+---
+
+## Future State
+
+- symbol resolution engine
+- watcher system
+- semantic search
+- AI context layer
