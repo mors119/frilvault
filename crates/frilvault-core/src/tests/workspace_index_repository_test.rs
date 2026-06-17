@@ -1,34 +1,10 @@
 use std::fs;
 
+use super::helper::{create_test_note_service, create_test_workspace_service};
 use crate::{
-    AddNoteInput, LineAnchor, NoteAnchor, NoteService, PathResolver, SymbolAnchor, SymbolKind,
-    VaultContext, WorkspaceIndex, WorkspaceIndexRepository, WorkspaceRepository, WorkspaceService,
-    YamlNoteRepository,
+    AddNoteInput, LineAnchor, NoteAnchor, PathResolver, SymbolAnchor, SymbolKind, WorkspaceIndex,
+    WorkspaceIndexRepository,
 };
-
-fn create_vault_context(workspace_root: &std::path::Path) -> VaultContext {
-    let resolver = PathResolver::new(workspace_root);
-    let workspace_repository = WorkspaceRepository::new(resolver.clone());
-    workspace_repository.create_if_missing().unwrap();
-
-    let note_repository = YamlNoteRepository::new(resolver.clone());
-    let index_repository = WorkspaceIndexRepository::new(resolver);
-    index_repository.create_if_missing().unwrap();
-
-    VaultContext::new(note_repository, index_repository)
-}
-
-fn create_note_service(workspace_root: &std::path::Path) -> NoteService {
-    NoteService::new(create_vault_context(workspace_root))
-}
-
-fn create_workspace_service(workspace_root: &std::path::Path) -> WorkspaceService {
-    let vault_context = create_vault_context(workspace_root);
-    let resolver = PathResolver::new(workspace_root);
-    let repository = WorkspaceIndexRepository::new(resolver);
-
-    WorkspaceService::new(vault_context, repository)
-}
 
 #[test]
 fn load_returns_default_index_when_missing() {
@@ -86,6 +62,7 @@ fn create_if_missing_creates_index_file() {
     fs::create_dir_all(&workspace_root).unwrap();
 
     let resolver = PathResolver::new(&workspace_root);
+
     let repository = WorkspaceIndexRepository::new(resolver.clone());
 
     repository.create_if_missing().unwrap();
@@ -107,7 +84,7 @@ fn rebuild_creates_index_from_note_files() {
 
     let resolver = PathResolver::new(&workspace_root);
 
-    let mut service = create_note_service(&workspace_root);
+    let mut service = create_test_note_service(&workspace_root);
 
     service
         .add_note(AddNoteInput {
@@ -170,7 +147,7 @@ fn rebuild_marks_missing_files_as_not_existing() {
 
     let resolver = PathResolver::new(&workspace_root);
 
-    let mut service = create_note_service(&workspace_root);
+    let mut service = create_test_note_service(&workspace_root);
 
     service
         .add_note(AddNoteInput {
@@ -198,7 +175,7 @@ fn health_check_detects_missing_files_from_note_repository() {
 
     fs::create_dir_all(&workspace_root).unwrap();
 
-    let mut service = create_note_service(&workspace_root);
+    let mut service = create_test_note_service(&workspace_root);
 
     service
         .add_note(AddNoteInput {
@@ -210,7 +187,7 @@ fn health_check_detects_missing_files_from_note_repository() {
         })
         .unwrap();
 
-    let mut workspace_service = create_workspace_service(&workspace_root);
+    let mut workspace_service = create_test_workspace_service(&workspace_root);
 
     let health = workspace_service.health_check().unwrap();
 
@@ -228,9 +205,9 @@ fn stats_counts_line_and_symbol_notes() {
 
     fs::create_dir_all(&workspace_root).unwrap();
 
-    let mut service = create_note_service(&workspace_root);
+    let mut service = create_test_note_service(&workspace_root);
 
-    let mut workspace_service = create_workspace_service(&workspace_root);
+    let mut workspace_service = create_test_workspace_service(&workspace_root);
 
     service
         .add_note(AddNoteInput {
@@ -286,7 +263,7 @@ fn repair_suggests_matching_file_names() {
 
     fs::write(workspace_root.join("src/core/lib.rs"), "").unwrap();
 
-    let mut service = create_note_service(&workspace_root);
+    let mut service = create_test_note_service(&workspace_root);
 
     service
         .add_note(AddNoteInput {
@@ -298,7 +275,7 @@ fn repair_suggests_matching_file_names() {
         })
         .unwrap();
 
-    let mut workspace_service = create_workspace_service(&workspace_root);
+    let mut workspace_service = create_test_workspace_service(&workspace_root);
 
     let suggestions = workspace_service.repair_suggestions().unwrap();
 
@@ -322,7 +299,7 @@ fn apply_repairs_moves_note_file() {
 
     let resolver = PathResolver::new(&workspace_root);
 
-    let mut service = create_note_service(&workspace_root);
+    let mut service = create_test_note_service(&workspace_root);
 
     service
         .add_note(AddNoteInput {
@@ -338,7 +315,7 @@ fn apply_repairs_moves_note_file() {
 
     assert!(old_note_path.exists());
 
-    let mut workspace_service = create_workspace_service(&workspace_root);
+    let mut workspace_service = create_test_workspace_service(&workspace_root);
 
     let repaired = workspace_service.apply_repairs().unwrap();
 

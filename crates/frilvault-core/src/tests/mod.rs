@@ -1,3 +1,5 @@
+mod helper;
+
 #[cfg(test)]
 mod note_entity_test;
 
