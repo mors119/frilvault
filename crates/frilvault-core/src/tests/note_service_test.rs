@@ -1,20 +1,9 @@
+use super::helper::create_test_note_service;
 use crate::{
-    AddNoteInput, LineAnchor, NoteAnchor, NoteService, PathResolver, SymbolAnchor, SymbolKind,
-    VaultContext, WorkspaceIndexRepository, YamlNoteRepository, constants::NOTE_FILE_EXTENSION,
+    AddNoteInput, LineAnchor, NoteAnchor, SymbolAnchor, SymbolKind, constants::NOTE_FILE_EXTENSION,
 };
 
-use std::{fs, path::Path};
-
-pub fn return_service(workspace_root: &Path) -> NoteService {
-    let resolver = PathResolver::new(workspace_root);
-
-    let note_repository = YamlNoteRepository::new(resolver.clone());
-    let index_repository = WorkspaceIndexRepository::new(resolver);
-
-    let vault_context = VaultContext::new(note_repository, index_repository);
-
-    NoteService::new(vault_context)
-}
+use std::fs;
 
 #[test]
 fn add_line_type_note_creates_yaml_file() {
@@ -23,7 +12,7 @@ fn add_line_type_note_creates_yaml_file() {
 
     fs::create_dir_all(&workspace_root).unwrap();
 
-    let mut service = return_service(&workspace_root);
+    let mut service = create_test_note_service(&workspace_root);
 
     let input = AddNoteInput {
         source_file: "src/main.rs".into(),
@@ -57,7 +46,7 @@ fn add_symbol_type_note_creates_yaml_file() {
 
     fs::create_dir_all(&workspace_root).unwrap();
 
-    let mut service = return_service(&workspace_root);
+    let mut service = create_test_note_service(&workspace_root);
 
     let input = AddNoteInput {
         source_file: "src/main.rs".into(),
@@ -107,7 +96,7 @@ fn load_notes_from_existing_yaml() {
 
     fs::create_dir_all(&workspace_root).unwrap();
 
-    let mut service = return_service(&workspace_root);
+    let mut service = create_test_note_service(&workspace_root);
 
     service
         .add_note(AddNoteInput {
@@ -132,7 +121,7 @@ fn add_note_and_load_note() {
 
     fs::create_dir_all(&workspace_root).unwrap();
 
-    let mut service = return_service(&workspace_root);
+    let mut service = create_test_note_service(&workspace_root);
 
     service
         .add_note(AddNoteInput {
@@ -169,7 +158,7 @@ fn delete_note_removes_note() {
 
     fs::create_dir_all(&workspace_root).unwrap();
 
-    let mut service = return_service(&workspace_root);
+    let mut service = create_test_note_service(&workspace_root);
 
     let note = service
         .add_note(AddNoteInput {
@@ -198,7 +187,7 @@ fn update_note_changes_content() {
 
     fs::create_dir_all(&workspace_root).unwrap();
 
-    let mut service = return_service(&workspace_root);
+    let mut service = create_test_note_service(&workspace_root);
 
     let note = service
         .add_note(AddNoteInput {
@@ -231,7 +220,7 @@ fn search_notes_finds_matching_notes() {
 
     fs::create_dir_all(&workspace_root).unwrap();
 
-    let mut service = return_service(&workspace_root);
+    let mut service = create_test_note_service(&workspace_root);
 
     service
         .add_note(AddNoteInput {
@@ -291,7 +280,7 @@ fn search_finds_symbol_anchor() {
 
     fs::create_dir_all(&workspace_root).unwrap();
 
-    let mut service = return_service(&workspace_root);
+    let mut service = create_test_note_service(&workspace_root);
 
     service
         .add_note(AddNoteInput {
