@@ -26,3 +26,6 @@ mod workspace_index_repository_test;
 
 #[cfg(test)]
 mod vault_context_test;
+
+#[cfg(test)]
+mod repair_engin_test;

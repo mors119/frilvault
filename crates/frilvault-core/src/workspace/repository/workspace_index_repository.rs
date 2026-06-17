@@ -1,6 +1,9 @@
 use std::{fs, path::Path};
 
-use crate::{FrilVaultResult, IndexedFile, PathResolver, WorkspaceIndex, YamlNoteRepository};
+use crate::{
+    FileMove, FrilVaultResult, IndexDiff, IndexedFile, PathResolver, RepairSuggestion,
+    WorkspaceIndex, YamlNoteRepository,
+};
 
 #[derive(Debug, Clone)]
 pub struct WorkspaceIndexRepository {
@@ -85,5 +88,23 @@ impl WorkspaceIndexRepository {
         self.save(&index)?;
 
         Ok(index)
+    }
+
+    pub fn detect_moves(
+        &self,
+        old_index: &WorkspaceIndex,
+        new_index: &WorkspaceIndex,
+    ) -> Vec<FileMove> {
+        IndexDiff::diff(old_index, new_index)
+    }
+
+    pub fn repair_suggestions(
+        &self,
+        old_index: &WorkspaceIndex,
+        new_index: &WorkspaceIndex,
+    ) -> Vec<RepairSuggestion> {
+        let moves = self.detect_moves(old_index, new_index);
+
+        RepairSuggestion::from_moves(moves)
     }
 }

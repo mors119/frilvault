@@ -35,3 +35,8 @@ pub fn create_test_workspace_service(workspace_root: &Path) -> WorkspaceService 
 
     WorkspaceService::new(vault_context, repository)
 }
+
+pub fn create_test_index_repository(workspace_root: &Path) -> WorkspaceIndexRepository {
+    let resolver = PathResolver::new(workspace_root);
+    WorkspaceIndexRepository::new(resolver)
+}

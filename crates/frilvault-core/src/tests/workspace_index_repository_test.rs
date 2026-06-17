@@ -2,8 +2,9 @@ use std::fs;
 
 use super::helper::{create_test_note_service, create_test_workspace_service};
 use crate::{
-    AddNoteInput, LineAnchor, NoteAnchor, PathResolver, SymbolAnchor, SymbolKind, WorkspaceIndex,
-    WorkspaceIndexRepository,
+    AddNoteInput, IndexDiff, IndexedFile, LineAnchor, NoteAnchor, PathResolver, SymbolAnchor,
+    SymbolKind, WorkspaceIndex, WorkspaceIndexRepository,
+    tests::helper::create_test_index_repository,
 };
 
 #[test]
@@ -328,4 +329,93 @@ fn apply_repairs_moves_note_file() {
     assert!(!old_note_path.exists());
 
     fs::remove_dir_all(workspace_root).unwrap();
+}
+
+#[test]
+fn detects_renamed_file_by_name_similarity() {
+    let workspace_root =
+        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
+
+    fs::create_dir_all(&workspace_root).unwrap();
+
+    let old = WorkspaceIndex {
+        version: 1,
+        files: vec![IndexedFile {
+            source_file: "src/parser.rs".to_string(),
+            note_count: 1,
+            exists: true,
+        }],
+    };
+
+    let new = WorkspaceIndex {
+        version: 1,
+        files: vec![IndexedFile {
+            source_file: "src/core/parser.rs".to_string(),
+            note_count: 1,
+            exists: true,
+        }],
+    };
+
+    let repo = create_test_index_repository(&workspace_root);
+
+    let moves = repo.detect_moves(&old, &new);
+
+    assert_eq!(moves.len(), 1);
+    assert!(moves[0].confidence > 0.5);
+
+    fs::remove_dir_all(workspace_root).unwrap();
+}
+
+#[test]
+fn detects_removed_and_added_files() {
+    let workspace_root =
+        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
+
+    fs::create_dir_all(&workspace_root).unwrap();
+
+    let old = WorkspaceIndex {
+        version: 1,
+        files: vec![IndexedFile {
+            source_file: "a.rs".to_string(),
+            note_count: 1,
+            exists: true,
+        }],
+    };
+
+    let new = WorkspaceIndex {
+        version: 1,
+        files: vec![IndexedFile {
+            source_file: "b.rs".to_string(),
+            note_count: 1,
+            exists: true,
+        }],
+    };
+
+    let repo = create_test_index_repository(&workspace_root);
+
+    let moves = repo.detect_moves(&old, &new);
+
+    assert!(moves.is_empty());
+
+    fs::remove_dir_all(workspace_root).unwrap();
+}
+
+#[test]
+fn detects_strong_rename_by_name_and_path() {
+    let old = "src/parser.rs";
+    let new = "src/parser.rs";
+
+    let score = IndexDiff::similarity_score(old, new);
+
+    assert!(score >= 1.0);
+}
+
+#[test]
+fn rejects_unrelated_files() {
+    let old = "src/parser.rs";
+    let new = "src/ui/button.rs";
+
+    let score = IndexDiff::similarity_score(old, new);
+
+    assert!(score < 1.0);
 }

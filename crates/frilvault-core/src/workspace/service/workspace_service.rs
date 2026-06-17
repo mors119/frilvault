@@ -3,8 +3,6 @@
 //! This module provides statistics,
 //! health checks, and repair workflows.
 
-use std::path::Path;
-
 use crate::{
     FrilVaultResult, NoteAnchor, RepairSuggestion, VaultContext, WorkspaceHealth,
     WorkspaceIndexRepository, WorkspaceStats,
@@ -31,9 +29,9 @@ impl WorkspaceService {
     }
 
     pub fn stats(&mut self) -> FrilVaultResult<WorkspaceStats> {
-        let index = self.index_repository.rebuild()?;
+        let index = self.vault_context.rebuild_index()?;
 
-        let records = self.vault_context.note_repository.list_all_note_files()?;
+        let records = self.vault_context.list_all_note_files()?;
 
         let mut stats = WorkspaceStats {
             file_count: index.files.len(),
@@ -76,50 +74,9 @@ impl WorkspaceService {
         Ok(health)
     }
 
-    fn scan_workspace_files(&self) -> FrilVaultResult<Vec<String>> {
-        let mut files = Vec::new();
-
-        self.collect_workspace_files(self.index_repository.workspace_root(), &mut files)?;
-
-        Ok(files)
-    }
-
-    fn collect_workspace_files(
-        &self,
-        directory: &Path,
-        files: &mut Vec<String>,
-    ) -> FrilVaultResult<()> {
-        for entry in std::fs::read_dir(directory)? {
-            let entry = entry?;
-            let file_type = entry.file_type()?;
-            let path = entry.path();
-
-            if file_type.is_symlink() {
-                continue;
-            }
-
-            if file_type.is_dir() {
-                if path.file_name().and_then(|n| n.to_str()) == Some(".vault") {
-                    continue;
-                }
-
-                self.collect_workspace_files(&path, files)?;
-                continue;
-            }
-
-            let relative = path
-                .strip_prefix(self.index_repository.workspace_root())
-                .map_err(|_| crate::FrilVaultError::SourcePathOutsideWorkspace)?;
-
-            files.push(relative.to_string_lossy().to_string());
-        }
-
-        Ok(())
-    }
-
     pub fn repair_suggestions(&mut self) -> FrilVaultResult<Vec<RepairSuggestion>> {
         let health = self.health_check()?;
-        let workspace_files = self.scan_workspace_files()?;
+        let workspace_files = self.vault_context.scan_workspace_files()?;
 
         let mut suggestions = Vec::new();
 
@@ -171,15 +128,9 @@ impl WorkspaceService {
     }
 
     fn move_note_file(&self, source_file: &str, target_file: &str) -> FrilVaultResult<()> {
-        let source_note = self
-            .vault_context
-            .note_repository
-            .resolve_note_path(source_file);
+        let source_note = self.vault_context.resolve_note_path(source_file);
 
-        let target_note = self
-            .vault_context
-            .note_repository
-            .resolve_note_path(target_file);
+        let target_note = self.vault_context.resolve_note_path(target_file);
 
         if let Some(parent) = target_note.parent() {
             std::fs::create_dir_all(parent)?;
