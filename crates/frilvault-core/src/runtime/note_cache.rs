@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use crate::NoteFile;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct NoteCache {
     files: HashMap<PathBuf, NoteFile>,
 }
