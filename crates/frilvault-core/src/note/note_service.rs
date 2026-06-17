@@ -179,4 +179,31 @@ impl NoteService {
             })
             .collect())
     }
+
+    pub fn list_symbol_notes(
+        &mut self,
+        source_file: impl AsRef<Path>,
+    ) -> FrilVaultResult<Vec<NoteView>> {
+        Ok(self
+            .list_notes(source_file)?
+            .into_iter()
+            .filter(|view| matches!(view.note.anchor, NoteAnchor::Symbol(_)))
+            .collect())
+    }
+
+    pub fn find_symbol_note(
+        &mut self,
+        source_file: impl AsRef<Path>,
+        symbol: &str,
+    ) -> FrilVaultResult<Option<NoteView>> {
+        let symbol = symbol.to_lowercase();
+
+        Ok(self
+            .list_symbol_notes(source_file)?
+            .into_iter()
+            .find(|view| match &view.note.anchor {
+                NoteAnchor::Symbol(anchor) => anchor.name.to_lowercase() == symbol,
+                _ => false,
+            }))
+    }
 }

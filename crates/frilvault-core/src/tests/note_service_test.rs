@@ -376,3 +376,78 @@ fn search_by_symbol_returns_empty_when_not_found() {
 
     fs::remove_dir_all(workspace_root).unwrap();
 }
+
+#[test]
+fn list_symbol_notes_returns_only_symbol_notes() {
+    let workspace_root =
+        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
+
+    fs::create_dir_all(&workspace_root).unwrap();
+
+    let mut service = create_test_note_service(&workspace_root);
+
+    service
+        .add_note(AddNoteInput {
+            source_file: "src/main.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "line".to_string(),
+        })
+        .unwrap();
+
+    service
+        .add_note(AddNoteInput {
+            source_file: "src/main.rs".into(),
+            anchor: NoteAnchor::Symbol(SymbolAnchor {
+                name: "main".to_string(),
+                kind: SymbolKind::Function,
+                signature: None,
+                line_hint: None,
+            }),
+            content: "symbol".to_string(),
+        })
+        .unwrap();
+
+    let results = service.list_symbol_notes("src/main.rs").unwrap();
+
+    assert_eq!(results.len(), 1);
+
+    match &results[0].note.anchor {
+        NoteAnchor::Symbol(anchor) => {
+            assert_eq!(anchor.name, "main");
+        }
+        _ => panic!("expected symbol note"),
+    }
+
+    fs::remove_dir_all(workspace_root).unwrap();
+}
+
+#[test]
+fn find_symbol_note_returns_matching_symbol() {
+    let workspace_root =
+        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
+
+    fs::create_dir_all(&workspace_root).unwrap();
+
+    let mut service = create_test_note_service(&workspace_root);
+
+    service
+        .add_note(AddNoteInput {
+            source_file: "src/main.rs".into(),
+            anchor: NoteAnchor::Symbol(SymbolAnchor {
+                name: "Parser".to_string(),
+                kind: SymbolKind::Struct,
+                signature: None,
+                line_hint: None,
+            }),
+            content: "parser note".to_string(),
+        })
+        .unwrap();
+
+    let result = service.find_symbol_note("src/main.rs", "Parser").unwrap();
+
+    assert!(result.is_some());
+
+    assert_eq!(result.unwrap().note.content, "parser note");
+
+    fs::remove_dir_all(workspace_root).unwrap();
+}
