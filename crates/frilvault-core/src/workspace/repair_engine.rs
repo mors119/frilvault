@@ -25,10 +25,10 @@ impl RepairEngine {
                 std::fs::rename(&old_path, &new_path)?;
             }
 
-            self.vault_context.invalidate_notes(&mv.from.as_ref());
-            self.vault_context.invalidate_notes(&mv.to.as_ref());
+            self.vault_context.invalidate_notes(mv.from.as_ref());
+            self.vault_context.invalidate_notes(mv.to.as_ref());
 
-            let _ = self.vault_context.load_notes(&mv.to.as_ref());
+            let _ = self.vault_context.load_notes(mv.to.as_ref());
 
             repaired += 1;
         }

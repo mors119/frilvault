@@ -1,5 +1,6 @@
 use crate::{WorkspaceIndex, WorkspaceSnapshot};
 
+#[derive(Default)]
 pub struct SnapshotManager {
     previous: Option<WorkspaceSnapshot>,
 }
