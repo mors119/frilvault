@@ -306,3 +306,73 @@ fn search_finds_symbol_anchor() {
 
     fs::remove_dir_all(workspace_root).unwrap();
 }
+
+#[test]
+fn search_by_symbol_returns_matching_notes() {
+    let workspace_root =
+        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
+
+    fs::create_dir_all(&workspace_root).unwrap();
+
+    let mut service = create_test_note_service(&workspace_root);
+
+    service
+        .add_note(AddNoteInput {
+            source_file: "src/main.rs".into(),
+
+            anchor: NoteAnchor::Symbol(SymbolAnchor {
+                name: "main".to_string(),
+
+                kind: SymbolKind::Function,
+
+                signature: None,
+
+                line_hint: None,
+            }),
+
+            content: "main symbol note".to_string(),
+        })
+        .unwrap();
+
+    let results = service.search_by_symbol("main").unwrap();
+
+    assert_eq!(results.len(), 1);
+
+    assert_eq!(results[0].note.content, "main symbol note");
+
+    fs::remove_dir_all(workspace_root).unwrap();
+}
+
+#[test]
+fn search_by_symbol_returns_empty_when_not_found() {
+    let workspace_root =
+        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
+
+    fs::create_dir_all(&workspace_root).unwrap();
+
+    let mut service = create_test_note_service(&workspace_root);
+
+    service
+        .add_note(AddNoteInput {
+            source_file: "src/main.rs".into(),
+
+            anchor: NoteAnchor::Symbol(SymbolAnchor {
+                name: "main".to_string(),
+
+                kind: SymbolKind::Function,
+
+                signature: None,
+
+                line_hint: None,
+            }),
+
+            content: "main symbol note".to_string(),
+        })
+        .unwrap();
+
+    let results = service.search_by_symbol("parser").unwrap();
+
+    assert!(results.is_empty());
+
+    fs::remove_dir_all(workspace_root).unwrap();
+}

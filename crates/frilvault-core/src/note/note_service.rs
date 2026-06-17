@@ -1,3 +1,12 @@
+//! Application services for note operations.
+//!
+//! This module contains high-level note workflows
+//! such as CRUD operations and searching.
+//!
+//! Services should access storage through
+//! VaultContext rather than directly interacting
+//! with repositories.
+
 use std::path::Path;
 
 use chrono::Utc;
@@ -9,6 +18,10 @@ use crate::{
     note_view::NoteView,
 };
 
+/// Application service responsible for note operations.
+///
+/// Coordinates repositories, caching,
+/// and future runtime behaviors.
 pub struct NoteService {
     pub vault_context: VaultContext,
 }
@@ -31,9 +44,9 @@ impl NoteService {
 
         self.vault_context
             .note_repository
-            .replace_notes(source_file, notes)?;
+            .replace_notes(source_file.as_ref(), notes)?;
 
-        self.vault_context.invalidate_notes(source_file);
+        self.vault_context.invalidate_notes(source_file.as_ref());
 
         Ok(())
     }
@@ -115,54 +128,55 @@ impl NoteService {
         Ok(())
     }
 
-    pub fn search_notes(&mut self, keyword: &str) -> FrilVaultResult<Vec<NoteView>> {
+    fn all_note_views(&self) -> FrilVaultResult<Vec<NoteView>> {
         let records = self.vault_context.note_repository.list_all_note_files()?;
-
-        let keyword = keyword.to_lowercase();
 
         let mut results = Vec::new();
 
         for record in records {
             for note in record.note_file.notes {
-                let content_match = note.content.to_lowercase().contains(&keyword);
-
-                let symbol_match = match &note.anchor {
-                    NoteAnchor::Symbol(anchor) => anchor.name.to_lowercase().contains(&keyword),
-                    _ => false,
-                };
-
-                if content_match || symbol_match {
-                    results.push(NoteView {
-                        source_file: record.source_file.clone(),
-                        note,
-                    });
-                }
+                results.push(NoteView {
+                    source_file: record.source_file.clone(),
+                    note,
+                });
             }
         }
 
         Ok(results)
     }
 
+    pub fn search_notes(&mut self, keyword: &str) -> FrilVaultResult<Vec<NoteView>> {
+        let keyword = keyword.to_lowercase();
+
+        Ok(self
+            .all_note_views()?
+            .into_iter()
+            .filter(|view| {
+                let content_match = view.note.content.to_lowercase().contains(&keyword);
+
+                let symbol_match = match &view.note.anchor {
+                    NoteAnchor::Symbol(anchor) => anchor.name.to_lowercase().contains(&keyword),
+                    _ => false,
+                };
+
+                content_match || symbol_match
+            })
+            .collect())
+    }
+
     pub fn search_by_symbol(&mut self, symbol: &str) -> FrilVaultResult<Vec<NoteView>> {
         let symbol = symbol.to_lowercase();
 
-        let records = self.vault_context.note_repository.list_all_note_files()?;
-
-        let mut results = Vec::new();
-
-        for record in records {
-            for note in record.note_file.notes {
-                if let NoteAnchor::Symbol(anchor) = &note.anchor
-                    && anchor.name.to_lowercase().contains(&symbol)
-                {
-                    results.push(NoteView {
-                        source_file: record.source_file.clone(),
-                        note,
-                    });
-                }
-            }
-        }
-
-        Ok(results)
+        Ok(self
+            .all_note_views()?
+            .into_iter()
+            .filter(|view| {
+                matches!(
+                    &view.note.anchor,
+                    NoteAnchor::Symbol(anchor)
+                        if anchor.name.to_lowercase().contains(&symbol)
+                )
+            })
+            .collect())
     }
 }

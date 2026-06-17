@@ -1,3 +1,8 @@
+//! Workspace-level application services.
+//!
+//! This module provides statistics,
+//! health checks, and repair workflows.
+
 use std::path::Path;
 
 use crate::{
@@ -5,6 +10,13 @@ use crate::{
     WorkspaceIndexRepository, WorkspaceStats,
 };
 
+/// Application service responsible for
+/// workspace-level operations.
+///
+/// Examples:
+/// - statistics
+/// - health checks
+/// - repair suggestions
 pub struct WorkspaceService {
     pub vault_context: VaultContext,
     pub index_repository: WorkspaceIndexRepository,
