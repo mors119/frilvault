@@ -1,9 +1,21 @@
+use std::path::Path;
+
 use crate::{FrilVaultResult, NoteCache, NoteFile, WorkspaceIndexRepository, YamlNoteRepository};
 
+/// Runtime container for FrilVault.
+///
+/// VaultContext owns shared runtime resources:
+///
+/// - repositories
+/// - caches
+/// - indexes
+///
+/// Services should use VaultContext instead of
+/// accessing repositories directly.
 pub struct VaultContext {
     pub note_repository: YamlNoteRepository,
     pub workspace_index_repository: WorkspaceIndexRepository,
-    pub cache: NoteCache,
+    pub note_cache: NoteCache,
 }
 
 impl VaultContext {
@@ -14,15 +26,13 @@ impl VaultContext {
         Self {
             note_repository,
             workspace_index_repository,
-            cache: NoteCache::default(),
+            note_cache: NoteCache::default(),
         }
     }
 
-    pub fn load_notes(&mut self, source_file: &std::path::Path) -> FrilVaultResult<NoteFile> {
-        let key = source_file.to_path_buf();
-
+    pub fn load_notes(&mut self, source_file: &Path) -> FrilVaultResult<NoteFile> {
         // 1. CACHE HIT
-        if let Some(cached) = self.cache.get(&key) {
+        if let Some(cached) = self.note_cache.get(source_file) {
             return Ok(cached.clone());
         }
 
@@ -30,12 +40,17 @@ impl VaultContext {
         let note_file = self.note_repository.load_by_source_file(source_file)?;
 
         // 3. CACHE STORE
-        self.cache.insert(key, note_file.clone());
+        self.note_cache
+            .insert(source_file.to_path_buf(), note_file.clone());
 
         Ok(note_file)
     }
 
-    pub fn invalidate_notes(&mut self, source_file: &std::path::Path) {
-        self.cache.invalidate(&source_file.to_path_buf());
+    pub fn invalidate_notes(&mut self, source_file: &Path) {
+        self.note_cache.invalidate(source_file);
+    }
+
+    pub fn contains_cached_notes(&self, source_file: &Path) -> bool {
+        self.note_cache.contains(source_file)
     }
 }

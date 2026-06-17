@@ -16,7 +16,7 @@ pub fn create_test_note_service(workspace_root: &Path) -> NoteService {
     NoteService::new(vault_context)
 }
 
-fn create_test_vault_context(workspace_root: &Path) -> VaultContext {
+pub fn create_test_vault_context(workspace_root: &Path) -> VaultContext {
     let resolver = PathResolver::new(workspace_root);
     let workspace_repository = WorkspaceRepository::new(resolver.clone());
     workspace_repository.create_if_missing().unwrap();

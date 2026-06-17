@@ -1,9 +1,9 @@
 mod dto;
 mod entity;
-mod repository;
-mod service;
+mod note_repository;
+mod note_service;
 
 pub use dto::*;
 pub use entity::*;
-pub use repository::*;
-pub use service::*;
+pub use note_repository::*;
+pub use note_service::*;

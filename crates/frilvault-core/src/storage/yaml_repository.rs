@@ -1,3 +1,8 @@
+//! YAML-backed note repository.
+//!
+//! Notes are persisted as YAML files
+//! inside the `.vault/notes` directory.
+
 use crate::note::{Note, NoteFile};
 use crate::parser::{NoteParser, YamlParser};
 use crate::workspace::PathResolver;
