@@ -1,8 +1,13 @@
 {
   "name": "frilvault",
   "displayName": "frilvault",
-  "description": "Personal Knowledge Vault",
+  "description": "Personal knowledge vault for code.",
   "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FrilLab/frilvault"
+  },
+  "publisher": "FrilLab",
   "engines": {
     "vscode": "^1.120.0"
   },
@@ -109,12 +114,6 @@
       }
     }
   },
-  "files": [
-    "dist/**",
-    "media/**",
-    "README.md",
-    "CHANGELOG.md"
-  ],
   "scripts": {
     "build:native": "node scripts/build-native.js",
     "vscode:prepublish": "npm run package",
