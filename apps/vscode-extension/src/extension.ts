@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 
 import { CliClient } from './core/cliClient';
-import { NodeBridge } from './core/nodeBridge';
 import { createAddNoteCommand } from './features/add-note/command';
 import { AddNoteService } from './features/add-note/service';
 import { FrilVaultDecorator } from './features/decorations/decorator';
@@ -9,14 +8,11 @@ import { FrilVaultHoverProvider } from './features/hover/hoverProvider';
 import { FrilVaultNotesProvider } from './features/notes-panel/provider';
 import { NotesPanelService } from './features/notes-panel/service';
 import { createSearchCommand } from './features/search/command';
-import { createApplyRepairsCommand, createShowHealthCommand } from './features/workspace/health';
-import { createShowStatsCommand } from './features/workspace/stats';
 import type { NoteView } from './types';
 import { getWorkspaceRoot, revealNote } from './utils/file';
 
 export function activate(context: vscode.ExtensionContext): void {
   const cliClient = new CliClient();
-  const nodeBridge = new NodeBridge(context);
   const addNoteService = new AddNoteService(cliClient);
   const notesPanelService = new NotesPanelService(cliClient);
   const notesProvider = new FrilVaultNotesProvider(notesPanelService, getWorkspaceRoot);
@@ -45,20 +41,21 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand(
       'frilvault.showStats',
-      createShowStatsCommand(nodeBridge, getWorkspaceRoot),
+      async () => {
+        await vscode.window.showWarningMessage('FrilVault stats are temporarily unavailable.');
+      },
     ),
     vscode.commands.registerCommand(
       'frilvault.showHealth',
-      createShowHealthCommand(nodeBridge, getWorkspaceRoot),
+      async () => {
+        await vscode.window.showWarningMessage('FrilVault health is temporarily unavailable.');
+      },
     ),
     vscode.commands.registerCommand(
       'frilvault.applyRepairs',
-      createApplyRepairsCommand(
-        nodeBridge,
-        getWorkspaceRoot,
-        () => notesProvider.refresh(),
-        async () => decorator.refresh(),
-      ),
+      async () => {
+        await vscode.window.showWarningMessage('FrilVault repair is temporarily unavailable.');
+      },
     ),
     vscode.commands.registerCommand('frilvault.refresh', async () => {
       notesProvider.refresh();
