@@ -1,6 +1,7 @@
 use super::helper::create_test_note_service;
 use crate::{
-    AddNoteInput, LineAnchor, NoteAnchor, SymbolAnchor, SymbolKind, constants::NOTE_FILE_EXTENSION,
+    LineAnchor, NoteAnchor, SymbolAnchor, SymbolKind, add_note_request::AddNoteRequest,
+    constants::NOTE_FILE_EXTENSION,
 };
 
 use std::fs;
@@ -14,7 +15,7 @@ fn add_line_type_note_creates_yaml_file() {
 
     let mut service = create_test_note_service(&workspace_root);
 
-    let input = AddNoteInput {
+    let input = AddNoteRequest {
         source_file: "src/main.rs".into(),
         anchor: crate::note::NoteAnchor::Line(crate::note::LineAnchor {
             line: 10,
@@ -48,13 +49,13 @@ fn add_symbol_type_note_creates_yaml_file() {
 
     let mut service = create_test_note_service(&workspace_root);
 
-    let input = AddNoteInput {
+    let input = AddNoteRequest {
         source_file: "src/main.rs".into(),
         anchor: crate::note::NoteAnchor::Symbol(crate::note::SymbolAnchor {
             name: "NoteService::add_note".to_string(),
             kind: SymbolKind::Method,
             signature: Some(
-                "fn add_note(&self, input: AddNoteInput) -> FrilVaultResult<Note>".to_owned(),
+                "fn add_note(&self, input: AddNoteRequest) -> FrilVaultResult<Note>".to_owned(),
             ),
             line_hint: Some(34),
         }),
@@ -79,7 +80,7 @@ fn add_symbol_type_note_creates_yaml_file() {
             assert_eq!(anchor.kind, SymbolKind::Method);
             assert_eq!(
                 anchor.signature.as_deref(),
-                Some("fn add_note(&self, input: AddNoteInput) -> FrilVaultResult<Note>")
+                Some("fn add_note(&self, input: AddNoteRequest) -> FrilVaultResult<Note>")
             );
             assert_eq!(anchor.line_hint, Some(34));
         }
@@ -99,7 +100,7 @@ fn load_notes_from_existing_yaml() {
     let mut service = create_test_note_service(&workspace_root);
 
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/lib.rs".into(),
             anchor: crate::note::NoteAnchor::Line(crate::note::LineAnchor { line: 1, column: 1 }),
             content: "lib 진입점".to_string(),
@@ -124,7 +125,7 @@ fn add_note_and_load_note() {
     let mut service = create_test_note_service(&workspace_root);
 
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/main.rs".into(),
             anchor: crate::note::NoteAnchor::Line(crate::note::LineAnchor {
                 line: 10,
@@ -161,7 +162,7 @@ fn delete_note_removes_note() {
     let mut service = create_test_note_service(&workspace_root);
 
     let note = service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/main.rs".into(),
             anchor: crate::note::NoteAnchor::Line(crate::note::LineAnchor {
                 line: 10,
@@ -190,7 +191,7 @@ fn update_note_changes_content() {
     let mut service = create_test_note_service(&workspace_root);
 
     let note = service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/main.rs".into(),
             anchor: crate::note::NoteAnchor::Line(crate::note::LineAnchor {
                 line: 10,
@@ -223,7 +224,7 @@ fn search_notes_finds_matching_notes() {
     let mut service = create_test_note_service(&workspace_root);
 
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/main.rs".into(),
 
             anchor: NoteAnchor::Line(LineAnchor {
@@ -236,7 +237,7 @@ fn search_notes_finds_matching_notes() {
         .unwrap();
 
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/lib.rs".into(),
 
             anchor: NoteAnchor::Line(LineAnchor { line: 3, column: 1 }),
@@ -246,7 +247,7 @@ fn search_notes_finds_matching_notes() {
         .unwrap();
 
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/mod.rs".into(),
 
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
@@ -283,7 +284,7 @@ fn search_finds_symbol_anchor() {
     let mut service = create_test_note_service(&workspace_root);
 
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/service.rs".into(),
 
             anchor: NoteAnchor::Symbol(SymbolAnchor {
@@ -317,7 +318,7 @@ fn search_by_symbol_returns_matching_notes() {
     let mut service = create_test_note_service(&workspace_root);
 
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/main.rs".into(),
 
             anchor: NoteAnchor::Symbol(SymbolAnchor {
@@ -353,7 +354,7 @@ fn search_by_symbol_returns_empty_when_not_found() {
     let mut service = create_test_note_service(&workspace_root);
 
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/main.rs".into(),
 
             anchor: NoteAnchor::Symbol(SymbolAnchor {
@@ -387,7 +388,7 @@ fn list_symbol_notes_returns_only_symbol_notes() {
     let mut service = create_test_note_service(&workspace_root);
 
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/main.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
             content: "line".to_string(),
@@ -395,7 +396,7 @@ fn list_symbol_notes_returns_only_symbol_notes() {
         .unwrap();
 
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/main.rs".into(),
             anchor: NoteAnchor::Symbol(SymbolAnchor {
                 name: "main".to_string(),
@@ -431,7 +432,7 @@ fn find_symbol_note_returns_matching_symbol() {
     let mut service = create_test_note_service(&workspace_root);
 
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/main.rs".into(),
             anchor: NoteAnchor::Symbol(SymbolAnchor {
                 name: "Parser".to_string(),

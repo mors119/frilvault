@@ -6,6 +6,7 @@ const extensionRoot = path.resolve(__dirname, '..');
 const workspaceRoot = path.resolve(extensionRoot, '..', '..');
 const profile = process.argv.includes('--production') ? 'release' : 'debug';
 const crateName = 'frilvault-node';
+const crateManifest = path.join(workspaceRoot, 'crates', 'frilvault-node', 'Cargo.toml');
 const dylibName = {
   darwin: `libfrilvault_node.dylib`,
   linux: `libfrilvault_node.so`,
@@ -14,6 +15,11 @@ const dylibName = {
 
 if (!dylibName) {
   throw new Error(`Unsupported platform: ${process.platform}`);
+}
+
+if (!fs.existsSync(crateManifest)) {
+  console.warn('[frilvault] frilvault-node crate is unavailable; skipping native build.');
+  process.exit(0);
 }
 
 childProcess.execFileSync(

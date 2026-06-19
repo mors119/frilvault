@@ -1,18 +1,16 @@
 use anyhow::{Result, bail};
-
-use frilvault_core::{AddNoteInput, LineAnchor, NoteAnchor, SymbolAnchor, SymbolKind};
-
-use crate::{
-    app::create_note_service,
-    cli::add::{AddCommand, SymbolKindArg},
+use frilvault_core::{
+    AddNoteRequest, LineAnchor, NoteAnchor, SymbolAnchor, SymbolKind, create_note_service,
 };
+
+use crate::cli::add::{AddCommand, SymbolKindArg};
 
 pub fn execute(command: AddCommand) -> Result<()> {
     let mut service = create_note_service()?;
 
     let anchor = create_anchor(&command)?;
 
-    service.add_note(AddNoteInput {
+    service.add_note(AddNoteRequest {
         source_file: command.file.into(),
         anchor,
         content: command.content,

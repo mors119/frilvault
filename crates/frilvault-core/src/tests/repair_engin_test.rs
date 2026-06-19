@@ -2,8 +2,9 @@ use std::{fs, path::Path};
 use uuid::Uuid;
 
 use crate::{
-    AddNoteInput, FileMove, LineAnchor, NoteAnchor, NoteService, PathResolver, VaultContext,
-    WorkspaceIndexRepository, YamlNoteRepository, repair_engine::RepairEngine,
+    FileMove, LineAnchor, NoteAnchor, NoteService, PathResolver, VaultContext,
+    WorkspaceIndexRepository, YamlNoteRepository, add_note_request::AddNoteRequest,
+    repair_engine::RepairEngine,
 };
 
 #[test]
@@ -24,7 +25,7 @@ fn repair_engine_moves_note_files() {
 
     // 1. create note for original file
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/main.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
             content: "test note".to_string(),

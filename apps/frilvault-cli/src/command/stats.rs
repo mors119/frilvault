@@ -1,6 +1,5 @@
 use anyhow::Result;
-
-use crate::app::create_workspace_service;
+use frilvault_core::create_workspace_service;
 
 pub fn execute() -> Result<()> {
     let mut service = create_workspace_service()?;

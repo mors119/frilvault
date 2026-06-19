@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::note::NoteAnchor;
 
 #[derive(Debug, Clone)]
-pub struct AddNoteInput {
+pub struct AddNoteRequest {
     /// source_file: the path to the source file where the note is located.
     pub source_file: PathBuf,
 

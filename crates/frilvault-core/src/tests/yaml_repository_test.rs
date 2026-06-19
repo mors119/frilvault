@@ -1,6 +1,6 @@
 use crate::{
-    AddNoteInput, LineAnchor, NoteAnchor, NoteService, PathResolver, VaultContext,
-    WorkspaceIndexRepository, WorkspaceRepository, YamlNoteRepository,
+    LineAnchor, NoteAnchor, NoteService, PathResolver, VaultContext, WorkspaceIndexRepository,
+    WorkspaceRepository, YamlNoteRepository, add_note_request::AddNoteRequest,
 };
 
 use std::fs;
@@ -35,7 +35,7 @@ fn list_all_note_files_returns_all_note_files() {
     let mut service = create_service(&workspace_root);
 
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/main.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor {
                 line: 10,
@@ -46,7 +46,7 @@ fn list_all_note_files_returns_all_note_files() {
         .unwrap();
 
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/lib.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 3, column: 1 }),
             content: "lib note".to_string(),
