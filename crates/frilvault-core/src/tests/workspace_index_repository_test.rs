@@ -2,8 +2,8 @@ use std::fs;
 
 use super::helper::{create_test_note_service, create_test_workspace_service};
 use crate::{
-    AddNoteInput, IndexDiff, IndexedFile, LineAnchor, NoteAnchor, PathResolver, SymbolAnchor,
-    SymbolKind, WorkspaceIndex, WorkspaceIndexRepository,
+    IndexDiff, IndexedFile, LineAnchor, NoteAnchor, PathResolver, SymbolAnchor, SymbolKind,
+    WorkspaceIndex, WorkspaceIndexRepository, add_note_request::AddNoteRequest,
     tests::helper::create_test_index_repository,
 };
 
@@ -88,7 +88,7 @@ fn rebuild_creates_index_from_note_files() {
     let mut service = create_test_note_service(&workspace_root);
 
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/main.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor {
                 line: 10,
@@ -99,7 +99,7 @@ fn rebuild_creates_index_from_note_files() {
         .unwrap();
 
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/lib.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 3, column: 1 }),
             content: "lib note".to_string(),
@@ -107,7 +107,7 @@ fn rebuild_creates_index_from_note_files() {
         .unwrap();
 
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/lib.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 7, column: 2 }),
             content: "second lib note".to_string(),
@@ -151,7 +151,7 @@ fn rebuild_marks_missing_files_as_not_existing() {
     let mut service = create_test_note_service(&workspace_root);
 
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/missing.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
             content: "orphan".to_string(),
@@ -179,7 +179,7 @@ fn health_check_detects_missing_files_from_note_repository() {
     let mut service = create_test_note_service(&workspace_root);
 
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/missing.rs".into(),
 
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
@@ -211,7 +211,7 @@ fn stats_counts_line_and_symbol_notes() {
     let mut workspace_service = create_test_workspace_service(&workspace_root);
 
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/main.rs".into(),
 
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
@@ -221,7 +221,7 @@ fn stats_counts_line_and_symbol_notes() {
         .unwrap();
 
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/main.rs".into(),
 
             anchor: NoteAnchor::Symbol(SymbolAnchor {
@@ -267,7 +267,7 @@ fn repair_suggests_matching_file_names() {
     let mut service = create_test_note_service(&workspace_root);
 
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/parser/lib.rs".into(),
 
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
@@ -303,7 +303,7 @@ fn apply_repairs_moves_note_file() {
     let mut service = create_test_note_service(&workspace_root);
 
     service
-        .add_note(AddNoteInput {
+        .add_note(AddNoteRequest {
             source_file: "src/parser/lib.rs".into(),
 
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),

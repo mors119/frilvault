@@ -1,11 +1,11 @@
 use crate::{
-    AddNoteInput,
+    add_note_request::AddNoteRequest,
     note::{LineAnchor, Note, NoteAnchor},
 };
 
 #[test]
 fn create_note_from_input() {
-    let input = AddNoteInput {
+    let input = AddNoteRequest {
         source_file: "src/main.rs".into(),
         anchor: NoteAnchor::Line(LineAnchor {
             line: 10,
@@ -29,7 +29,7 @@ fn create_note_from_input() {
 
 #[test]
 fn create_note_generates_uuid() {
-    let input = AddNoteInput {
+    let input = AddNoteRequest {
         source_file: "src/main.rs".into(),
         anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
         content: "uuid test".to_string(),

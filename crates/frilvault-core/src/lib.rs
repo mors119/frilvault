@@ -1,11 +1,14 @@
-pub mod constants;
+pub mod app;
 pub mod error;
-pub mod note;
-pub mod parser;
-pub mod runtime;
-pub mod storage;
-pub mod workspace;
 
+mod constants;
+pub mod note;
+mod parser;
+mod runtime;
+mod storage;
+mod workspace;
+
+pub use app::*;
 pub use error::*;
 pub use note::*;
 pub use parser::*;

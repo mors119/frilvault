@@ -13,9 +13,8 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use crate::{
-    FrilVaultError, FrilVaultResult, NoteAnchor, VaultContext,
-    note::{AddNoteInput, Note},
-    note_view::NoteView,
+    FrilVaultError, FrilVaultResult, NoteAnchor, VaultContext, add_note_request::AddNoteRequest,
+    note::Note, note_view::NoteView,
 };
 
 /// Application service responsible for note operations.
@@ -23,7 +22,7 @@ use crate::{
 /// Coordinates repositories, caching,
 /// and future runtime behaviors.
 pub struct NoteService {
-    pub vault_context: VaultContext,
+    vault_context: VaultContext,
 }
 
 impl NoteService {
@@ -51,7 +50,7 @@ impl NoteService {
         Ok(())
     }
 
-    pub fn add_note(&mut self, input: AddNoteInput) -> FrilVaultResult<Note> {
+    pub fn add_note(&mut self, input: AddNoteRequest) -> FrilVaultResult<Note> {
         let source_file = input.source_file.clone();
         let note = Note::new(input);
 

@@ -1,7 +1,7 @@
 use anyhow::Result;
+use frilvault_core::create_note_service;
 
 use crate::{
-    app::create_note_service,
     cli::list::{ListCommand, ListFormatArg},
     output::{OutputFormat, print_notes},
 };

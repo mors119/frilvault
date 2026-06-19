@@ -1,6 +1,9 @@
 use std::{fs, path::Path};
 
-use crate::{AddNoteInput, LineAnchor, Note, NoteAnchor, tests::helper::create_test_vault_context};
+use crate::{
+    LineAnchor, Note, NoteAnchor, add_note_request::AddNoteRequest,
+    tests::helper::create_test_vault_context,
+};
 
 #[test]
 fn load_notes_populates_cache() {
@@ -15,7 +18,7 @@ fn load_notes_populates_cache() {
         .note_repository
         .append_note(
             Path::new("src/main.rs"),
-            &Note::new(AddNoteInput {
+            &Note::new(AddNoteRequest {
                 source_file: "src/main.rs".into(),
                 anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
                 content: "test".to_string(),

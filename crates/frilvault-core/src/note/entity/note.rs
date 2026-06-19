@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::note::{AddNoteInput, NoteAnchor};
+use crate::{add_note_request::AddNoteRequest, note::NoteAnchor};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Note {
@@ -23,7 +23,7 @@ pub struct Note {
 }
 
 impl Note {
-    pub fn new(input: AddNoteInput) -> Self {
+    pub fn new(input: AddNoteRequest) -> Self {
         let now = Utc::now();
 
         Self {

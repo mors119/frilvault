@@ -1,6 +1,7 @@
 use anyhow::Result;
+use frilvault_core::create_workspace_service;
 
-use crate::{app::create_workspace_service, cli::repair::RepairCommand};
+use crate::cli::repair::RepairCommand;
 
 pub fn execute(command: RepairCommand) -> Result<()> {
     let mut service = create_workspace_service()?;

@@ -1,7 +1,8 @@
 use anyhow::Result;
+use frilvault_core::create_note_service;
 use uuid::Uuid;
 
-use crate::{app::create_note_service, cli::update::UpdateCommand};
+use crate::cli::update::UpdateCommand;
 
 pub fn execute(command: UpdateCommand) -> Result<()> {
     let mut service = create_note_service()?;

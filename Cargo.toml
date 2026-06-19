@@ -3,6 +3,5 @@ resolver = "2"
 
 members = [
     "apps/frilvault-cli",
-    "crates/frilvault-node",
     "crates/frilvault-core",
 ]

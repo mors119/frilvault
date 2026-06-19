@@ -1,11 +1,12 @@
-use anyhow::Result;
-
-use frilvault_core::{
-    NoteService, PathResolver, VaultContext, WorkspaceIndexRepository, WorkspaceRepository,
-    WorkspaceService, YamlNoteRepository,
+use crate::{
+    FrilVaultResult,
+    note::NoteService,
+    runtime::VaultContext,
+    storage::YamlNoteRepository,
+    workspace::{PathResolver, WorkspaceIndexRepository, WorkspaceRepository, WorkspaceService},
 };
 
-pub fn create_note_service() -> Result<NoteService> {
+pub fn create_note_service() -> FrilVaultResult<NoteService> {
     let workspace_root = std::env::current_dir()?;
 
     let resolver = PathResolver::new(workspace_root);
@@ -22,7 +23,7 @@ pub fn create_note_service() -> Result<NoteService> {
     Ok(NoteService::new(vault_context))
 }
 
-pub fn create_workspace_service() -> anyhow::Result<WorkspaceService> {
+pub fn create_workspace_service() -> FrilVaultResult<WorkspaceService> {
     let workspace_root = std::env::current_dir()?;
 
     let resolver = PathResolver::new(workspace_root);
