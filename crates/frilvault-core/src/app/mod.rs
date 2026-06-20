@@ -1,3 +1,3 @@
-pub mod frilvault;
+mod frilvault;
 
 pub use frilvault::*;

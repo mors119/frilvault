@@ -1,8 +1,9 @@
 use anyhow::Result;
-use frilvault_core::create_workspace_service;
+use frilvault_core::FrilVault;
 
 pub fn execute() -> Result<()> {
-    let mut service = create_workspace_service()?;
+    let workspace = FrilVault::open(std::env::current_dir()?)?;
+    let mut service = FrilVault::create_workspace_service(&workspace)?;
 
     let stats = service.stats()?;
 

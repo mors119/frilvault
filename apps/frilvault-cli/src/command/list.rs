@@ -1,5 +1,5 @@
 use anyhow::Result;
-use frilvault_core::create_note_service;
+use frilvault_core::FrilVault;
 
 use crate::{
     cli::list::{ListCommand, ListFormatArg},
@@ -7,7 +7,8 @@ use crate::{
 };
 
 pub fn execute(command: ListCommand) -> Result<()> {
-    let mut service = create_note_service()?;
+    let workspace = FrilVault::open(std::env::current_dir()?)?;
+    let mut service = FrilVault::create_note_service(&workspace)?;
 
     let notes = service.list_notes(&command.file)?;
 

@@ -1,8 +1,8 @@
 pub mod app;
 pub mod error;
+pub mod note;
 
 mod constants;
-pub mod note;
 mod parser;
 mod runtime;
 mod storage;
