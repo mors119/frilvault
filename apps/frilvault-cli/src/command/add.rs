@@ -1,12 +1,11 @@
 use anyhow::{Result, bail};
-use frilvault_core::{
-    AddNoteRequest, LineAnchor, NoteAnchor, SymbolAnchor, SymbolKind, create_note_service,
-};
+use frilvault_core::{AddNoteRequest, FrilVault, LineAnchor, NoteAnchor, SymbolAnchor, SymbolKind};
 
 use crate::cli::add::{AddCommand, SymbolKindArg};
 
 pub fn execute(command: AddCommand) -> Result<()> {
-    let mut service = create_note_service()?;
+    let workspace = FrilVault::open(std::env::current_dir()?)?;
+    let mut service = FrilVault::create_note_service(&workspace)?;
 
     let anchor = create_anchor(&command)?;
 

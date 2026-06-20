@@ -1,3 +1,5 @@
+use std::path::{Path, PathBuf};
+
 use crate::{
     FrilVaultResult,
     note::NoteService,
@@ -6,36 +8,44 @@ use crate::{
     workspace::{PathResolver, WorkspaceIndexRepository, WorkspaceRepository, WorkspaceService},
 };
 
-pub fn create_note_service() -> FrilVaultResult<NoteService> {
-    let workspace_root = std::env::current_dir()?;
-
-    let resolver = PathResolver::new(workspace_root);
-
-    let workspace_repository = WorkspaceRepository::new(resolver.clone());
-    workspace_repository.create_if_missing()?;
-
-    let index_repository = WorkspaceIndexRepository::new(resolver.clone());
-    index_repository.create_if_missing()?;
-
-    let note_repository = YamlNoteRepository::new(resolver.clone());
-    let vault_context = VaultContext::new(note_repository, index_repository);
-
-    Ok(NoteService::new(vault_context))
+pub struct FrilVault {
+    workspace_root: PathBuf,
 }
 
-pub fn create_workspace_service() -> FrilVaultResult<WorkspaceService> {
-    let workspace_root = std::env::current_dir()?;
+impl FrilVault {
+    pub fn open(workspace_root: impl AsRef<Path>) -> FrilVaultResult<Self> {
+        Ok(Self {
+            workspace_root: workspace_root.as_ref().to_path_buf(),
+        })
+    }
 
-    let resolver = PathResolver::new(workspace_root);
+    pub fn create_note_service(&self) -> FrilVaultResult<NoteService> {
+        let resolver = PathResolver::new(&self.workspace_root);
 
-    let workspace_repository = WorkspaceRepository::new(resolver.clone());
-    workspace_repository.create_if_missing()?;
+        let workspace_repository = WorkspaceRepository::new(resolver.clone());
+        workspace_repository.create_if_missing()?;
 
-    let index_repository = WorkspaceIndexRepository::new(resolver.clone());
-    index_repository.create_if_missing()?;
+        let index_repository = WorkspaceIndexRepository::new(resolver.clone());
+        index_repository.create_if_missing()?;
 
-    let note_repository = YamlNoteRepository::new(resolver);
-    let vault_context = VaultContext::new(note_repository, index_repository.clone());
+        let note_repository = YamlNoteRepository::new(resolver.clone());
+        let vault_context = VaultContext::new(note_repository, index_repository);
 
-    Ok(WorkspaceService::new(vault_context, index_repository))
+        Ok(NoteService::new(vault_context))
+    }
+
+    pub fn create_workspace_service(&self) -> FrilVaultResult<WorkspaceService> {
+        let resolver = PathResolver::new(&self.workspace_root);
+
+        let workspace_repository = WorkspaceRepository::new(resolver.clone());
+        workspace_repository.create_if_missing()?;
+
+        let index_repository = WorkspaceIndexRepository::new(resolver.clone());
+        index_repository.create_if_missing()?;
+
+        let note_repository = YamlNoteRepository::new(resolver);
+        let vault_context = VaultContext::new(note_repository, index_repository.clone());
+
+        Ok(WorkspaceService::new(vault_context, index_repository))
+    }
 }
