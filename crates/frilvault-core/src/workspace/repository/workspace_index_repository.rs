@@ -1,8 +1,9 @@
 use std::{fs, path::Path};
 
 use crate::{
-    FileMove, FrilVaultResult, IndexDiff, IndexedFile, PathResolver, RepairSuggestion,
-    WorkspaceIndex, YamlNoteRepository,
+    FrilVaultResult, RepairSuggestion,
+    storage::YamlNoteRepository,
+    workspace::{FileMove, IndexDiff, IndexedFile, PathResolver, WorkspaceIndex},
 };
 
 #[derive(Debug, Clone)]

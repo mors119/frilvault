@@ -1,4 +1,4 @@
-use crate::{WorkspaceIndex, WorkspaceSnapshot};
+use crate::workspace::{WorkspaceIndex, WorkspaceSnapshot};
 
 #[derive(Default)]
 pub struct SnapshotManager {

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::WorkspaceIndex;
+use crate::workspace::WorkspaceIndex;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkspaceSnapshot {

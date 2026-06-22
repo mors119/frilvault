@@ -1,26 +1,18 @@
-use std::{fs, path::Path};
-use uuid::Uuid;
+use std::path::Path;
 
 use crate::{
-    FileMove, LineAnchor, NoteAnchor, NoteService, PathResolver, VaultContext,
-    WorkspaceIndexRepository, YamlNoteRepository, add_note_request::AddNoteRequest,
-    repair_engine::RepairEngine,
+    AddNoteRequest, LineAnchor, NoteAnchor,
+    note::NoteService,
+    tests::helper::{create_test_vault_context, create_test_workspace},
+    workspace::{FileMove, PathResolver, repair_engine::RepairEngine},
 };
 
 #[test]
 fn repair_engine_moves_note_files() {
-    let workspace_root = std::env::temp_dir().join(format!("frilvault-test-{}", Uuid::new_v4()));
-
-    fs::create_dir_all(&workspace_root).unwrap();
-
-    let resolver = PathResolver::new(&workspace_root);
-
-    let note_repository = YamlNoteRepository::new(resolver.clone());
-
-    let index_repository = WorkspaceIndexRepository::new(resolver.clone());
-
-    let vault_context = VaultContext::new(note_repository, index_repository);
-
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let resolver = PathResolver::new(workspace_root);
+    let vault_context = create_test_vault_context(workspace_root);
     let mut service = NoteService::new(vault_context.clone());
 
     // 1. create note for original file
@@ -51,24 +43,13 @@ fn repair_engine_moves_note_files() {
 
     assert!(!old_path.exists());
     assert!(new_path.exists());
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn repair_engine_invalidates_cache_correctly() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
-
-    fs::create_dir_all(&workspace_root).unwrap();
-
-    let resolver = PathResolver::new(&workspace_root);
-
-    let note_repository = YamlNoteRepository::new(resolver.clone());
-
-    let index_repository = WorkspaceIndexRepository::new(resolver.clone());
-
-    let mut vault_context = VaultContext::new(note_repository, index_repository);
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut vault_context = create_test_vault_context(workspace_root);
 
     // preload cache
     let _ = vault_context.load_notes("src/main.rs".as_ref());
@@ -98,6 +79,4 @@ fn repair_engine_invalidates_cache_correctly() {
             .note_cache
             .contains(Path::new("src/main_renamed.rs"))
     );
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }

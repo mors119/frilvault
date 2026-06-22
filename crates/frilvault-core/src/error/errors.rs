@@ -18,3 +18,5 @@ pub enum FrilVaultError {
     #[error("invalid note file path")]
     InvalidNoteFilePath,
 }
+
+pub type FrilVaultResult<T> = Result<T, FrilVaultError>;

@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{add_note_request::AddNoteRequest, note::NoteAnchor};
+use crate::{AddNoteRequest, note::NoteAnchor};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Note {

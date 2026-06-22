@@ -1,6 +1,6 @@
-use super::helper::create_test_note_service;
+use super::helper::{create_test_note_service, create_test_workspace};
 use crate::{
-    LineAnchor, NoteAnchor, SymbolAnchor, SymbolKind, add_note_request::AddNoteRequest,
+    AddNoteRequest, LineAnchor, NoteAnchor, SymbolAnchor, SymbolKind,
     constants::NOTE_FILE_EXTENSION,
 };
 
@@ -8,12 +8,9 @@ use std::fs;
 
 #[test]
 fn add_line_type_note_creates_yaml_file() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
-
-    fs::create_dir_all(&workspace_root).unwrap();
-
-    let mut service = create_test_note_service(&workspace_root);
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut service = create_test_note_service(workspace_root);
 
     let input = AddNoteRequest {
         source_file: "src/main.rs".into(),
@@ -36,18 +33,13 @@ fn add_line_type_note_creates_yaml_file() {
     let content = fs::read_to_string(note_path).unwrap();
 
     assert!(content.contains("여기서 스캔이 시작된다."));
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn add_symbol_type_note_creates_yaml_file() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
-
-    fs::create_dir_all(&workspace_root).unwrap();
-
-    let mut service = create_test_note_service(&workspace_root);
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut service = create_test_note_service(workspace_root);
 
     let input = AddNoteRequest {
         source_file: "src/main.rs".into(),
@@ -86,18 +78,13 @@ fn add_symbol_type_note_creates_yaml_file() {
         }
         _ => panic!("Expected SymbolAnchor"),
     }
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn load_notes_from_existing_yaml() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
-
-    fs::create_dir_all(&workspace_root).unwrap();
-
-    let mut service = create_test_note_service(&workspace_root);
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut service = create_test_note_service(workspace_root);
 
     service
         .add_note(AddNoteRequest {
@@ -111,18 +98,13 @@ fn load_notes_from_existing_yaml() {
 
     assert_eq!(notes.len(), 1);
     assert_eq!(notes[0].note.content, "lib 진입점");
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn add_note_and_load_note() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
-
-    fs::create_dir_all(&workspace_root).unwrap();
-
-    let mut service = create_test_note_service(&workspace_root);
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut service = create_test_note_service(workspace_root);
 
     service
         .add_note(AddNoteRequest {
@@ -148,18 +130,13 @@ fn add_note_and_load_note() {
         }
         _ => panic!("Expected LineAnchor"),
     }
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn delete_note_removes_note() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
-
-    fs::create_dir_all(&workspace_root).unwrap();
-
-    let mut service = create_test_note_service(&workspace_root);
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut service = create_test_note_service(workspace_root);
 
     let note = service
         .add_note(AddNoteRequest {
@@ -177,18 +154,13 @@ fn delete_note_removes_note() {
     let notes = service.list_notes("src/main.rs").unwrap();
 
     assert_eq!(notes.len(), 0);
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn update_note_changes_content() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
-
-    fs::create_dir_all(&workspace_root).unwrap();
-
-    let mut service = create_test_note_service(&workspace_root);
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut service = create_test_note_service(workspace_root);
 
     let note = service
         .add_note(AddNoteRequest {
@@ -210,18 +182,13 @@ fn update_note_changes_content() {
     assert_eq!(notes.len(), 1);
 
     assert_eq!(notes[0].note.content, "new content");
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn search_notes_finds_matching_notes() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
-
-    fs::create_dir_all(&workspace_root).unwrap();
-
-    let mut service = create_test_note_service(&workspace_root);
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut service = create_test_note_service(workspace_root);
 
     service
         .add_note(AddNoteRequest {
@@ -270,18 +237,13 @@ fn search_notes_finds_matching_notes() {
     let notes = service.search_notes("PARSER").unwrap();
 
     assert_eq!(notes.len(), 2,);
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn search_finds_symbol_anchor() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4(),));
-
-    fs::create_dir_all(&workspace_root).unwrap();
-
-    let mut service = create_test_note_service(&workspace_root);
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut service = create_test_note_service(workspace_root);
 
     service
         .add_note(AddNoteRequest {
@@ -304,18 +266,13 @@ fn search_finds_symbol_anchor() {
     let results = service.search_notes("add_note").unwrap();
 
     assert_eq!(results.len(), 1,);
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn search_by_symbol_returns_matching_notes() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
-
-    fs::create_dir_all(&workspace_root).unwrap();
-
-    let mut service = create_test_note_service(&workspace_root);
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut service = create_test_note_service(workspace_root);
 
     service
         .add_note(AddNoteRequest {
@@ -340,18 +297,13 @@ fn search_by_symbol_returns_matching_notes() {
     assert_eq!(results.len(), 1);
 
     assert_eq!(results[0].note.content, "main symbol note");
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn search_by_symbol_returns_empty_when_not_found() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
-
-    fs::create_dir_all(&workspace_root).unwrap();
-
-    let mut service = create_test_note_service(&workspace_root);
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut service = create_test_note_service(workspace_root);
 
     service
         .add_note(AddNoteRequest {
@@ -374,18 +326,13 @@ fn search_by_symbol_returns_empty_when_not_found() {
     let results = service.search_by_symbol("parser").unwrap();
 
     assert!(results.is_empty());
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn list_symbol_notes_returns_only_symbol_notes() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
-
-    fs::create_dir_all(&workspace_root).unwrap();
-
-    let mut service = create_test_note_service(&workspace_root);
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut service = create_test_note_service(workspace_root);
 
     service
         .add_note(AddNoteRequest {
@@ -418,18 +365,13 @@ fn list_symbol_notes_returns_only_symbol_notes() {
         }
         _ => panic!("expected symbol note"),
     }
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn find_symbol_note_returns_matching_symbol() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
-
-    fs::create_dir_all(&workspace_root).unwrap();
-
-    let mut service = create_test_note_service(&workspace_root);
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut service = create_test_note_service(workspace_root);
 
     service
         .add_note(AddNoteRequest {
@@ -449,6 +391,4 @@ fn find_symbol_note_returns_matching_symbol() {
     assert!(result.is_some());
 
     assert_eq!(result.unwrap().note.content, "parser note");
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }

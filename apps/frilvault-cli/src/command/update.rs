@@ -6,8 +6,8 @@ use uuid::Uuid;
 use crate::cli::update::UpdateCommand;
 
 pub fn execute(command: UpdateCommand) -> Result<()> {
-    let workspace = FrilVault::open(std::env::current_dir()?)?;
-    let mut service = FrilVault::create_note_service(&workspace)?;
+    let vault = FrilVault::open(std::env::current_dir()?)?;
+    let mut service = vault.notes()?;
 
     service.update_note(
         &command.file,

@@ -3,12 +3,14 @@
 //! Notes are persisted as YAML files
 //! inside the `.vault/notes` directory.
 
-use crate::note::{Note, NoteFile};
-use crate::parser::{NoteParser, YamlParser};
-use crate::workspace::PathResolver;
-use crate::{FrilVaultResult, NoteFileRecord, NoteRepository};
 use std::fs;
 use std::path::{Path, PathBuf};
+
+use crate::note::{NoteFile, NoteRepository};
+use crate::parser::{NoteParser, YamlParser};
+use crate::storage::NoteFileRecord;
+use crate::workspace::PathResolver;
+use crate::{FrilVaultResult, Note};
 
 #[derive(Debug, Clone)]
 pub struct YamlNoteRepository {

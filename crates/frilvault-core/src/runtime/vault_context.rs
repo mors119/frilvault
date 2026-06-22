@@ -1,8 +1,11 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    FrilVaultResult, NoteCache, NoteFile, NoteFileRecord, WorkspaceIndex, WorkspaceIndexRepository,
-    YamlNoteRepository,
+    FrilVaultResult,
+    note::NoteFile,
+    runtime::NoteCache,
+    storage::{NoteFileRecord, YamlNoteRepository},
+    workspace::{WorkspaceIndex, WorkspaceIndexRepository},
 };
 
 /// Runtime container for FrilVault.

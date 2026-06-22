@@ -7,8 +7,8 @@ use crate::{
 };
 
 pub fn execute(command: SearchCommand) -> Result<()> {
-    let workspace = FrilVault::open(std::env::current_dir()?)?;
-    let mut service = FrilVault::create_note_service(&workspace)?;
+    let vault = FrilVault::open(std::env::current_dir()?)?;
+    let mut service = vault.notes()?;
 
     let results = match (command.keyword.as_deref(), command.file.as_deref()) {
         (Some(keyword), Some(file)) => service

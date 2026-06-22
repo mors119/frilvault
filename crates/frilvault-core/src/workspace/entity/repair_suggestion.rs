@@ -1,4 +1,4 @@
-use crate::FileMove;
+use crate::workspace::FileMove;
 
 #[derive(Debug, Clone)]
 pub struct RepairSuggestion {

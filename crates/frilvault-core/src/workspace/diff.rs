@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::{FileMove, IndexedFile, WorkspaceIndex};
+use crate::workspace::{FileMove, IndexedFile, WorkspaceIndex};
 
 pub struct IndexDiff;
 

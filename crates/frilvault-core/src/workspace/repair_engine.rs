@@ -1,4 +1,4 @@
-use crate::{FileMove, FrilVaultResult, VaultContext};
+use crate::{FrilVaultResult, runtime::VaultContext, workspace::FileMove};
 
 pub struct RepairEngine {
     pub vault_context: VaultContext,
