@@ -1,7 +1,30 @@
 [workspace]
-resolver = "2"
+resolver = "3"
 
 members = [
     "apps/frilvault-cli",
     "crates/frilvault-core",
 ]
+
+[workspace.package]
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/FrilLab/frilvault"
+
+[workspace.dependencies]
+chrono = "0.4.45"
+serde = "1"
+uuid = "1.23.3"
+thiserror = "2"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = "warn"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
