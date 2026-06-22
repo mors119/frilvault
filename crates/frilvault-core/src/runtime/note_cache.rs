@@ -6,7 +6,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::NoteFile;
+use crate::note::NoteFile;
 
 #[derive(Debug, Default, Clone)]
 pub struct NoteCache {

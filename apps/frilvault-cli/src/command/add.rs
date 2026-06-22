@@ -4,8 +4,8 @@ use frilvault_core::{AddNoteRequest, FrilVault, LineAnchor, NoteAnchor, SymbolAn
 use crate::cli::add::{AddCommand, SymbolKindArg};
 
 pub fn execute(command: AddCommand) -> Result<()> {
-    let workspace = FrilVault::open(std::env::current_dir()?)?;
-    let mut service = FrilVault::create_note_service(&workspace)?;
+    let vault = FrilVault::open(std::env::current_dir()?)?;
+    let mut service = vault.notes()?;
 
     let anchor = create_anchor(&command)?;
 

@@ -13,8 +13,8 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use crate::{
-    FrilVaultError, FrilVaultResult, NoteAnchor, VaultContext, add_note_request::AddNoteRequest,
-    note::Note, note_view::NoteView,
+    AddNoteRequest, FrilVaultError, FrilVaultResult, NoteAnchor, NoteView, note::Note,
+    runtime::VaultContext,
 };
 
 /// Application service responsible for note operations.

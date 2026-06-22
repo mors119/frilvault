@@ -1,22 +1,17 @@
-pub mod app;
-pub mod error;
-pub mod note;
-
+mod app;
 mod constants;
+mod error;
+mod note;
 mod parser;
 mod runtime;
 mod storage;
 mod workspace;
 
-pub use app::*;
-pub use error::*;
-pub use note::*;
-pub use parser::*;
-pub use runtime::*;
-pub use storage::*;
-pub use workspace::*;
+pub use app::FrilVault;
 
-pub type FrilVaultResult<T> = Result<T, FrilVaultError>;
+pub use error::{FrilVaultError, FrilVaultResult};
+pub use note::{AddNoteRequest, LineAnchor, Note, NoteAnchor, NoteView, SymbolAnchor, SymbolKind};
+pub use workspace::{RepairSuggestion, WorkspaceHealth, WorkspaceStats};
 
 #[cfg(test)]
 mod tests;

@@ -1,3 +1,3 @@
 mod errors;
 
-pub use errors::FrilVaultError;
+pub use errors::*;

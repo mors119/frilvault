@@ -4,8 +4,8 @@
 //! health checks, and repair workflows.
 
 use crate::{
-    FrilVaultResult, NoteAnchor, RepairSuggestion, VaultContext, WorkspaceHealth,
-    WorkspaceIndexRepository, WorkspaceStats,
+    FrilVaultResult, NoteAnchor, RepairSuggestion, WorkspaceHealth, WorkspaceStats,
+    runtime::VaultContext, workspace::WorkspaceIndexRepository,
 };
 
 /// Application service responsible for

@@ -1,5 +1,5 @@
 use crate::{
-    add_note_request::AddNoteRequest,
+    AddNoteRequest,
     note::{LineAnchor, Note, NoteAnchor},
 };
 

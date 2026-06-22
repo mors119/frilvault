@@ -1,17 +1,13 @@
-use std::fs;
-
+use super::helper::create_test_workspace;
 use crate::{AddNoteRequest, FrilVault, LineAnchor, NoteAnchor};
 
 #[test]
 fn frilvault_open_creates_note_service() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let vault = FrilVault::open(workspace_root).unwrap();
 
-    fs::create_dir_all(&workspace_root).unwrap();
-
-    let vault = FrilVault::open(&workspace_root).unwrap();
-
-    let mut notes = vault.create_note_service().unwrap();
+    let mut notes = vault.notes().unwrap();
 
     notes
         .add_note(AddNoteRequest {
@@ -25,24 +21,17 @@ fn frilvault_open_creates_note_service() {
 
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].note.content, "facade note");
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn frilvault_open_creates_workspace_service() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let vault = FrilVault::open(workspace_root).unwrap();
 
-    fs::create_dir_all(&workspace_root).unwrap();
-
-    let vault = FrilVault::open(&workspace_root).unwrap();
-
-    let mut workspace = vault.create_workspace_service().unwrap();
+    let mut workspace = vault.workspace().unwrap();
 
     let stats = workspace.stats().unwrap();
 
     assert_eq!(stats.file_count, 0);
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }

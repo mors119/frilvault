@@ -1,4 +1,4 @@
-use crate::{IndexedFile, WorkspaceIndex};
+use crate::workspace::{IndexedFile, WorkspaceIndex};
 
 #[test]
 fn workspace_index_starts_empty() {

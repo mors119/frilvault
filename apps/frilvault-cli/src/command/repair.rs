@@ -4,8 +4,8 @@ use frilvault_core::FrilVault;
 use crate::cli::repair::RepairCommand;
 
 pub fn execute(command: RepairCommand) -> Result<()> {
-    let workspace = FrilVault::open(std::env::current_dir()?)?;
-    let mut service = FrilVault::create_workspace_service(&workspace)?;
+    let vault = FrilVault::open(std::env::current_dir()?)?;
+    let mut service = vault.workspace()?;
 
     if command.apply {
         let repaired = service.apply_repairs()?;

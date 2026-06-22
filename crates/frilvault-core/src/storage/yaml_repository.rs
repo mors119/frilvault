@@ -3,12 +3,14 @@
 //! Notes are persisted as YAML files
 //! inside the `.vault/notes` directory.
 
-use crate::note::{Note, NoteFile};
-use crate::parser::{NoteParser, YamlParser};
-use crate::workspace::PathResolver;
-use crate::{FrilVaultResult, NoteFileRecord, NoteRepository};
 use std::fs;
 use std::path::{Path, PathBuf};
+
+use crate::note::NoteFile;
+use crate::parser::{NoteParser, YamlParser};
+use crate::storage::NoteFileRecord;
+use crate::workspace::PathResolver;
+use crate::{FrilVaultResult, Note};
 
 #[derive(Debug, Clone)]
 pub struct YamlNoteRepository {
@@ -126,23 +128,5 @@ impl YamlNoteRepository {
 
     pub fn resolve_note_path(&self, source_file: impl AsRef<Path>) -> PathBuf {
         self.path_resolver.resolve_note_path(source_file)
-    }
-}
-
-impl NoteRepository for YamlNoteRepository {
-    fn append_note(&self, source_file: &Path, note: &Note) -> FrilVaultResult<()> {
-        YamlNoteRepository::append_note(self, source_file, note)
-    }
-
-    fn load_by_source_file(&self, source_file: &Path) -> FrilVaultResult<NoteFile> {
-        YamlNoteRepository::load_by_source_file(self, source_file)
-    }
-
-    fn replace_notes(&self, source_file: &Path, notes: Vec<Note>) -> FrilVaultResult<()> {
-        YamlNoteRepository::replace_notes(self, source_file, notes)
-    }
-
-    fn list_all_note_files(&self) -> FrilVaultResult<Vec<NoteFileRecord>> {
-        YamlNoteRepository::list_all_note_files(self)
     }
 }

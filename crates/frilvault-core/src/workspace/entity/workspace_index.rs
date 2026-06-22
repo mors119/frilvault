@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::IndexedFile;
+use crate::workspace::IndexedFile;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkspaceIndex {

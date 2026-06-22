@@ -7,8 +7,8 @@ use crate::{
 };
 
 pub fn execute(command: ListCommand) -> Result<()> {
-    let workspace = FrilVault::open(std::env::current_dir()?)?;
-    let mut service = FrilVault::create_note_service(&workspace)?;
+    let vault = FrilVault::open(std::env::current_dir()?)?;
+    let mut service = vault.notes()?;
 
     let notes = service.list_notes(&command.file)?;
 

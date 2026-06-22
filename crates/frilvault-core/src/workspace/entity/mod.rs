@@ -1,10 +1,10 @@
-pub mod file_move;
-pub mod indexed_file;
-pub mod repair_suggestion;
-pub mod workspace_health;
-pub mod workspace_index;
-pub mod workspace_metadata;
-pub mod workspace_stats;
+mod file_move;
+mod indexed_file;
+mod repair_suggestion;
+mod workspace_health;
+mod workspace_index;
+mod workspace_metadata;
+mod workspace_stats;
 
 pub use file_move::*;
 pub use indexed_file::*;

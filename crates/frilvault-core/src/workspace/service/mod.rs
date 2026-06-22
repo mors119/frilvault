@@ -1,3 +1,3 @@
-pub mod workspace_service;
+mod workspace_service;
 
 pub use workspace_service::*;

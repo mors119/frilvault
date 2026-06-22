@@ -1,6 +1,6 @@
-use crate::PathResolver;
-
 use std::path::PathBuf;
+
+use crate::workspace::PathResolver;
 
 #[test]
 fn resolve_note_path_returns_vault_path() {

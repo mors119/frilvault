@@ -1,44 +1,38 @@
 use std::fs;
 
-use super::helper::{create_test_note_service, create_test_workspace_service};
+use super::helper::{
+    create_test_note_service, create_test_workspace, create_test_workspace_service,
+};
 use crate::{
-    IndexDiff, IndexedFile, LineAnchor, NoteAnchor, PathResolver, SymbolAnchor, SymbolKind,
-    WorkspaceIndex, WorkspaceIndexRepository, add_note_request::AddNoteRequest,
+    AddNoteRequest, LineAnchor, NoteAnchor, SymbolAnchor, SymbolKind,
     tests::helper::create_test_index_repository,
+    workspace::{IndexDiff, IndexedFile, PathResolver, WorkspaceIndex, WorkspaceIndexRepository},
 };
 
 #[test]
 fn load_returns_default_index_when_missing() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4(),));
-
-    fs::create_dir_all(&workspace_root).unwrap();
-
-    let resolver = PathResolver::new(&workspace_root);
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let resolver = PathResolver::new(workspace_root);
 
     let repository = WorkspaceIndexRepository::new(resolver);
 
     let index = repository.load().unwrap();
 
     assert!(index.files.is_empty());
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn save_and_load_index() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4(),));
-
-    fs::create_dir_all(&workspace_root).unwrap();
-
-    let resolver = PathResolver::new(&workspace_root);
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let resolver = PathResolver::new(workspace_root);
 
     let repository = WorkspaceIndexRepository::new(resolver);
 
     let mut index = WorkspaceIndex::default();
 
-    index.files.push(crate::IndexedFile {
+    index.files.push(IndexedFile {
         source_file: "src/main.rs".to_string(),
         note_count: 3,
         exists: true,
@@ -51,41 +45,32 @@ fn save_and_load_index() {
     assert_eq!(loaded.files.len(), 1,);
 
     assert_eq!(loaded.files[0].note_count, 3,);
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn create_if_missing_creates_index_file() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4(),));
-
-    fs::create_dir_all(&workspace_root).unwrap();
-
-    let resolver = PathResolver::new(&workspace_root);
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let resolver = PathResolver::new(workspace_root);
 
     let repository = WorkspaceIndexRepository::new(resolver.clone());
 
     repository.create_if_missing().unwrap();
 
     assert!(resolver.workspace_index_path().exists());
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn rebuild_creates_index_from_note_files() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
-
-    fs::create_dir_all(&workspace_root).unwrap();
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
     fs::create_dir_all(workspace_root.join("src")).unwrap();
     fs::write(workspace_root.join("src/main.rs"), "").unwrap();
     fs::write(workspace_root.join("src/lib.rs"), "").unwrap();
 
-    let resolver = PathResolver::new(&workspace_root);
+    let resolver = PathResolver::new(workspace_root);
 
-    let mut service = create_test_note_service(&workspace_root);
+    let mut service = create_test_note_service(workspace_root);
 
     service
         .add_note(AddNoteRequest {
@@ -135,20 +120,15 @@ fn rebuild_creates_index_from_note_files() {
     );
 
     assert!(index.files.iter().all(|file| file.exists));
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn rebuild_marks_missing_files_as_not_existing() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let resolver = PathResolver::new(workspace_root);
 
-    fs::create_dir_all(&workspace_root).unwrap();
-
-    let resolver = PathResolver::new(&workspace_root);
-
-    let mut service = create_test_note_service(&workspace_root);
+    let mut service = create_test_note_service(workspace_root);
 
     service
         .add_note(AddNoteRequest {
@@ -165,18 +145,13 @@ fn rebuild_marks_missing_files_as_not_existing() {
     assert_eq!(index.files.len(), 1);
     assert_eq!(index.files[0].source_file, "src/missing.rs");
     assert!(!index.files[0].exists);
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn health_check_detects_missing_files_from_note_repository() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4(),));
-
-    fs::create_dir_all(&workspace_root).unwrap();
-
-    let mut service = create_test_note_service(&workspace_root);
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut service = create_test_note_service(workspace_root);
 
     service
         .add_note(AddNoteRequest {
@@ -188,27 +163,22 @@ fn health_check_detects_missing_files_from_note_repository() {
         })
         .unwrap();
 
-    let mut workspace_service = create_test_workspace_service(&workspace_root);
+    let mut workspace_service = create_test_workspace_service(workspace_root);
 
     let health = workspace_service.health_check().unwrap();
 
     assert_eq!(health.missing_source_files.len(), 1,);
 
     assert_eq!(health.missing_source_files[0], "src/missing.rs",);
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn stats_counts_line_and_symbol_notes() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut service = create_test_note_service(workspace_root);
 
-    fs::create_dir_all(&workspace_root).unwrap();
-
-    let mut service = create_test_note_service(&workspace_root);
-
-    let mut workspace_service = create_test_workspace_service(&workspace_root);
+    let mut workspace_service = create_test_workspace_service(workspace_root);
 
     service
         .add_note(AddNoteRequest {
@@ -251,20 +221,16 @@ fn stats_counts_line_and_symbol_notes() {
     assert_eq!(stats.line_notes, 1);
 
     assert_eq!(stats.symbol_notes, 1);
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn repair_suggests_matching_file_names() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4(),));
-
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
     fs::create_dir_all(workspace_root.join("src/core")).unwrap();
-
     fs::write(workspace_root.join("src/core/lib.rs"), "").unwrap();
 
-    let mut service = create_test_note_service(&workspace_root);
+    let mut service = create_test_note_service(workspace_root);
 
     service
         .add_note(AddNoteRequest {
@@ -276,7 +242,7 @@ fn repair_suggests_matching_file_names() {
         })
         .unwrap();
 
-    let mut workspace_service = create_test_workspace_service(&workspace_root);
+    let mut workspace_service = create_test_workspace_service(workspace_root);
 
     let suggestions = workspace_service.repair_suggestions().unwrap();
 
@@ -285,22 +251,18 @@ fn repair_suggests_matching_file_names() {
     assert_eq!(suggestions[0].candidates.len(), 1,);
 
     assert_eq!(suggestions[0].candidates[0], "src/core/lib.rs",);
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn apply_repairs_moves_note_file() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4(),));
-
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
     fs::create_dir_all(workspace_root.join("src/core")).unwrap();
-
     fs::write(workspace_root.join("src/core/lib.rs"), "").unwrap();
 
-    let resolver = PathResolver::new(&workspace_root);
+    let resolver = PathResolver::new(workspace_root);
 
-    let mut service = create_test_note_service(&workspace_root);
+    let mut service = create_test_note_service(workspace_root);
 
     service
         .add_note(AddNoteRequest {
@@ -316,7 +278,7 @@ fn apply_repairs_moves_note_file() {
 
     assert!(old_note_path.exists());
 
-    let mut workspace_service = create_test_workspace_service(&workspace_root);
+    let mut workspace_service = create_test_workspace_service(workspace_root);
 
     let repaired = workspace_service.apply_repairs().unwrap();
 
@@ -327,16 +289,12 @@ fn apply_repairs_moves_note_file() {
     assert!(new_note_path.exists());
 
     assert!(!old_note_path.exists());
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn detects_renamed_file_by_name_similarity() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
-
-    fs::create_dir_all(&workspace_root).unwrap();
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
 
     let old = WorkspaceIndex {
         version: 1,
@@ -356,22 +314,18 @@ fn detects_renamed_file_by_name_similarity() {
         }],
     };
 
-    let repo = create_test_index_repository(&workspace_root);
+    let repo = create_test_index_repository(workspace_root);
 
     let moves = repo.detect_moves(&old, &new);
 
     assert_eq!(moves.len(), 1);
     assert!(moves[0].confidence > 0.5);
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]
 fn detects_removed_and_added_files() {
-    let workspace_root =
-        std::env::temp_dir().join(format!("frilvault-test-{}", uuid::Uuid::new_v4()));
-
-    fs::create_dir_all(&workspace_root).unwrap();
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
 
     let old = WorkspaceIndex {
         version: 1,
@@ -391,13 +345,11 @@ fn detects_removed_and_added_files() {
         }],
     };
 
-    let repo = create_test_index_repository(&workspace_root);
+    let repo = create_test_index_repository(workspace_root);
 
     let moves = repo.detect_moves(&old, &new);
 
     assert!(moves.is_empty());
-
-    fs::remove_dir_all(workspace_root).unwrap();
 }
 
 #[test]

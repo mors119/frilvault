@@ -16,15 +16,15 @@ impl WorkspaceRepository {
         Self { path_resolver }
     }
 
-    pub fn load(&self) -> FrilVaultResult<WorkspaceMetadata> {
-        let path = self.path_resolver.workspace_metadata_path();
+    // pub fn load(&self) -> FrilVaultResult<WorkspaceMetadata> {
+    //     let path = self.path_resolver.workspace_metadata_path();
 
-        let content = fs::read_to_string(path)?;
+    //     let content = fs::read_to_string(path)?;
 
-        let metadata = serde_yml::from_str(&content)?;
+    //     let metadata = serde_yml::from_str(&content)?;
 
-        Ok(metadata)
-    }
+    //     Ok(metadata)
+    // }
 
     pub fn save(&self, metadata: &WorkspaceMetadata) -> FrilVaultResult<()> {
         let path = self.path_resolver.workspace_metadata_path();
