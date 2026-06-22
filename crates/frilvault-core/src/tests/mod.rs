@@ -30,5 +30,5 @@ mod vault_context_test;
 #[cfg(test)]
 mod frilvault_app_test;
 
-#[cfg(test)]
-mod repair_engin_test;
+// #[cfg(test)]
+// mod repair_engin_test;

@@ -21,7 +21,6 @@ fn frilvault_open_creates_note_service() {
 
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].note.content, "facade note");
-
 }
 
 #[test]
@@ -35,5 +34,4 @@ fn frilvault_open_creates_workspace_service() {
     let stats = workspace.stats().unwrap();
 
     assert_eq!(stats.file_count, 0);
-
 }

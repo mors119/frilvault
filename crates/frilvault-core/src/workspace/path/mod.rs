@@ -1,3 +1,3 @@
-pub mod path_resolver;
+mod path_resolver;
 
 pub use path_resolver::*;
