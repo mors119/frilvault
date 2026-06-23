@@ -4,7 +4,7 @@ use crate::{
     FrilVaultResult,
     note::NoteFile,
     runtime::NoteCache,
-    storage::{NoteFileRecord, YamlNoteRepository},
+    storage::{NoteFileRecord, NoteRepository},
     workspace::{WorkspaceIndex, WorkspaceIndexRepository},
 };
 
@@ -20,14 +20,14 @@ use crate::{
 /// accessing repositories directly.
 #[derive(Clone)]
 pub struct VaultContext {
-    pub note_repository: YamlNoteRepository,
+    pub note_repository: NoteRepository,
     pub workspace_index_repository: WorkspaceIndexRepository,
     pub note_cache: NoteCache,
 }
 
 impl VaultContext {
     pub fn new(
-        note_repository: YamlNoteRepository,
+        note_repository: NoteRepository,
         workspace_index_repository: WorkspaceIndexRepository,
     ) -> Self {
         Self {

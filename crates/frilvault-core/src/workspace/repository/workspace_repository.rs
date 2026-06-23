@@ -21,7 +21,7 @@ impl WorkspaceRepository {
 
     //     let content = fs::read_to_string(path)?;
 
-    //     let metadata = serde_yml::from_str(&content)?;
+    //     let metadata = serde_json::from_str(&content)?;
 
     //     Ok(metadata)
     // }
@@ -33,9 +33,9 @@ impl WorkspaceRepository {
             fs::create_dir_all(parent)?;
         }
 
-        let yaml = serde_yml::to_string(metadata)?;
+        let json = serde_json::to_string(metadata)?;
 
-        fs::write(path, yaml)?;
+        fs::write(path, json)?;
 
         Ok(())
     }

@@ -1,28 +1,28 @@
-//! YAML-backed note repository.
+//! JSON-backed note repository.
 //!
-//! Notes are persisted as YAML files
+//! Notes are persisted as JSON files
 //! inside the `.vault/notes` directory.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::note::NoteFile;
-use crate::parser::{NoteParser, YamlParser};
+use crate::parser::JsonParser;
 use crate::storage::NoteFileRecord;
 use crate::workspace::PathResolver;
 use crate::{FrilVaultResult, Note};
 
 #[derive(Debug, Clone)]
-pub struct YamlNoteRepository {
+pub struct NoteRepository {
     path_resolver: PathResolver,
-    parser: YamlParser,
+    parser: JsonParser,
 }
 
-impl YamlNoteRepository {
+impl NoteRepository {
     pub fn new(path_resolver: PathResolver) -> Self {
         Self {
             path_resolver,
-            parser: YamlParser,
+            parser: JsonParser,
         }
     }
 
@@ -53,9 +53,9 @@ impl YamlNoteRepository {
             fs::create_dir_all(parent)?;
         }
 
-        let yaml = self.parser.serialize(note_file)?;
+        let json = self.parser.serialize(note_file)?;
 
-        fs::write(note_path, yaml)?;
+        fs::write(note_path, json)?;
 
         Ok(())
     }

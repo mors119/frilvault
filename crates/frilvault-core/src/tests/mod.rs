@@ -10,10 +10,10 @@ mod note_resolver_test;
 mod note_service_test;
 
 #[cfg(test)]
-mod yaml_parser_test;
+mod parser_test;
 
 #[cfg(test)]
-mod yaml_repository_test;
+mod repository_test;
 
 #[cfg(test)]
 mod workspace_repository_test;

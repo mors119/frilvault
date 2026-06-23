@@ -6,8 +6,8 @@ pub enum FrilVaultError {
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
 
-    #[error("yaml error: {0}")]
-    Yaml(#[from] serde_yml::Error),
+    #[error("json error: {0}")]
+    JSON(#[from] serde_json::Error),
 
     #[error("source path is outside workspace")]
     SourcePathOutsideWorkspace,

@@ -120,7 +120,7 @@ Responsible for:
 - line-based anchors
 - symbol-based anchors
 - note search
-- YAML persistence
+- JSON persistence
 
 ---
 
@@ -142,7 +142,7 @@ VaultContext is the runtime container of FrilVault.
 
 It owns:
 
-- YamlNoteRepository
+- NoteRepository
 - WorkspaceIndexRepository
 - NoteCache
 
@@ -208,7 +208,7 @@ Important:
 ├── notes
 ├── cache
 ├── index
-└── workspace.yml
+└── workspace.json
 ```
 
 ---
@@ -257,7 +257,7 @@ Cache (hit/miss)
 ↓
 Repository (fallback)
 ↓
-Filesystem (YAML)
+Filesystem (JSON)
 ```
 
 ---

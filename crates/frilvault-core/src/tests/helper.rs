@@ -6,7 +6,7 @@ use std::{
 use crate::{
     note::NoteService,
     runtime::VaultContext,
-    storage::YamlNoteRepository,
+    storage::NoteRepository,
     workspace::{PathResolver, WorkspaceIndexRepository, WorkspaceRepository, WorkspaceService},
 };
 
@@ -43,7 +43,7 @@ pub fn create_test_vault_context(workspace_root: &Path) -> VaultContext {
     let workspace_repository = WorkspaceRepository::new(resolver.clone());
     workspace_repository.create_if_missing().unwrap();
 
-    let note_repository = YamlNoteRepository::new(resolver.clone());
+    let note_repository = NoteRepository::new(resolver.clone());
     let index_repository = WorkspaceIndexRepository::new(resolver);
     index_repository.create_if_missing().unwrap();
 
@@ -63,7 +63,7 @@ pub fn create_test_index_repository(workspace_root: &Path) -> WorkspaceIndexRepo
     WorkspaceIndexRepository::new(resolver)
 }
 
-pub fn create_test_yaml_repository(workspace_root: &Path) -> YamlNoteRepository {
+pub fn create_test_repository(workspace_root: &Path) -> NoteRepository {
     let resolver = PathResolver::new(workspace_root);
-    YamlNoteRepository::new(resolver)
+    NoteRepository::new(resolver)
 }

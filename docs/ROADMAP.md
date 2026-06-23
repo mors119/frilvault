@@ -16,7 +16,7 @@ Local note system with structured storage and basic workspace intelligence.
 
 ### Note System
 
-- YAML-based note storage
+- JSON-based note storage
 - Note CRUD (create / update / delete / list)
 - Line-based anchors
 - Symbol-based anchors
@@ -37,7 +37,7 @@ Local note system with structured storage and basic workspace intelligence.
 ### Storage Layer
 
 - `.vault` directory structure
-- YAML persistence model
+- JSON persistence model
 - structured note file format
 
 ---

@@ -8,7 +8,7 @@ fn resolve_note_path_returns_vault_path() {
 
     let path = resolver.resolve_note_path("src/main.rs");
 
-    let expected = PathBuf::from("/workspace/.vault/notes/src/main.rs.yml");
+    let expected = PathBuf::from("/workspace/.vault/notes/src/main.rs.json");
 
     assert_eq!(path, expected);
 }
@@ -28,7 +28,7 @@ fn source_file_from_note_path_returns_source_path() {
     let resolver = PathResolver::new("/workspace");
 
     let source_file = resolver
-        .source_file_from_note_path("/workspace/.vault/notes/src/main.rs.yml")
+        .source_file_from_note_path("/workspace/.vault/notes/src/main.rs.json")
         .unwrap();
 
     assert_eq!(source_file, PathBuf::from("src/main.rs"));

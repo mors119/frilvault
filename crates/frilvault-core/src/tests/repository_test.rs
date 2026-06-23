@@ -1,4 +1,4 @@
-use super::helper::{create_test_note_service, create_test_workspace, create_test_yaml_repository};
+use super::helper::{create_test_note_service, create_test_repository, create_test_workspace};
 use crate::{AddNoteRequest, LineAnchor, NoteAnchor};
 
 #[test]
@@ -26,7 +26,7 @@ fn list_all_note_files_returns_all_note_files() {
         })
         .unwrap();
 
-    let repository = create_test_yaml_repository(workspace_root);
+    let repository = create_test_repository(workspace_root);
 
     let note_files = repository.list_all_note_files().unwrap();
 
