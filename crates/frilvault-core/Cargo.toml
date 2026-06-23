@@ -15,4 +15,4 @@ serde = { workspace = true, features = ["derive"] }
 uuid = { workspace = true, features = ["v4", "serde"] }
 thiserror.workspace = true
 
-serde_yml = "0.0.13"
+serde_json= "1.0.150"

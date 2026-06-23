@@ -4,7 +4,7 @@ use crate::{
     FrilVaultResult,
     note::NoteService,
     runtime::VaultContext,
-    storage::YamlNoteRepository,
+    storage::NoteRepository,
     workspace::{PathResolver, WorkspaceIndexRepository, WorkspaceRepository, WorkspaceService},
 };
 
@@ -28,7 +28,7 @@ impl FrilVault {
         let index_repository = WorkspaceIndexRepository::new(resolver.clone());
         index_repository.create_if_missing()?;
 
-        let note_repository = YamlNoteRepository::new(resolver.clone());
+        let note_repository = NoteRepository::new(resolver.clone());
 
         let vault_context = VaultContext::new(note_repository, index_repository.clone());
 

@@ -37,7 +37,7 @@ crates/
 ├── notes/
 ├── cache/
 ├── index/
-└── workspace.yml
+└── workspace.json
 ```
 
 Notes are stored separately from source files. FrilVault does not modify the source code it annotates.

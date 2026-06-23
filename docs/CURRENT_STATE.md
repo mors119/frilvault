@@ -37,7 +37,7 @@ The system has moved beyond a simple note storage tool and is evolving into a **
 ### Note System
 
 - CRUD operations implemented
-- YAML-based storage
+- JSON-based storage
 - line anchors implemented
 - symbol anchors implemented
 - keyword + symbol search implemented
@@ -57,14 +57,14 @@ The system has moved beyond a simple note storage tool and is evolving into a **
 ### Storage Layer
 
 - `.vault` directory structure implemented
-- YAML persistence implemented
+- JSON persistence implemented
 - note file structure stable
 
 ---
 
 ### Parser Layer
 
-- YAML parser implemented
+- JSON parser implemented
 - note serialization/deserialization stable
 
 ---
@@ -235,7 +235,7 @@ This is temporary and will be unified later.
 ├── notes/
 ├── cache/
 ├── index/
-└── workspace.yml
+└── workspace.json
 ```
 
 ---

@@ -7,7 +7,7 @@ use crate::{
 use std::fs;
 
 #[test]
-fn add_line_type_note_creates_yaml_file() {
+fn add_line_type_note_creates_json_file() {
     let workspace = create_test_workspace();
     let workspace_root = workspace.root();
     let mut service = create_test_note_service(workspace_root);
@@ -36,7 +36,7 @@ fn add_line_type_note_creates_yaml_file() {
 }
 
 #[test]
-fn add_symbol_type_note_creates_yaml_file() {
+fn add_symbol_type_note_creates_json_file() {
     let workspace = create_test_workspace();
     let workspace_root = workspace.root();
     let mut service = create_test_note_service(workspace_root);
@@ -81,7 +81,7 @@ fn add_symbol_type_note_creates_yaml_file() {
 }
 
 #[test]
-fn load_notes_from_existing_yaml() {
+fn load_notes_from_existing_json() {
     let workspace = create_test_workspace();
     let workspace_root = workspace.root();
     let mut service = create_test_note_service(workspace_root);

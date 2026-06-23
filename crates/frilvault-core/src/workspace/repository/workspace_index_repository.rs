@@ -2,7 +2,7 @@ use std::{fs, path::Path};
 
 use crate::{
     FrilVaultResult, RepairSuggestion,
-    storage::YamlNoteRepository,
+    storage::NoteRepository,
     workspace::{FileMove, IndexDiff, IndexedFile, PathResolver, WorkspaceIndex},
 };
 
@@ -29,7 +29,7 @@ impl WorkspaceIndexRepository {
 
         let content = fs::read_to_string(path)?;
 
-        let index = serde_yml::from_str(&content)?;
+        let index = serde_json::from_str(&content)?;
 
         Ok(index)
     }
@@ -41,9 +41,9 @@ impl WorkspaceIndexRepository {
             fs::create_dir_all(parent)?;
         }
 
-        let yaml = serde_yml::to_string(index)?;
+        let json = serde_json::to_string(index)?;
 
-        fs::write(path, yaml)?;
+        fs::write(path, json)?;
 
         Ok(())
     }
@@ -61,7 +61,7 @@ impl WorkspaceIndexRepository {
     }
 
     pub fn rebuild(&self) -> FrilVaultResult<WorkspaceIndex> {
-        let note_repository = YamlNoteRepository::new(self.path_resolver.clone());
+        let note_repository = NoteRepository::new(self.path_resolver.clone());
 
         let records = note_repository.list_all_note_files()?;
 

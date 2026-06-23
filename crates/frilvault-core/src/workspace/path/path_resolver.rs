@@ -39,10 +39,12 @@ impl PathResolver {
     }
 
     pub fn workspace_index_path(&self) -> PathBuf {
-        self.vault_root().join(INDEX_DIR_NAME).join("workspace.yml")
+        self.vault_root()
+            .join(INDEX_DIR_NAME)
+            .join("workspace.json")
     }
 
-    // Convert the relative path of the source file to the path '.vault/notes/{source_file}.yml'
+    // Convert the relative path of the source file to the path '.vault/notes/{source_file}.json'
     pub fn resolve_note_path(&self, source_file: impl AsRef<Path>) -> PathBuf {
         self.notes_root().join(Self::note_file_name(source_file))
     }

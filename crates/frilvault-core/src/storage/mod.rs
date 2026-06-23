@@ -1,5 +1,3 @@
-mod note_file_record;
-mod yaml_repository;
+mod repository;
 
-pub use note_file_record::*;
-pub use yaml_repository::*;
+pub use repository::*;
