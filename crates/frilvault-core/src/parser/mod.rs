@@ -1,3 +1,3 @@
-mod parser;
+mod json_parser;
 
-pub use parser::*;
+pub use json_parser::*;
