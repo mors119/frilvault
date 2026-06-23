@@ -39,7 +39,9 @@ impl PathResolver {
     }
 
     pub fn workspace_index_path(&self) -> PathBuf {
-        self.vault_root().join(INDEX_DIR_NAME).join("workspace.json")
+        self.vault_root()
+            .join(INDEX_DIR_NAME)
+            .join("workspace.json")
     }
 
     // Convert the relative path of the source file to the path '.vault/notes/{source_file}.json'

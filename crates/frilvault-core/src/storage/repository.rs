@@ -6,9 +6,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::note::NoteFile;
+use crate::note::{NoteFile, NoteFileRecord};
 use crate::parser::JsonParser;
-use crate::storage::NoteFileRecord;
 use crate::workspace::PathResolver;
 use crate::{FrilVaultResult, Note};
 

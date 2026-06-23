@@ -2,9 +2,9 @@ use std::path::{Path, PathBuf};
 
 use crate::{
     FrilVaultResult,
-    note::NoteFile,
+    note::{NoteFile, NoteFileRecord},
     runtime::NoteCache,
-    storage::{NoteFileRecord, NoteRepository},
+    storage::NoteRepository,
     workspace::{WorkspaceIndex, WorkspaceIndexRepository},
 };
 
