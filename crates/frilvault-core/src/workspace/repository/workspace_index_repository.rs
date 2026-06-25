@@ -2,7 +2,7 @@ use std::{fs, path::Path};
 
 use crate::{
     FrilVaultResult, RepairSuggestion,
-    storage::NoteRepository,
+    note::NoteRepository,
     workspace::{FileMove, IndexDiff, IndexedFile, PathResolver, WorkspaceIndex},
 };
 

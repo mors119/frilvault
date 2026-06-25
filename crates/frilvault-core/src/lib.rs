@@ -4,7 +4,6 @@ mod error;
 mod note;
 mod parser;
 mod runtime;
-mod storage;
 mod workspace;
 
 pub use app::FrilVault;
