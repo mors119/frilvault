@@ -4,9 +4,8 @@ use std::{
 };
 
 use crate::{
-    note::NoteService,
+    note::{NoteRepository, NoteService},
     runtime::VaultContext,
-    storage::NoteRepository,
     workspace::{PathResolver, WorkspaceIndexRepository, WorkspaceRepository, WorkspaceService},
 };
 
