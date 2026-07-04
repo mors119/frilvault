@@ -21,13 +21,11 @@ apps/
 └── vscode-extension
 
 crates/
-├── frilvault-core
-└── frilvault-node
+└── frilvault-core
 ```
 
 - `frilvault-core`: domain logic, repositories, workspace services
 - `frilvault-cli`: command-line interface for note and workspace operations
-- `frilvault-node`: Node-API bridge for editor integrations
 - `apps/vscode-extension`: VS Code UI layer
 
 ## Storage Model
@@ -93,10 +91,10 @@ Current extension scope:
 
 Current integration model:
 
-- `Add Note`, notes panel, and gutter decorations use the CLI
-- edit/delete/search/stats/health/repair still use the Node bridge
+- VS Code invokes the `flvt` CLI through `CliClient`
+- core behavior is executed in `frilvault-core` through the CLI surface
 
-This is an in-progress architecture and will continue moving toward shared `frilvault-core` behavior across surfaces.
+This is an in-progress architecture and will continue moving toward thinner editor integrations over shared `frilvault-core` behavior.
 
 ## Build
 
@@ -104,7 +102,7 @@ Rust:
 
 ```bash
 cargo test -p frilvault-core
-cargo test -p frilvault-node
+cargo test -p frilvault-cli
 ```
 
 VS Code extension:
@@ -115,6 +113,18 @@ npm run compile
 npm test
 ```
 
+Documentation:
+
+Run these from the repository root:
+
+```bash
+cargo install mdbook --locked
+cargo install mdbook-mermaid --locked
+mdbook-mermaid install docs/book
+mdbook build docs/book
+mdbook serve docs/book --open
+```
+
 ## Status
 
 Implemented:
@@ -123,7 +133,6 @@ Implemented:
 - Search
 - Line and symbol anchors
 - Workspace index, stats, health, repair
-- Node bridge MVP
 - VS Code extension MVP
 
 Planned:
@@ -133,4 +142,4 @@ Planned:
 - Semantic search
 - IntelliJ integration
 
-See [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), and [docs/ROADMAP.md](docs/ROADMAP.md).
+See [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ROADMAP.md](docs/ROADMAP.md), and the mdBook sources under [docs/book](docs/book).
