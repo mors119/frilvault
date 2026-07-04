@@ -74,12 +74,148 @@ Future editors must be able to integrate without modifying core logic.
 ```text
 frilvault
 ├── crates
-│   ├── frilvault-core
-│   └── frilvault-node
+│   └── frilvault-core
 │
 └── apps
     ├── frilvault-cli
     └── vscode-extension
+```
+
+## 3.1 Current Structure (Mermaid)
+
+```mermaid
+flowchart TD
+    subgraph Clients
+        CLI["apps/frilvault-cli"]
+        VSCode["apps/vscode-extension"]
+    end
+
+    subgraph Core["crates/frilvault-core"]
+        FV["FrilVault facade"]
+        NS["NoteService"]
+        WS["WorkspaceService"]
+        VC["VaultContext"]
+        NR["NoteRepository"]
+        WIR["WorkspaceIndexRepository"]
+        WR["WorkspaceRepository"]
+        NC["NoteCache"]
+        ND["note"]
+        WD["workspace"]
+        RT["runtime"]
+    end
+
+    CLI --> FV
+    VSCode --> CLI
+    FV --> NS
+    FV --> WS
+    NS --> VC
+    WS --> VC
+    WS --> WIR
+    VC --> NR
+    VC --> WIR
+    VC --> NC
+    NR --> ND
+    WIR --> WD
+    WR --> WD
+    VC --> RT
+```
+
+## 3.2 Enterprise Architecture (PlantUML)
+
+```plantuml
+@startuml
+title FrilVault Enterprise Architecture
+
+top to bottom direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment center
+
+actor Developer
+
+node "Editor Layer" as editor_layer {
+  component "VSCode Extension\n(apps/vscode-extension)" as vscode
+}
+
+node "Application Layer" as app_layer {
+  component "FrilVault CLI\n(apps/frilvault-cli)\nBinary: flvt" as cli
+}
+
+node "Core Domain Layer" as core_layer {
+  package "frilvault-core" {
+    component "FrilVault\nFacade" as facade
+
+    package "Application Services" {
+      component "NoteService" as note_service
+      component "WorkspaceService" as workspace_service
+    }
+
+    package "Runtime" {
+      component "VaultContext" as vault_context
+      component "NoteCache" as note_cache
+    }
+
+    package "Repositories" {
+      component "NoteRepository" as note_repository
+      component "WorkspaceIndexRepository" as index_repository
+      component "WorkspaceRepository" as workspace_repository
+    }
+
+    package "Domain Modules" {
+      component "note" as note_domain
+      component "workspace" as workspace_domain
+      component "parser / error / constants" as support_modules
+    }
+  }
+}
+
+node "Workspace Storage" as storage_layer {
+  folder "Source Workspace" as source_workspace
+  folder ".vault/notes" as vault_notes
+  folder ".vault/index" as vault_index
+  file ".vault/workspace.json" as workspace_meta
+}
+
+Developer --> vscode : add/search/list notes
+vscode --> cli : execFile()
+cli --> facade : open(workspace_root)
+facade --> note_service : notes()
+facade --> workspace_service : workspace()
+
+note_service --> vault_context : read/write notes
+workspace_service --> vault_context : stats / health / repair
+workspace_service --> index_repository : rebuild()
+
+vault_context --> note_cache : cache hit / invalidate
+vault_context --> note_repository : load / append / replace
+vault_context --> index_repository : rebuild / scan
+
+note_repository --> note_domain
+index_repository --> workspace_domain
+workspace_repository --> workspace_domain
+note_service --> note_domain
+workspace_service --> workspace_domain
+facade --> support_modules
+
+note_repository --> vault_notes
+index_repository --> vault_index
+workspace_repository --> workspace_meta
+index_repository --> source_workspace : scan files
+workspace_service --> source_workspace : repair candidates
+
+note right of vscode
+Current integration model:
+VSCode calls the CLI instead of
+linking directly to frilvault-core.
+end note
+
+note bottom of vault_context
+VaultContext is the runtime boundary.
+Services should not access repositories
+outside this container.
+end note
+@enduml
 ```
 
 ---
@@ -91,21 +227,44 @@ frilvault
 ```text
 frilvault-core
 ├── note
+│   ├── dto
 │   ├── entity
-│   ├── repository
-│   ├── service
-│   └── view
+│   ├── note_repository
+│   └── note_service
 │
 ├── workspace
+│   ├── diff
 │   ├── entity
 │   ├── path
 │   ├── repository
 │   └── service
 │
-├── storage
 ├── parser
-├── cache
-└── vault_context
+├── runtime
+├── app
+├── constants
+└── error
+```
+
+---
+
+## 4.1.1 Core Runtime View (Mermaid)
+
+```mermaid
+flowchart LR
+    A["FrilVault::open(workspace_root)"] --> B["PathResolver"]
+    B --> C["WorkspaceRepository"]
+    B --> D["WorkspaceIndexRepository"]
+    B --> E["NoteRepository"]
+    E --> F["VaultContext"]
+    D --> F
+    F --> G["NoteCache"]
+    F --> H["NoteService"]
+    F --> I["WorkspaceService"]
+    D --> I
+    C --> J[".vault/workspace.json"]
+    D --> K[".vault/index"]
+    E --> L[".vault/notes"]
 ```
 
 ---
@@ -280,27 +439,32 @@ Cache invalidation
 
 # 9. Editor Integration Model
 
-## 9.1 VSCode Architecture (Current Transition State)
+## 9.1 VSCode Architecture (Current)
 
-```text
-VSCode Extension
-├── CLI-based operations
-├── Node bridge operations
-└── Core-backed features
+```mermaid
+flowchart TD
+    Editor["VSCode UI
+    - gutter
+    - hover
+    - notes panel
+    - commands"] --> Client["CliClient"]
+    Client --> Binary["flvt CLI"]
+    Binary --> Facade["FrilVault"]
+    Facade --> Services["NoteService / WorkspaceService"]
+    Services --> Context["VaultContext"]
+    Context --> Vault[".vault"]
 ```
 
 ---
 
 ## 9.2 Target Architecture
 
-```text
-VSCode Extension
-↓
-Node Bridge
-↓
-VaultContext
-↓
-frilvault-core
+```mermaid
+flowchart TD
+    Editor["VSCode Extension"] --> Bridge["Node bridge or native binding"]
+    Bridge --> Core["frilvault-core"]
+    Core --> Context["VaultContext"]
+    Context --> Vault[".vault"]
 ```
 
 ---
