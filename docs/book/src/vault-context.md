@@ -12,7 +12,7 @@ The current `VaultContext` owns:
 - `WorkspaceIndexRepository`
 - `NoteCache`
 
-This gives services a single entry point for note loading, index rebuilds, cache invalidation, and workspace scans.
+This gives services a single place for note loading, index rebuilds, cache invalidation, and workspace scans.
 
 ## Coordination Role
 
@@ -38,6 +38,8 @@ This gives services a single entry point for note loading, index rebuilds, cache
 ## Why It Matters
 
 Without `VaultContext`, each service would need to understand cache policy and repository wiring independently. That would duplicate logic and make long-running integrations harder to evolve.
+
+The current codebase has not fully completed that move yet. Some flows still hold direct repository access alongside the context. Even so, `VaultContext` is the correct boundary for future consolidation.
 
 By keeping runtime policy in one place, FrilVault can later add:
 

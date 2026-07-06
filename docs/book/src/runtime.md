@@ -2,9 +2,9 @@
 
 FrilVault runtime behavior is built around service orchestration, repository fallback, and cache-aware note loading.
 
-## Read Flow
+## Cached Read Flow
 
-The read path starts from a client surface such as the CLI or VS Code:
+The cache-aware read path is used for loading notes for a specific source file:
 
 1. client requests note or workspace data
 2. service calls into `VaultContext`
@@ -14,7 +14,7 @@ The read path starts from a client surface such as the CLI or VS Code:
 
 ## Write Flow
 
-Write operations follow a stricter persistence-first path:
+Write operations follow a persistence-first path:
 
 1. client issues a mutation request
 2. service validates and transforms the request
@@ -22,6 +22,16 @@ Write operations follow a stricter persistence-first path:
 4. `VaultContext` invalidates affected cache entries
 
 This keeps persisted state authoritative and prevents stale cache reuse.
+
+## Non-Cached Flows
+
+Not every read path uses `NoteCache` yet.
+
+- note search currently iterates persisted note files from the repository
+- symbol search follows the same repository-backed scan
+- workspace health rebuilds the workspace index directly through `WorkspaceIndexRepository`
+
+The runtime model is therefore partially centralized rather than fully unified.
 
 ## Cache Behavior
 
@@ -47,7 +57,7 @@ Repositories are the persistence boundary:
 - `WorkspaceIndexRepository` rebuilds and loads workspace index data
 - `WorkspaceRepository` manages workspace metadata
 
-Services should not bypass this layer. Runtime policy belongs in `VaultContext`, while persistence policy belongs in repositories.
+Runtime policy belongs in `VaultContext`, while persistence policy belongs in repositories. Some services still hold direct repository access during this transition.
 
 ## Mermaid View
 
@@ -61,7 +71,7 @@ sequenceDiagram
     participant Repository
     participant Filesystem
 
-    Client->>Service: read notes
+    Client->>Service: list notes for file
     Service->>VaultContext: load_notes(source_file)
     VaultContext->>NoteCache: get(source_file)
 

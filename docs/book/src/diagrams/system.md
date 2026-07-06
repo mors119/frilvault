@@ -1,12 +1,17 @@
 # System Diagram
 
-This view shows FrilVault as an enterprise-style system with client surfaces, a shared core, and workspace-local storage.
+This view shows the current repository shape: shared Rust core, CLI surface, hybrid VS Code integration, and workspace-local storage.
 
 ```mermaid
 flowchart TD
     subgraph Clients
         CLI["FrilVault CLI"]
         VSCode["VSCode Extension"]
+    end
+
+    subgraph ExtensionBackends["VS Code Backends"]
+        CliClient["CliClient"]
+        NodeBridge["NodeBridge"]
     end
 
     subgraph Core["frilvault-core"]
@@ -36,7 +41,10 @@ flowchart TD
         Meta[".vault/workspace.json"]
     end
 
-    VSCode --> CLI
+    VSCode --> CliClient
+    VSCode --> NodeBridge
+    CliClient --> CLI
+    NodeBridge --> Facade
     CLI --> Facade
     Facade --> NoteService
     Facade --> WorkspaceService

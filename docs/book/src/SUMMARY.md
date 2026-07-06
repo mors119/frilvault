@@ -1,6 +1,7 @@
 # Summary
 
 - [Introduction](intro.md)
+- [Getting Started](getting-started.md)
 - [Architecture](architecture.md)
 - [Runtime Flow](runtime.md)
 - [VaultContext](vault-context.md)
