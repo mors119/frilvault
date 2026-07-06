@@ -44,8 +44,9 @@ The VS Code extension is a UI integration layer:
 - notes panel
 - hover and gutter decorations
 - CLI invocation through `CliClient`
+- native calls through `NodeBridge`
 
-The extension should remain thin and delegate behavior to shared core logic through the CLI or a future bridge.
+The extension is currently hybrid. CLI-backed and Node-bridge-backed paths coexist in the MVP.
 
 ## Core Modules
 
@@ -57,17 +58,25 @@ The current core is centered around these areas:
 - `runtime`: `VaultContext` and `NoteCache`
 - `parser`, `error`, `constants`: support modules
 
+## Current Boundaries
+
+The runtime boundary exists, but the architecture is not fully centralized yet.
+
+- `NoteService` uses `VaultContext` for cache-aware note loading, but still writes through the repository stored inside the context.
+- `WorkspaceService` rebuilds indexes through both `VaultContext` and a direct `WorkspaceIndexRepository` field.
+- Search reads currently enumerate persisted note files instead of reusing the in-memory note cache.
+
+That means the project already has a clear runtime container, but not every flow has been fully routed through it yet.
+
 ## VaultContext
 
-`VaultContext` is the runtime boundary inside `frilvault-core`.
-
-It owns:
+`VaultContext` currently owns:
 
 - `NoteRepository`
 - `WorkspaceIndexRepository`
 - `NoteCache`
 
-Services should use `VaultContext` instead of reaching into repositories directly. That keeps cache behavior, repository access, and future runtime policy centralized.
+Its main role today is to keep note-loading cache behavior and workspace-level helpers in one place.
 
 ## Architectural Rules
 
@@ -75,6 +84,7 @@ Services should use `VaultContext` instead of reaching into repositories directl
 - source files are never modified by FrilVault
 - the `.vault` directory is the storage boundary
 - caches are runtime concerns, not client concerns
+- editor integrations should stay thin and reuse shared core behavior
 
 See the diagram pages for concrete system views:
 

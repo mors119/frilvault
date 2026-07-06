@@ -4,27 +4,28 @@ permissions:
   contents: write
 
 on:
-  pull_request:
-    paths:
-      - "docs/**"
-      - "crates/**"
-      - ".github/workflows/docs.yml"
-
   push:
     branches:
       - main
     paths:
-      - "docs/**"
-      - "crates/**"
-      - ".github/workflows/docs.yml"
+      - 'docs/**'
+      - 'crates/**'
+      - '.github/workflows/docs.yml'
+    paths-ignore:
+      - 'gh-pages/**'
+
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'crates/**'
+      - '.github/workflows/docs.yml'
 
 jobs:
   docs:
-    name: Build Docs
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
       - name: Set up Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1

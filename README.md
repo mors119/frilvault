@@ -1,17 +1,16 @@
 # FrilVault
 
-> Personal notes for source code, without modifying source files
+Personal notes for source code, without modifying source files.
 
-FrilVault is a local-first knowledge layer for developers. It stores personal notes in a `.vault` directory instead of writing them into production code.
+FrilVault is a local-first workspace knowledge layer. Notes live under `.vault/` beside the project, while application code stays untouched.
 
-## What It Does
+## What It Supports
 
-- Attach notes to source files with line or symbol anchors
-- Keep personal context out of the repository code
-- Search notes across a workspace
-- Inspect workspace stats and health
-- Repair note files after file moves or renames
-- Surface notes inside VS Code
+- line-anchored and symbol-anchored notes
+- workspace search
+- workspace stats and health checks
+- note-file repair after file moves or renames
+- VS Code integration for the current MVP
 
 ## Repository Layout
 
@@ -24,122 +23,58 @@ crates/
 └── frilvault-core
 ```
 
-- `frilvault-core`: domain logic, repositories, workspace services
-- `frilvault-cli`: command-line interface for note and workspace operations
-- `apps/vscode-extension`: VS Code UI layer
+`frilvault-core` contains the domain logic, storage access, and runtime utilities. `frilvault-cli` is the main executable surface. `apps/vscode-extension` is the current editor integration.
 
 ## Storage Model
 
 ```text
 .vault/
 ├── notes/
-├── cache/
 ├── index/
 └── workspace.json
 ```
 
-Notes are stored separately from source files. FrilVault does not modify the source code it annotates.
+FrilVault does not rewrite or annotate source files.
 
-## CLI Examples
-
-Add a note:
+## Quick Commands
 
 ```bash
-flvt add \
-  --file src/main.rs \
-  --line 10 \
-  --column 5 \
-  --content "parser needs cleanup"
-```
-
-List notes for one file:
-
-```bash
+flvt add --file src/main.rs --line 10 --column 5 --content "parser needs cleanup"
 flvt list --file src/main.rs
-```
-
-List notes as JSON:
-
-```bash
-flvt list --file src/main.rs --format json
-```
-
-Search notes:
-
-```bash
 flvt search parser
-```
-
-Workspace commands:
-
-```bash
 flvt stats
 flvt doctor
-flvt repair
 flvt repair --apply
 ```
 
-## VS Code Extension
+## Documentation
 
-Current extension scope:
+The maintained documentation now lives in `docs/book`.
 
-- `FrilVault: Add Note` command
-- `FrilVault Notes` side panel for the active editor
-- Gutter decorations for line notes
-- Edit and delete note flows
-- Workspace search, stats, health, and repair commands
-
-Current integration model:
-
-- VS Code invokes the `flvt` CLI through `CliClient`
-- core behavior is executed in `frilvault-core` through the CLI surface
-
-This is an in-progress architecture and will continue moving toward thinner editor integrations over shared `frilvault-core` behavior.
-
-## Build
-
-Rust:
-
-```bash
-cargo test -p frilvault-core
-cargo test -p frilvault-cli
-```
-
-VS Code extension:
-
-```bash
-cd apps/vscode-extension
-npm run compile
-npm test
-```
-
-Documentation:
-
-Run these from the repository root:
+Build it locally from the repository root:
 
 ```bash
 cargo install mdbook --locked
 cargo install mdbook-mermaid --locked
 mdbook-mermaid install docs/book
 mdbook build docs/book
+```
+
+Serve it locally:
+
+```bash
 mdbook serve docs/book --open
 ```
 
-## Status
+## Development
 
-Implemented:
+```bash
+cargo test -p frilvault-core
+cargo test -p frilvault-cli
+```
 
-- Core note CRUD
-- Search
-- Line and symbol anchors
-- Workspace index, stats, health, repair
-- VS Code extension MVP
-
-Planned:
-
-- Watcher and cache invalidation
-- Richer symbol workflows
-- Semantic search
-- IntelliJ integration
-
-See [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ROADMAP.md](docs/ROADMAP.md), and the mdBook sources under [docs/book](docs/book).
+```bash
+cd apps/vscode-extension
+npm run compile
+npm test
+```

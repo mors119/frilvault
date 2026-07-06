@@ -1,6 +1,6 @@
 # Runtime Diagram
 
-This view focuses on cache behavior and repository fallback.
+This view focuses on the file-specific cached note path used today.
 
 ```mermaid
 flowchart LR
