@@ -11,8 +11,6 @@ on:
       - 'docs/**'
       - 'crates/**'
       - '.github/workflows/docs.yml'
-    paths-ignore:
-      - 'gh-pages/**'
 
   pull_request:
     paths:
