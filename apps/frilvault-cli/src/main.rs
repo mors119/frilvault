@@ -29,15 +29,15 @@ fn main() -> Result<()> {
         Commands::Search(cmd) => {
             command::search::execute(cmd)?;
         }
-        Commands::Doctor => {
-            command::doctor::execute()?;
+        Commands::Doctor(cmd) => {
+            command::doctor::execute(cmd)?;
         }
 
-        Commands::Health => {
-            command::doctor::execute()?;
+        Commands::Health(cmd) => {
+            command::doctor::execute(cmd)?;
         }
 
-        Commands::Stats => command::stats::execute()?,
+        Commands::Stats(cmd) => command::stats::execute(cmd)?,
 
         Commands::Repair(cmd) => {
             command::repair::execute(cmd)?;

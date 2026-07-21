@@ -1,4 +1,6 @@
-#[derive(Debug, Default)]
+use serde::Serialize;
+
+#[derive(Debug, Default, Serialize)]
 pub struct WorkspaceStats {
     pub file_count: usize,
 

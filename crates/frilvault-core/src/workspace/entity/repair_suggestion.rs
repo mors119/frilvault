@@ -1,6 +1,8 @@
+use serde::Serialize;
+
 use crate::workspace::FileMove;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct RepairSuggestion {
     pub missing_file: String,
     pub candidates: Vec<String>,

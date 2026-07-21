@@ -85,10 +85,17 @@ Current feature scope:
 - workspace health
 - repair apply
 
-Its backend is hybrid:
+Its active backend is currently CLI-backed:
 
-- CLI-backed: add note, notes panel, gutter decorations
-- Node-bridge-backed: edit, delete, search, stats, health, repair
+- add note
+- notes panel
+- gutter decorations
+- search
+- stats
+- health
+- repair
+
+There is still native bridge scaffolding in the extension repo, but it is not the active runtime path.
 
 ## Known Architectural Reality
 

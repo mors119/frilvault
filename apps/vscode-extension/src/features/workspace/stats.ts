@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 
-import type { NodeBridge } from '../../core/nodeBridge';
+import type { CliClient } from '../../core/cliClient';
 
 export function createShowStatsCommand(
-  nodeBridge: NodeBridge,
+  cliClient: CliClient,
   getWorkspaceRoot: () => string,
 ): () => Promise<void> {
   return async () => {
-    const stats = nodeBridge.workspaceStats(getWorkspaceRoot());
+    const stats = await cliClient.workspaceStats(getWorkspaceRoot());
     const channel = vscode.window.createOutputChannel('FrilVault Stats');
     channel.clear();
     channel.appendLine(`files: ${stats.file_count}`);

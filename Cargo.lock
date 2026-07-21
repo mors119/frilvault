@@ -192,6 +192,7 @@ dependencies = [
  "anyhow",
  "clap",
  "frilvault-core",
+ "serde",
  "serde_json",
  "uuid",
 ]

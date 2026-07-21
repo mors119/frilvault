@@ -1,5 +1,6 @@
 use anyhow::Result;
 use frilvault_core::{NoteAnchor, NoteView};
+use serde::Serialize;
 
 #[derive(Debug, Clone, Copy)]
 pub enum OutputFormat {
@@ -28,6 +29,14 @@ pub fn print_notes(notes: &[NoteView], format: OutputFormat) -> Result<()> {
         }
     }
 
+    Ok(())
+}
+
+pub fn print_json<T>(value: &T) -> Result<()>
+where
+    T: Serialize,
+{
+    println!("{}", serde_json::to_string_pretty(value)?);
     Ok(())
 }
 
