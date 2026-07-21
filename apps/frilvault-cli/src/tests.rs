@@ -1,6 +1,9 @@
 use clap::Parser;
 
-use crate::cli::{Cli, Commands, add::SymbolKindArg, list::ListFormatArg, search::SearchFormatArg};
+use crate::cli::{
+    Cli, Commands, add::SymbolKindArg, health::HealthFormatArg, list::ListFormatArg,
+    repair::RepairFormatArg, search::SearchFormatArg, stats::StatsFormatArg,
+};
 
 #[test]
 fn parses_list_format_json() {
@@ -41,7 +44,66 @@ fn parses_search_with_file_and_json_format() {
 fn parses_health_command_alias() {
     let cli = Cli::parse_from(["flvt", "health"]);
 
-    assert!(matches!(cli.command, Commands::Health));
+    match cli.command {
+        Commands::Health(command) => {
+            assert!(command.format.is_none());
+            assert!(!command.json);
+        }
+        _ => panic!("expected health command"),
+    }
+}
+
+#[test]
+fn parses_stats_json_format() {
+    let cli = Cli::parse_from(["flvt", "stats", "--format", "json"]);
+
+    match cli.command {
+        Commands::Stats(command) => {
+            assert!(matches!(command.format, Some(StatsFormatArg::Json)));
+            assert!(!command.json);
+        }
+        _ => panic!("expected stats command"),
+    }
+}
+
+#[test]
+fn parses_doctor_hidden_json_flag() {
+    let cli = Cli::parse_from(["flvt", "doctor", "--json"]);
+
+    match cli.command {
+        Commands::Doctor(command) => {
+            assert!(command.format.is_none());
+            assert!(command.json);
+        }
+        _ => panic!("expected doctor command"),
+    }
+}
+
+#[test]
+fn parses_repair_json_format() {
+    let cli = Cli::parse_from(["flvt", "repair", "--format", "json"]);
+
+    match cli.command {
+        Commands::Repair(command) => {
+            assert!(!command.apply);
+            assert!(matches!(command.format, Some(RepairFormatArg::Json)));
+            assert!(!command.json);
+        }
+        _ => panic!("expected repair command"),
+    }
+}
+
+#[test]
+fn parses_health_json_format() {
+    let cli = Cli::parse_from(["flvt", "health", "--format", "json"]);
+
+    match cli.command {
+        Commands::Health(command) => {
+            assert!(matches!(command.format, Some(HealthFormatArg::Json)));
+            assert!(!command.json);
+        }
+        _ => panic!("expected health command"),
+    }
 }
 
 #[test]

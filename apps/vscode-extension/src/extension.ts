@@ -8,6 +8,8 @@ import { FrilVaultHoverProvider } from './features/hover/hoverProvider';
 import { FrilVaultNotesProvider } from './features/notes-panel/provider';
 import { NotesPanelService } from './features/notes-panel/service';
 import { createSearchCommand } from './features/search/command';
+import { createApplyRepairsCommand, createShowHealthCommand } from './features/workspace/health';
+import { createShowStatsCommand } from './features/workspace/stats';
 import type { NoteView } from './types';
 import { getWorkspaceRoot, revealNote } from './utils/file';
 
@@ -41,21 +43,20 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand(
       'frilvault.showStats',
-      async () => {
-        await vscode.window.showWarningMessage('FrilVault stats are temporarily unavailable.');
-      },
+      createShowStatsCommand(cliClient, getWorkspaceRoot),
     ),
     vscode.commands.registerCommand(
       'frilvault.showHealth',
-      async () => {
-        await vscode.window.showWarningMessage('FrilVault health is temporarily unavailable.');
-      },
+      createShowHealthCommand(cliClient, getWorkspaceRoot),
     ),
     vscode.commands.registerCommand(
       'frilvault.applyRepairs',
-      async () => {
-        await vscode.window.showWarningMessage('FrilVault repair is temporarily unavailable.');
-      },
+      createApplyRepairsCommand(
+        cliClient,
+        getWorkspaceRoot,
+        () => notesProvider.refresh(),
+        async () => decorator.refresh(),
+      ),
     ),
     vscode.commands.registerCommand('frilvault.refresh', async () => {
       notesProvider.refresh();

@@ -1,19 +1,16 @@
 use clap::{Args, ValueEnum};
 
 #[derive(Debug, Args)]
-pub struct RepairCommand {
-    #[arg(long)]
-    pub apply: bool,
-
+pub struct StatsCommand {
     #[arg(long, value_enum)]
-    pub format: Option<RepairFormatArg>,
+    pub format: Option<StatsFormatArg>,
 
     #[arg(long, hide = true)]
     pub json: bool,
 }
 
 #[derive(Debug, Clone, ValueEnum)]
-pub enum RepairFormatArg {
+pub enum StatsFormatArg {
     Text,
     Json,
 }

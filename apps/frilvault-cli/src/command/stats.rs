@@ -1,11 +1,26 @@
 use anyhow::Result;
 use frilvault_core::FrilVault;
 
-pub fn execute() -> Result<()> {
+use crate::{
+    cli::stats::{StatsCommand, StatsFormatArg},
+    output::{OutputFormat, print_json},
+};
+
+pub fn execute(command: StatsCommand) -> Result<()> {
     let vault = FrilVault::open(std::env::current_dir()?)?;
     let mut service = vault.workspace()?;
 
     let stats = service.stats()?;
+
+    let format = match (command.format, command.json) {
+        (Some(StatsFormatArg::Json), _) | (None, true) => OutputFormat::Json,
+        _ => OutputFormat::Text,
+    };
+
+    if matches!(format, OutputFormat::Json) {
+        print_json(&stats)?;
+        return Ok(());
+    }
 
     println!("Workspace Statistics\n");
 

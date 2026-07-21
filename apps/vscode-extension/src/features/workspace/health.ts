@@ -1,15 +1,15 @@
 import * as vscode from 'vscode';
 
-import type { NodeBridge } from '../../core/nodeBridge';
+import type { CliClient } from '../../core/cliClient';
 
 export function createShowHealthCommand(
-  nodeBridge: NodeBridge,
+  cliClient: CliClient,
   getWorkspaceRoot: () => string,
 ): () => Promise<void> {
   return async () => {
     const workspaceRoot = getWorkspaceRoot();
-    const health = nodeBridge.workspaceHealth(workspaceRoot);
-    const suggestions = nodeBridge.repairSuggestions(workspaceRoot);
+    const health = await cliClient.workspaceHealth(workspaceRoot);
+    const suggestions = await cliClient.repairSuggestions(workspaceRoot);
     const channel = vscode.window.createOutputChannel('FrilVault Health');
 
     channel.clear();
@@ -40,13 +40,13 @@ export function createShowHealthCommand(
 }
 
 export function createApplyRepairsCommand(
-  nodeBridge: NodeBridge,
+  cliClient: CliClient,
   getWorkspaceRoot: () => string,
   refreshNotesPanel: () => void,
   refreshDecorations: () => Promise<void>,
 ): () => Promise<void> {
   return async () => {
-    const repaired = nodeBridge.applyRepairs(getWorkspaceRoot());
+    const repaired = await cliClient.applyRepairs(getWorkspaceRoot());
     refreshNotesPanel();
     await refreshDecorations();
     await vscode.window.showInformationMessage(`FrilVault repaired ${repaired} file(s).`);

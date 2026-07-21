@@ -3,7 +3,7 @@ import { promisify } from 'node:util';
 
 import * as vscode from 'vscode';
 
-import type { NoteView } from '../types';
+import type { NoteView, RepairSuggestion, WorkspaceHealth, WorkspaceStats } from '../types';
 import { parseJson } from '../utils/parser';
 
 const execFileAsync = promisify(execFile);
@@ -117,6 +117,31 @@ export class CliClient {
 
   public async repair(workspaceRoot: string, apply = false): Promise<string> {
     return this.execInWorkspace(workspaceRoot, apply ? ['repair', '--apply'] : ['repair']);
+  }
+
+  public async workspaceStats(workspaceRoot: string): Promise<WorkspaceStats> {
+    const stdout = await this.execInWorkspace(workspaceRoot, ['stats', '--format', 'json']);
+    return parseJson<WorkspaceStats>(stdout);
+  }
+
+  public async workspaceHealth(workspaceRoot: string): Promise<WorkspaceHealth> {
+    const stdout = await this.execInWorkspace(workspaceRoot, ['health', '--format', 'json']);
+    return parseJson<WorkspaceHealth>(stdout);
+  }
+
+  public async repairSuggestions(workspaceRoot: string): Promise<RepairSuggestion[]> {
+    const stdout = await this.execInWorkspace(workspaceRoot, ['repair', '--format', 'json']);
+    return parseJson<RepairSuggestion[]>(stdout);
+  }
+
+  public async applyRepairs(workspaceRoot: string): Promise<number> {
+    const stdout = await this.execInWorkspace(workspaceRoot, [
+      'repair',
+      '--apply',
+      '--format',
+      'json',
+    ]);
+    return parseJson<number>(stdout);
   }
 
   private async execInWorkspace(workspaceRoot: string, args: string[]): Promise<string> {

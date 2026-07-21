@@ -16,21 +16,17 @@ VS Code integration for FrilVault.
 
 ## Current Integration Model
 
-The extension currently uses two backends:
+The extension currently uses the `flvt` CLI as its active backend:
 
-- CLI-backed:
-  - add note
-  - notes panel
-  - gutter decorations
-- Node-bridge-backed:
-  - edit note
-  - delete note
-  - search
-  - stats
-  - health
-  - repair
+- add note
+- notes panel
+- gutter decorations
+- search
+- stats
+- health
+- repair
 
-This is the current MVP shape, not the final architecture.
+Native bridge scaffolding still exists in the repo, but the current shipped command path is CLI-backed.
 
 ## Feature Structure
 
@@ -58,9 +54,8 @@ npm run compile
 
 This builds:
 
-1. `frilvault-node`
-2. `dist/frilvault.node`
-3. the extension bundle at `dist/extension.js`
+1. the extension bundle at `dist/extension.js`
+2. `dist/frilvault.node` only when the optional `frilvault-node` crate exists
 
 ## Test
 
