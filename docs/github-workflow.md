@@ -293,6 +293,21 @@ gh pr create \
   --body-file .github/PULL_REQUEST_TEMPLATE.md
 ```
 
+For the common fork workflow, prefer an explicit command like:
+
+```bash
+gh pr create \
+  --repo "FrilLab/frilvault" \
+  --base "main" \
+  --head "<FORK_OWNER>:<BRANCH_NAME>" \
+  --draft \
+  --fill
+```
+
+Use `--draft` by default while the branch is still under review or while CI has not finished.
+
+If the template must be filled manually, write the PR body to a temporary file with real newlines and then pass it to `--body-file`.
+
 When generating the body directly, use this structure:
 
 ```markdown
