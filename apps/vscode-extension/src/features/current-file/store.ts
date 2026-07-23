@@ -164,29 +164,3 @@ export class CurrentFileNotesStore implements vscode.Disposable {
     this.onDidChangeEmitter.fire();
   }
 }
-
-export function notesAtLine(notes: NoteView[], line: number): NoteView[] {
-  return notes.filter((note) => {
-    if (note.note.anchor.type === 'Line') {
-      return (note.note.anchor.line ?? 1) - 1 === line;
-    }
-
-    return (note.note.anchor.line_hint ?? 1) - 1 === line;
-  });
-}
-
-export function partitionNotesByAnchor(notes: NoteView[]): {
-  lineNotes: NoteView[];
-  symbolNotes: NoteView[];
-} {
-  const lineNotes = notes
-    .filter((note) => note.note.anchor.type === 'Line')
-    .sort((left, right) => (left.note.anchor.line ?? 0) - (right.note.anchor.line ?? 0));
-  const symbolNotes = notes
-    .filter((note) => note.note.anchor.type === 'Symbol')
-    .sort((left, right) =>
-      (left.note.anchor.name ?? '').localeCompare(right.note.anchor.name ?? ''),
-    );
-
-  return { lineNotes, symbolNotes };
-}

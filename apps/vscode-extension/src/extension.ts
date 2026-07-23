@@ -18,7 +18,7 @@ import { COMMAND_IDS } from './constants/ids';
 import { CurrentFileNotesStore } from './features/current-file/store';
 import { createDisableCommand, createEnableCommand } from './features/enablement/command';
 import { isFrilVaultEnabled, syncEnabledContext } from './features/enablement/state';
-import { maybePromptForGitignore } from './features/gitignore/prompt';
+import { runOptionalPostSaveTasks } from './features/post-save/tasks';
 import { FrilVaultDecorator } from './features/decorations/decorator';
 import { GutterNoteActions } from './features/decorations/gutterActions';
 import { registerGutterCommands } from './features/decorations/gutterCommands';
@@ -27,7 +27,7 @@ import { FrilVaultHoverProvider } from './features/hover/hoverProvider';
 import { registerFrilVaultHoverProvider } from './features/hover/register';
 import { registerInlineNoteCodeLensProvider } from './features/inline-editor/codelens';
 import {
-  createCreateNoteHereCommand,
+  createAddNoteCommand,
   createEditNoteCommand,
 } from './features/inline-editor/command';
 import { createInlineNoteEditor } from './features/inline-editor/editor';
@@ -87,25 +87,25 @@ export function activate(context: vscode.ExtensionContext): void {
   activeDecorator = decorator;
   const hoverProvider = new FrilVaultHoverProvider(store, getWorkspaceRoot, isEnabled);
 
-  const invalidateViews = async (editor?: vscode.TextEditor) => {
+  const refreshNoteState = async (editor?: vscode.TextEditor) => {
     await store.syncActiveEditor(editor ?? vscode.window.activeTextEditor);
   };
 
   const refreshUi = async (editor?: vscode.TextEditor) => {
-    await invalidateViews(editor);
+    await refreshNoteState(editor);
   };
 
   const inlineNoteEditor = createInlineNoteEditor({
     cliClient,
     getWorkspaceRoot,
-    invalidateViews: async () => {
-      await refreshUi();
-      await maybePromptForGitignore({
+    refreshNoteState: () => refreshNoteState(),
+    runOptionalPostSaveTasks: () =>
+      runOptionalPostSaveTasks({
         getWorkspaceRoot,
         cliClient,
         workspaceState: context.workspaceState,
-      });
-    },
+      }),
+    showWarningMessage: (message) => vscode.window.showWarningMessage(message),
   });
   inlineNoteEditor.register(context);
 
@@ -113,7 +113,7 @@ export function activate(context: vscode.ExtensionContext): void {
     cliClient,
     registry: gutterRegistry,
     getWorkspaceRoot,
-    invalidateViews,
+    invalidateViews: refreshNoteState,
     openInlineEditor: (noteView) => inlineNoteEditor.openEdit(noteView),
   });
 
@@ -180,11 +180,7 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand(
       COMMAND_IDS.addNote,
-      runWhenEnabled(createCreateNoteHereCommand(inlineNoteEditor)),
-    ),
-    vscode.commands.registerCommand(
-      COMMAND_IDS.createNoteHere,
-      runWhenEnabled(createCreateNoteHereCommand(inlineNoteEditor)),
+      runWhenEnabled(createAddNoteCommand(inlineNoteEditor)),
     ),
     vscode.commands.registerCommand(
       COMMAND_IDS.editNote,
@@ -213,7 +209,7 @@ export function activate(context: vscode.ExtensionContext): void {
           quickPick: {
             cliClient,
             getWorkspaceRoot,
-            invalidateViews,
+            invalidateViews: refreshNoteState,
             openInlineEditor: (noteView) => inlineNoteEditor.openEdit(noteView),
           },
         }),
@@ -229,7 +225,7 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand(
       'frilvault.applyRepairs',
-      runWhenEnabled(createApplyRepairsCommand(cliClient, getWorkspaceRoot, invalidateViews)),
+      runWhenEnabled(createApplyRepairsCommand(cliClient, getWorkspaceRoot, refreshNoteState)),
     ),
     vscode.commands.registerCommand(
       COMMAND_IDS.refresh,
@@ -247,8 +243,8 @@ export function activate(context: vscode.ExtensionContext): void {
 
   registerNotesTreeDataProvider(context, notesProvider);
 
-  registerSourceRenameHandler(context, cliClient, isEnabled, invalidateViews);
-  registerWorkspaceWatcher(context, cliClient, isEnabled, invalidateViews);
+  registerSourceRenameHandler(context, cliClient, isEnabled, refreshNoteState);
+  registerWorkspaceWatcher(context, cliClient, isEnabled, refreshNoteState);
   registerNoteUriHandler(context, { cliClient, isEnabled });
   registerInlineNoteCodeLensProvider(
     context,

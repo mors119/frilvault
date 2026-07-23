@@ -41,17 +41,40 @@ export function getActiveEditorOrThrow(): vscode.TextEditor {
   return editor;
 }
 
+export function normalizeWorkspaceRelativePath(relative: string): string {
+  return relative.split(path.sep).join('/');
+}
+
 export function tryGetRelativeFilePath(
   workspaceRoot: string,
   sourceFile: string,
 ): string | undefined {
-  const relative = path.relative(workspaceRoot, sourceFile);
+  const resolvedRoot = path.resolve(workspaceRoot);
+  const resolvedFile = path.resolve(sourceFile);
+  const relative = path.relative(resolvedRoot, resolvedFile);
 
   if (relative.length === 0 || relative.startsWith('..') || path.isAbsolute(relative)) {
     return undefined;
   }
 
-  return relative;
+  return normalizeWorkspaceRelativePath(relative);
+}
+
+export function getRelativePathForDocument(
+  document: vscode.TextDocument,
+  workspaceRoot?: string,
+): string | undefined {
+  if (document.uri.scheme !== 'file') {
+    return undefined;
+  }
+
+  const root = workspaceRoot ?? tryGetWorkspaceRoot();
+
+  if (!root) {
+    return undefined;
+  }
+
+  return tryGetRelativeFilePath(root, document.uri.fsPath);
 }
 
 export function getRelativeFilePath(workspaceRoot: string, sourceFile: string): string {

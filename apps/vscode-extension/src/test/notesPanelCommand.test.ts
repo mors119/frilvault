@@ -51,7 +51,7 @@ suite('Show notes for current file command', () => {
         return undefined;
       },
       executeCommand: async (commandId) => {
-        assert.strictEqual(commandId, 'frilvault.createNoteHere');
+        assert.strictEqual(commandId, 'frilvault.addNote');
       },
     });
 

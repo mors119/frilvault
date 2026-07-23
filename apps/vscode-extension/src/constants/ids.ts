@@ -13,7 +13,6 @@ export const VIEW_IDS = {
 
 export const COMMAND_IDS = {
   addNote: 'frilvault.addNote',
-  createNoteHere: 'frilvault.createNoteHere',
   editNote: 'frilvault.editNote',
   enable: 'frilvault.enable',
   disable: 'frilvault.disable',

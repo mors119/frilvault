@@ -3,7 +3,7 @@ import * as assert from 'node:assert';
 import { suite, test } from 'mocha';
 
 import { CliClient } from '../core/cliClient';
-import { CurrentFileNotesStore, notesAtLine, partitionNotesByAnchor } from '../features/current-file/store';
+import { CurrentFileNotesStore } from '../features/current-file/store';
 import type { NoteView } from '../types';
 
 suite('CurrentFileNotesStore', () => {
@@ -66,20 +66,6 @@ suite('CurrentFileNotesStore', () => {
 
     assert.strictEqual(store.getSnapshot().notes.length, 0);
   });
-
-  test('notesAtLine filters line and symbol notes on the same row', () => {
-    const notes = [
-      createLineNoteView('src/sample.ts', 4, 1, 'line note'),
-      createSymbolNoteView('src/sample.ts', 'fn', 4, 'symbol note'),
-      createLineNoteView('src/sample.ts', 9, 1, 'other line'),
-    ];
-
-    const matched = notesAtLine(notes, 3);
-
-    assert.strictEqual(matched.length, 2);
-    assert.strictEqual(partitionNotesByAnchor(matched).lineNotes.length, 1);
-    assert.strictEqual(partitionNotesByAnchor(matched).symbolNotes.length, 1);
-  });
 });
 
 function createMockEditor(filePath: string): import('vscode').TextEditor {
@@ -108,29 +94,6 @@ function createLineNoteView(
         type: 'Line' as const,
         line,
         column,
-      },
-      content,
-      created_at: '2026-06-09T00:00:00Z',
-      updated_at: '2026-06-09T00:00:00Z',
-    },
-  };
-}
-
-function createSymbolNoteView(
-  sourceFile: string,
-  name: string,
-  lineHint: number,
-  content: string,
-): NoteView {
-  return {
-    source_file: sourceFile,
-    note: {
-      id: `${sourceFile}-${name}`,
-      anchor: {
-        type: 'Symbol' as const,
-        name,
-        kind: 'Function',
-        line_hint: lineHint,
       },
       content,
       created_at: '2026-06-09T00:00:00Z',

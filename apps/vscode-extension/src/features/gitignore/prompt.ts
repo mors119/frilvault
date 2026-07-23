@@ -49,7 +49,14 @@ export async function maybePromptForGitignore(
     return;
   }
 
-  const status = await dependencies.cliClient.checkGitignore(workspaceRoot);
+  let status;
+
+  try {
+    status = await dependencies.cliClient.checkGitignore(workspaceRoot);
+  } catch (error) {
+    await showWarningMessage(formatGitignoreInspectionFailure(error), { modal: false });
+    return;
+  }
 
   if (status.ignored) {
     return;
@@ -64,12 +71,26 @@ export async function maybePromptForGitignore(
   );
 
   if (choice === 'Add to .gitignore') {
-    await dependencies.cliClient.addGitignoreEntry(workspaceRoot);
-    await showInformationMessage('Added `.vault/` to `.gitignore`.');
+    try {
+      await dependencies.cliClient.addGitignoreEntry(workspaceRoot);
+      await showInformationMessage('Added `.vault/` to `.gitignore`.');
+    } catch (error) {
+      await showWarningMessage(formatGitignoreAppendFailure(error), { modal: false });
+    }
     return;
   }
 
   if (choice === 'Never Ask Again') {
     await disablePrompt(dependencies.workspaceState, workspaceRoot);
   }
+}
+
+function formatGitignoreInspectionFailure(error: unknown): string {
+  const detail = error instanceof Error ? error.message : 'Unknown error';
+  return `FrilVault could not inspect .gitignore: ${detail}`;
+}
+
+function formatGitignoreAppendFailure(error: unknown): string {
+  const detail = error instanceof Error ? error.message : 'Unknown error';
+  return `FrilVault could not update .gitignore: ${detail}`;
 }
