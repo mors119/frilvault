@@ -1,7 +1,7 @@
 use std::{fs, path::Path};
 
 use crate::{
-    AddNoteRequest, LineAnchor, NoteAnchor,
+    AddNoteRequest, ExplorerGroup, ExplorerNode, LineAnchor, NoteAnchor, SymbolAnchor, SymbolKind,
     note::NoteRepository,
     runtime::VaultContext,
     tests::helper::{
@@ -296,4 +296,99 @@ fn repair_suggests_content_match_when_source_file_is_renamed() {
     assert_eq!(suggestions.len(), 1);
     assert_eq!(suggestions[0].missing_file, "src/parser/service.rs");
     assert_eq!(suggestions[0].candidates, vec!["src/core/user_service.rs"]);
+}
+
+#[test]
+fn explorer_builds_directory_file_and_note_groups() {
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    fs::create_dir_all(workspace_root.join("src")).unwrap();
+    fs::write(workspace_root.join("src/main.rs"), "").unwrap();
+    fs::write(workspace_root.join("src/lib.rs"), "").unwrap();
+
+    let mut note_service = create_test_note_service(workspace_root);
+    note_service
+        .add_note(AddNoteRequest {
+            source_file: "src/main.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "line note".to_string(),
+            tags: None,
+        })
+        .unwrap();
+    note_service
+        .add_note(AddNoteRequest {
+            source_file: "src/main.rs".into(),
+            anchor: NoteAnchor::Symbol(SymbolAnchor {
+                name: "main".to_string(),
+                kind: SymbolKind::Function,
+                signature: None,
+                line_hint: None,
+            }),
+            content: "symbol note".to_string(),
+            tags: None,
+        })
+        .unwrap();
+    note_service
+        .add_note(AddNoteRequest {
+            source_file: "src/lib.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 3, column: 1 }),
+            content: "lib note".to_string(),
+            tags: None,
+        })
+        .unwrap();
+
+    let mut workspace_service = create_test_workspace_service(workspace_root);
+    workspace_service.warm_up().unwrap();
+
+    let explorer = workspace_service.explorer().unwrap();
+
+    let ExplorerNode::Directory { children, .. } = &explorer.root else {
+        panic!("expected root directory");
+    };
+
+    let src_dir = children
+        .iter()
+        .find(|node| matches!(node, ExplorerNode::Directory { name, .. } if name == "src"))
+        .expect("expected src directory");
+
+    let ExplorerNode::Directory { children, .. } = src_dir else {
+        panic!("expected src directory node");
+    };
+
+    assert_eq!(children.len(), 2);
+
+    let main_file = children
+        .iter()
+        .find(|node| {
+            matches!(
+                node,
+                ExplorerNode::File { source_file, .. } if source_file == "src/main.rs"
+            )
+        })
+        .expect("expected src/main.rs file node");
+
+    let ExplorerNode::File { groups, exists, .. } = main_file else {
+        panic!("expected file node");
+    };
+
+    assert!(*exists);
+    assert_eq!(groups.len(), 2);
+    assert!(matches!(groups[0], ExplorerGroup::LineNotes { .. }));
+    assert!(matches!(groups[1], ExplorerGroup::SymbolNotes { .. }));
+
+    match &groups[0] {
+        ExplorerGroup::LineNotes { notes } => {
+            assert_eq!(notes.len(), 1);
+            assert_eq!(notes[0].content, "line note");
+        }
+        _ => panic!("expected line notes group"),
+    }
+
+    match &groups[1] {
+        ExplorerGroup::SymbolNotes { notes } => {
+            assert_eq!(notes.len(), 1);
+            assert_eq!(notes[0].content, "symbol note");
+        }
+        _ => panic!("expected symbol notes group"),
+    }
 }

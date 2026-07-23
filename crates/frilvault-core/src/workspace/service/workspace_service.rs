@@ -4,11 +4,13 @@
 //! health checks, and repair workflows.
 
 use crate::{
-    FrilVaultResult, NoteAnchor, RepairSuggestion, WorkspaceHealth, WorkspaceStats,
+    FrilVaultResult, NoteAnchor, RepairSuggestion, WorkspaceExplorer, WorkspaceHealth,
+    WorkspaceStats,
     runtime::VaultContext,
     workspace::{
         ContentMatcher, FileMove, IndexDiff, RepairEngine, WorkspaceIndex,
-        WorkspaceIndexRepository, WorkspaceWatcher, content_match::read_source_file_content,
+        WorkspaceIndexRepository, WorkspaceWatcher, build_workspace_explorer,
+        content_match::read_source_file_content,
     },
 };
 
@@ -109,6 +111,26 @@ impl WorkspaceService {
         }
 
         Ok(stats)
+    }
+
+    pub fn explorer(&mut self) -> FrilVaultResult<WorkspaceExplorer> {
+        let index = self.index_repository.load_and_refresh_exists()?;
+        let exists_by_file = index
+            .files
+            .iter()
+            .map(|file| (file.source_file.clone(), file.exists))
+            .collect::<std::collections::HashMap<_, _>>();
+
+        let records = self.vault_context.list_all_note_files()?;
+
+        let entries = records.into_iter().map(|record| {
+            let source_file = record.source_file.to_string_lossy().into_owned();
+            let exists = exists_by_file.get(&source_file).copied().unwrap_or(true);
+
+            (source_file, exists, record.note_file.notes)
+        });
+
+        Ok(build_workspace_explorer(entries))
     }
 
     pub fn health_check(&mut self) -> FrilVaultResult<WorkspaceHealth> {

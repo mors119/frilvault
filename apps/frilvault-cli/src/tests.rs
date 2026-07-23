@@ -75,6 +75,18 @@ fn parses_stats_json_format() {
 }
 
 #[test]
+fn parses_explorer_json_format() {
+    let cli = Cli::parse_from(["flvt", "explorer", "--format", "json"]);
+
+    match cli.command {
+        Commands::Explorer(command) => {
+            assert!(matches!(command.format, Some(FormatArg::Json)));
+        }
+        _ => panic!("expected explorer command"),
+    }
+}
+
+#[test]
 fn rejects_legacy_json_flag() {
     match Cli::try_parse_from(["flvt", "doctor", "--json"]) {
         Err(error) => assert!(error.to_string().contains("--json")),
