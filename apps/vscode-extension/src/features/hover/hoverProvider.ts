@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import type { CliClient } from '../../core/cliClient';
 import { getRelativeFilePath } from '../../utils/file';
+import { formatNoteHover } from '../../utils/noteMarkdown';
 
 export class FrilVaultHoverProvider implements vscode.HoverProvider {
   public constructor(
@@ -34,13 +35,20 @@ export class FrilVaultHoverProvider implements vscode.HoverProvider {
       return undefined;
     }
 
-    const markdown = matched
-      .map((note) => {
-        const type = note.note.anchor.type;
-        return `**FrilVault Note**\n---\nType: ${type}\nContent: ${note.note.content}`;
-      })
-      .join('\n\n');
+    if (matched.length === 1) {
+      return new vscode.Hover(formatNoteHover(matched[0], this.getWorkspaceRoot()));
+    }
 
-    return new vscode.Hover(new vscode.MarkdownString(markdown));
+    const markdown = new vscode.MarkdownString();
+
+    for (const [index, note] of matched.entries()) {
+      if (index > 0) {
+        markdown.appendMarkdown('\n\n---\n\n');
+      }
+
+      markdown.appendMarkdown(formatNoteHover(note, this.getWorkspaceRoot()).value);
+    }
+
+    return new vscode.Hover(markdown);
   }
 }

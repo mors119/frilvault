@@ -8,6 +8,13 @@ export type NoteAnchor = {
   line_hint?: number;
 };
 
+export type NoteAttachment = {
+  id: string;
+  filename: string;
+  mime_type: string;
+  extension: string;
+};
+
 export type ResolvedSymbol = {
   line: number;
   column: number;
@@ -19,6 +26,7 @@ export type NoteView = {
     id: string;
     content: string;
     anchor: NoteAnchor;
+    attachments?: NoteAttachment[];
     created_at?: string;
     updated_at?: string;
   };

@@ -1,7 +1,7 @@
-import * as path from 'node:path';
 import * as vscode from 'vscode';
 
 import type { NoteView } from '../../types';
+import { formatNoteHover } from '../../utils/noteMarkdown';
 
 export type AnchorGroupKind = 'Line' | 'Symbol';
 
@@ -30,9 +30,7 @@ export class NotesPanelItem extends vscode.TreeItem {
     super(createPreview(noteView), vscode.TreeItemCollapsibleState.None);
 
     this.description = createDescription(noteView);
-    this.tooltip = new vscode.MarkdownString(
-      `**${path.basename(noteView.source_file)}**\n\n${noteView.note.content}`,
-    );
+    this.tooltip = formatNoteHover(noteView, workspaceRoot);
     this.contextValue = 'frilvault.note';
     this.iconPath = new vscode.ThemeIcon('note');
     this.command = {

@@ -13,8 +13,12 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use crate::{
-    AddNoteRequest, FrilVaultError, FrilVaultResult, NoteAnchor, NoteQuery, NoteView, SymbolKind,
-    note::Note, runtime::VaultContext, symbol::SymbolResolver, workspace::read_source_file_content,
+    AddNoteRequest, AttachmentRepository, FrilVaultError, FrilVaultResult, NoteAnchor,
+    NoteAttachment, NoteQuery, NoteView, SymbolKind,
+    note::Note,
+    runtime::VaultContext,
+    symbol::SymbolResolver,
+    workspace::{PathResolver, read_source_file_content},
 };
 
 /// Application service responsible for note operations.
@@ -149,6 +153,8 @@ impl NoteService {
             return Err(FrilVaultError::NoteNotFound(note_id));
         }
 
+        self.attachment_repository().remove_all_for_note(note_id)?;
+
         self.save_notes(source_file, notes)?;
 
         self.vault_context.sync_index_for_source_file(source_file)?;
@@ -179,6 +185,72 @@ impl NoteService {
         self.vault_context.sync_index_for_source_file(source_file)?;
 
         Ok(())
+    }
+
+    pub fn attach_image(
+        &mut self,
+        source_file: impl AsRef<Path>,
+        note_id: Uuid,
+        image_path: impl AsRef<Path>,
+    ) -> FrilVaultResult<NoteAttachment> {
+        let source_file = source_file.as_ref();
+        let mut notes = self.load_notes(source_file)?;
+
+        let note = notes
+            .iter_mut()
+            .find(|note| note.id == note_id)
+            .ok_or(FrilVaultError::NoteNotFound(note_id))?;
+
+        let attachment = self
+            .attachment_repository()
+            .store(note_id, image_path.as_ref())?;
+
+        note.attachments.push(attachment.clone());
+        note.updated_at = Utc::now();
+
+        self.save_notes(source_file, notes)?;
+        self.vault_context.sync_index_for_source_file(source_file)?;
+
+        Ok(attachment)
+    }
+
+    pub fn detach_image(
+        &mut self,
+        source_file: impl AsRef<Path>,
+        note_id: Uuid,
+        attachment_id: Uuid,
+    ) -> FrilVaultResult<()> {
+        let source_file = source_file.as_ref();
+        let mut notes = self.load_notes(source_file)?;
+
+        let note = notes
+            .iter_mut()
+            .find(|note| note.id == note_id)
+            .ok_or(FrilVaultError::NoteNotFound(note_id))?;
+
+        let attachment_index = note
+            .attachments
+            .iter()
+            .position(|attachment| attachment.id == attachment_id)
+            .ok_or(FrilVaultError::AttachmentNotFound(attachment_id))?;
+
+        let attachment = note.attachments.remove(attachment_index);
+        note.updated_at = Utc::now();
+
+        self.attachment_repository().remove(note_id, &attachment)?;
+
+        self.save_notes(source_file, notes)?;
+        self.vault_context.sync_index_for_source_file(source_file)?;
+
+        Ok(())
+    }
+
+    fn attachment_repository(&self) -> AttachmentRepository {
+        AttachmentRepository::new(PathResolver::new(
+            self.vault_context
+                .workspace_index_repository
+                .workspace_root(),
+        ))
     }
 
     fn all_note_views(&mut self) -> FrilVaultResult<Vec<NoteView>> {
