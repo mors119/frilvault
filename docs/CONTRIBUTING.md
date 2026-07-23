@@ -4,6 +4,15 @@
 
 FrilVault is currently a small repository with a Rust core and a VS Code integration. Contributions should prefer clarity and low maintenance over adding new infrastructure.
 
+The current checkout contains:
+
+- `crates/frilvault-core`
+- `apps/frilvault-cli`
+- `apps/vscode-extension`
+- `docs/`
+
+A desktop application is planned in repository guidance, but it is not present as a source tree in the current repository.
+
 ## Environment
 
 ### Rust
@@ -35,7 +44,8 @@ npm test
 - `README.md` is the main entry point
 - `docs/ARCHITECTURE.md` explains current system shape
 - `docs/ROADMAP.md` tracks intended direction
-- `docs/AGENTS.md` captures agent-facing repository guidance
+- `AGENTS.md` captures repository-wide agent-facing rules
+- `docs/github-workflow.md`, `docs/testing.md`, and `docs/release-process.md` define the detailed workflow
 
 Avoid introducing a separate docs build system unless the project clearly needs public documentation hosting.
 

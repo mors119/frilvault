@@ -7,23 +7,34 @@ FrilVault is a local-first workspace knowledge layer. Notes live under `.vault/`
 ## What It Supports
 
 - line-anchored and symbol-anchored notes
+- note attachments
 - workspace search
+- workspace explorer output
 - workspace stats and health checks
+- note URI resolution
+- workspace sync and gitignore helper flows
 - note-file repair after file moves or renames
-- VS Code integration for the current MVP
+- VS Code integration with notes panel, gutter markers, hover preview, inline editing, and CodeLens
 
 ## Repository Layout
 
 ```text
-apps/
-├── frilvault-cli
-└── vscode-extension
-
-crates/
-└── frilvault-core
+.
+├── AGENTS.md
+├── apps/
+│   ├── frilvault-cli
+│   └── vscode-extension
+├── crates/
+│   └── frilvault-core
+└── docs/
 ```
 
-`frilvault-core` contains the domain logic, storage access, and runtime utilities. `frilvault-cli` is the main executable surface. `apps/vscode-extension` is the current editor integration.
+- `crates/frilvault-core` contains the domain logic, persistence boundaries, symbol helpers, URI helpers, and workspace services.
+- `apps/frilvault-cli` is the main executable surface for local workflows and JSON consumers.
+- `apps/vscode-extension` contains the current editor integration.
+- `docs/` contains architecture, workflow, testing, and release guidance.
+
+The current checkout contains a CLI and a VS Code extension. Repository guidance still reserves room for a future desktop application, but there is no desktop application source tree in the current layout.
 
 ## Storage Model
 
@@ -40,8 +51,10 @@ FrilVault does not rewrite or annotate source files.
 
 ```bash
 flvt add --file src/main.rs --line 10 --column 5 --content "parser needs cleanup"
+flvt explorer --format json
 flvt list --file src/main.rs
 flvt search parser
+flvt resolve-uri "frilvault://note/..."
 flvt stats
 flvt doctor
 flvt repair --apply
@@ -52,17 +65,21 @@ flvt repair --apply
 - [Architecture](docs/ARCHITECTURE.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Contributing](docs/CONTRIBUTING.md)
-- [Agents](docs/AGENTS.md)
+- [Repository Rules](AGENTS.md)
+- [GitHub Workflow](docs/github-workflow.md)
+- [Testing](docs/testing.md)
+- [Release Process](docs/release-process.md)
 
 ## Development
 
 ```bash
-cargo test -p frilvault-core
-cargo test -p frilvault-cli
+cargo fmt --all --check
+cargo test --workspace
 ```
 
 ```bash
 cd apps/vscode-extension
+npm install
 npm run compile
 npm test
 ```
