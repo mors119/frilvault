@@ -92,7 +92,7 @@ fn repair_engine_applies_high_confidence_moves_when_threshold_allows() {
     let repaired =
         RepairEngine::apply_moves_with_min_confidence(&mut vault_context, moves, 0.7).unwrap();
 
-    assert_eq!(repaired, 1);
+    assert_eq!(repaired.len(), 1);
 
     let old_path = resolver.note_path_for_source_file("src/parser/lib.rs");
     let new_path = resolver.note_path_for_source_file("src/core/lib.rs");
