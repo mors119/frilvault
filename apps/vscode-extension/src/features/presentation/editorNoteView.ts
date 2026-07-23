@@ -90,21 +90,11 @@ export function resolveNoteRange(note: NoteView, lineCount: number): vscode.Rang
   return new vscode.Range(line, column, line, column);
 }
 
-export function formatNoteTitle(view: EditorNoteView): string {
-  if (view.noteType) {
-    return view.noteType;
-  }
-
-  if (view.anchor.kind === 'symbol') {
-    return view.anchor.symbolName;
-  }
-
-  const firstLine = view.content.split('\n').find((line) => line.trim().length > 0);
-
-  return firstLine?.trim() ?? 'FrilVault Note';
+export function formatNoteTitle(view: EditorNoteView): string | undefined {
+  return view.noteType;
 }
 
-export function formatAnchorHeading(anchor: ResolvedNoteAnchor): string {
+export function formatAnchorLabel(anchor: ResolvedNoteAnchor): string {
   if (anchor.kind === 'line') {
     const columnSuffix =
       typeof anchor.column === 'number' ? `:${anchor.column}` : '';
@@ -112,17 +102,15 @@ export function formatAnchorHeading(anchor: ResolvedNoteAnchor): string {
     return `Line ${anchor.line}${columnSuffix}`;
   }
 
-  return 'Symbol';
+  return `Symbol: ${anchor.symbolName}`;
 }
 
-export function formatAnchorDetail(anchor: ResolvedNoteAnchor): string | undefined {
-  if (anchor.kind === 'line') {
-    return undefined;
-  }
+export function formatAnchorHeading(anchor: ResolvedNoteAnchor): string {
+  return formatAnchorLabel(anchor);
+}
 
-  const kindLabel = anchor.symbolKind ?? 'Symbol';
-
-  return `${kindLabel}: ${anchor.symbolName}`;
+export function formatAnchorDetail(_anchor: ResolvedNoteAnchor): string | undefined {
+  return undefined;
 }
 
 export function formatResolutionWarning(anchor: ResolvedNoteAnchor): string | undefined {
@@ -130,7 +118,7 @@ export function formatResolutionWarning(anchor: ResolvedNoteAnchor): string | un
     return undefined;
   }
 
-  return 'Could not locate the current symbol';
+  return 'Could not resolve the current declaration.';
 }
 
 export function normalizeInlineContent(content: string): string {
@@ -201,7 +189,5 @@ function inferNoteType(note: NoteView): string | undefined {
     return note.note.title.trim();
   }
 
-  const tag = note.note.tags?.find((entry) => entry.trim().length > 0);
-
-  return tag?.trim();
+  return undefined;
 }

@@ -3,14 +3,15 @@ import * as vscode from 'vscode';
 import { COMMAND_IDS } from '../../constants/ids';
 import type { NoteView } from '../../types';
 import { appendNoteAttachments } from '../../utils/noteMarkdown';
+import { deduplicateNotesById } from './deduplicateNotes';
 import {
-  formatAnchorDetail,
-  formatAnchorHeading,
+  formatAnchorLabel,
   formatNoteTitle,
   formatResolutionWarning,
   toEditorNoteView,
   type EditorNoteView,
-} from '../presentation/editorNoteView';
+  type ResolvedNoteAnchor,
+} from './editorNoteView';
 import { truncateMarkdownContent } from '../hover/richHover';
 
 export const NOTE_HOVER_COMMANDS = [
@@ -22,105 +23,187 @@ export const NOTE_HOVER_COMMANDS = [
   COMMAND_IDS.notesPanelOpenNote,
 ] as const;
 
-export function formatEditorNoteHover(
-  note: NoteView,
+export interface HoverNotePresentation {
+  noteId: string;
+  title?: string;
+  content: string;
+  tags: string[];
+  anchor: ResolvedNoteAnchor;
+  updatedAt?: string;
+  warning?: string;
+}
+
+export interface EditorNotesHoverParts {
+  contents: vscode.MarkdownString[];
+}
+
+export function toHoverNotePresentation(view: EditorNoteView): HoverNotePresentation {
+  return {
+    noteId: view.noteId,
+    title: formatNoteTitle(view),
+    content: view.content,
+    tags: view.tags,
+    anchor: view.anchor,
+    updatedAt: view.updatedAt,
+    warning: formatResolutionWarning(view.anchor),
+  };
+}
+
+export function buildEditorNotesHoverParts(
+  notes: NoteView[],
   workspaceRoot: string,
   sourceFile: string,
   previewLength: number,
-): vscode.MarkdownString {
-  const view = toEditorNoteView(note, workspaceRoot);
-  const markdown = createTrustedMarkdown();
+): EditorNotesHoverParts {
+  const uniqueNotes = deduplicateNotesById(notes);
 
-  markdown.appendMarkdown(`**FrilVault**\n\n`);
-  markdown.appendMarkdown(`**${escapeMarkdownInline(formatNoteTitle(view))}**\n\n`);
-  appendAnchorSection(markdown, view);
-  appendTags(markdown, view);
-  appendUpdatedTime(markdown, view);
-  appendDecisionMetadata(markdown, view);
+  if (uniqueNotes.length === 0) {
+    return { contents: [] };
+  }
 
-  const { preview, truncated } = truncateMarkdownContent(view.content, previewLength);
-  markdown.appendMarkdown(`${preview}\n\n`);
-  appendNoteAttachments(markdown, note, workspaceRoot);
+  const contentMarkdown = createUntrustedMarkdown();
+  const actionMarkdown = createTrustedActionsMarkdown();
+  const presentations = uniqueNotes.map((note) =>
+    toHoverNotePresentation(toEditorNoteView(note, workspaceRoot)),
+  );
 
-  appendActionLinks(markdown, note.note.id, sourceFile, truncated);
+  buildHoverHeader(contentMarkdown);
 
-  return markdown;
+  if (presentations.length === 1) {
+    buildSingleNoteSections(
+      contentMarkdown,
+      presentations[0],
+      uniqueNotes[0],
+      workspaceRoot,
+      previewLength,
+    );
+    buildHoverActions(actionMarkdown, presentations[0].noteId, sourceFile);
+  } else {
+    buildMultipleNoteSections(contentMarkdown, presentations, previewLength);
+    buildHoverActions(actionMarkdown, presentations[0].noteId, sourceFile, true);
+  }
+
+  return { contents: [contentMarkdown, actionMarkdown] };
 }
 
+/** Legacy combined hover string for decoration summaries. */
 export function formatEditorNotesHover(
   notes: NoteView[],
   workspaceRoot: string,
   sourceFile: string,
   previewLength: number,
 ): vscode.MarkdownString {
-  if (notes.length === 1) {
-    return formatEditorNoteHover(notes[0], workspaceRoot, sourceFile, previewLength);
+  const parts = buildEditorNotesHoverParts(notes, workspaceRoot, sourceFile, previewLength);
+  const combined = createUntrustedMarkdown();
+
+  for (const part of parts.contents) {
+    combined.appendMarkdown(part.value);
   }
 
-  const markdown = createTrustedMarkdown();
-
-  markdown.appendMarkdown(`**FrilVault Notes (${notes.length})**\n\n`);
-
-  for (const [index, note] of notes.entries()) {
-    const view = toEditorNoteView(note, workspaceRoot);
-
-    markdown.appendMarkdown(`${index + 1}. **${escapeMarkdownInline(formatNoteTitle(view))}**\n`);
-    markdown.appendMarkdown(`   ${truncateSingleLine(view.content)}\n\n`);
-  }
-
-  appendActionLinks(markdown, notes[0].note.id, sourceFile, false, notes.length > 1);
-
-  return markdown;
+  return combined;
 }
 
-function appendAnchorSection(markdown: vscode.MarkdownString, view: EditorNoteView): void {
-  markdown.appendMarkdown(`**Anchor**\n`);
-  markdown.appendMarkdown(`${escapeMarkdownInline(formatAnchorHeading(view.anchor))}\n`);
+export function formatEditorNoteHover(
+  note: NoteView,
+  workspaceRoot: string,
+  sourceFile: string,
+  previewLength: number,
+): vscode.MarkdownString {
+  return formatEditorNotesHover([note], workspaceRoot, sourceFile, previewLength);
+}
 
-  const detail = formatAnchorDetail(view.anchor);
+function buildHoverHeader(markdown: vscode.MarkdownString): void {
+  markdown.appendMarkdown('**FrilVault**\n\n');
+}
 
-  if (detail) {
-    markdown.appendMarkdown(`${escapeMarkdownInline(detail)}\n`);
+function buildSingleNoteSections(
+  markdown: vscode.MarkdownString,
+  presentation: HoverNotePresentation,
+  note: NoteView,
+  workspaceRoot: string,
+  previewLength: number,
+): void {
+  buildHoverTitle(markdown, presentation.title);
+  buildHoverContent(markdown, presentation.content, previewLength);
+  appendNoteAttachments(markdown, note, workspaceRoot);
+  buildHoverMetadata(markdown, presentation);
+  buildHoverWarning(markdown, presentation.warning);
+}
+
+function buildMultipleNoteSections(
+  markdown: vscode.MarkdownString,
+  presentations: HoverNotePresentation[],
+  previewLength: number,
+): void {
+  markdown.appendMarkdown(`**FrilVault Notes (${presentations.length})**\n\n`);
+
+  for (const [index, presentation] of presentations.entries()) {
+    if (index > 0) {
+      markdown.appendMarkdown('\n\n---\n\n');
+    }
+
+    markdown.appendMarkdown(`${index + 1}. `);
+    buildHoverTitle(markdown, presentation.title, true);
+    buildHoverContent(markdown, presentation.content, Math.min(previewLength, 240));
+    buildHoverMetadata(markdown, presentation);
+    buildHoverWarning(markdown, presentation.warning);
+  }
+}
+
+function buildHoverTitle(
+  markdown: vscode.MarkdownString,
+  title: string | undefined,
+  inline = false,
+): void {
+  if (!title) {
+    return;
   }
 
-  const warning = formatResolutionWarning(view.anchor);
+  if (inline) {
+    markdown.appendMarkdown(`**${escapeMarkdownInline(title)}**\n\n`);
+    return;
+  }
 
-  if (warning) {
-    markdown.appendMarkdown(`Status: ${escapeMarkdownInline(warning)}\n`);
+  markdown.appendMarkdown(`**${escapeMarkdownInline(title)}**\n\n`);
+}
+
+function buildHoverContent(
+  markdown: vscode.MarkdownString,
+  content: string,
+  previewLength: number,
+): void {
+  const { preview } = truncateMarkdownContent(content, previewLength);
+  markdown.appendMarkdown(`${preview}\n\n`);
+}
+
+function buildHoverMetadata(markdown: vscode.MarkdownString, presentation: HoverNotePresentation): void {
+  markdown.appendMarkdown(`${escapeMarkdownInline(formatAnchorLabel(presentation.anchor))}\n`);
+
+  if (presentation.tags.length > 0) {
+    markdown.appendMarkdown(
+      `Tags: ${presentation.tags.map(escapeMarkdownInline).join(', ')}\n`,
+    );
+  }
+
+  if (presentation.updatedAt) {
+    markdown.appendMarkdown(`Updated: ${escapeMarkdownInline(formatUpdatedAt(presentation.updatedAt))}\n`);
   }
 
   markdown.appendMarkdown('\n');
 }
 
-function appendTags(markdown: vscode.MarkdownString, view: EditorNoteView): void {
-  if (view.tags.length === 0) {
+function buildHoverWarning(markdown: vscode.MarkdownString, warning: string | undefined): void {
+  if (!warning) {
     return;
   }
 
-  markdown.appendMarkdown(`**Tags:** ${view.tags.map(escapeMarkdownInline).join(', ')}\n\n`);
+  markdown.appendMarkdown(`${escapeMarkdownInline(warning)}\n\n`);
 }
 
-function appendUpdatedTime(markdown: vscode.MarkdownString, view: EditorNoteView): void {
-  if (!view.updatedAt) {
-    return;
-  }
-
-  markdown.appendMarkdown(`**Updated**\n${escapeMarkdownInline(formatUpdatedAt(view.updatedAt))}\n\n`);
-}
-
-function appendDecisionMetadata(markdown: vscode.MarkdownString, view: EditorNoteView): void {
-  if (!view.decisionMetadata) {
-    return;
-  }
-
-  markdown.appendMarkdown(`**Decision:** ${escapeMarkdownInline(view.decisionMetadata)}\n\n`);
-}
-
-function appendActionLinks(
+function buildHoverActions(
   markdown: vscode.MarkdownString,
   noteId: string,
   sourceFile: string,
-  _truncated: boolean,
   multipleNotes = false,
 ): void {
   const links = [
@@ -139,21 +222,18 @@ function appendActionLinks(
   markdown.appendMarkdown(`${links.join(' · ')}\n`);
 }
 
-function createTrustedMarkdown(): vscode.MarkdownString {
+function createUntrustedMarkdown(): vscode.MarkdownString {
   const markdown = new vscode.MarkdownString(undefined, true);
-  markdown.isTrusted = { enabledCommands: [...NOTE_HOVER_COMMANDS] };
+  markdown.isTrusted = false;
   markdown.supportHtml = false;
   return markdown;
 }
 
-function truncateSingleLine(content: string, limit = 80): string {
-  const normalized = content.replace(/\s+/g, ' ').trim();
-
-  if (normalized.length <= limit) {
-    return normalized;
-  }
-
-  return `${normalized.slice(0, limit - 3)}...`;
+function createTrustedActionsMarkdown(): vscode.MarkdownString {
+  const markdown = new vscode.MarkdownString(undefined, true);
+  markdown.isTrusted = { enabledCommands: [...NOTE_HOVER_COMMANDS] };
+  markdown.supportHtml = false;
+  return markdown;
 }
 
 function formatUpdatedAt(value: string): string {
@@ -171,5 +251,9 @@ function escapeMarkdownInline(value: string): string {
 }
 
 function commandUri(command: string, args: unknown[]): string {
+  if (!NOTE_HOVER_COMMANDS.includes(command as (typeof NOTE_HOVER_COMMANDS)[number])) {
+    throw new Error(`Untrusted hover command: ${command}`);
+  }
+
   return `command:${command}?${encodeURIComponent(JSON.stringify(args))}`;
 }

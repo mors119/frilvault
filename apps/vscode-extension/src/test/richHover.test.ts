@@ -6,6 +6,7 @@ import * as vscode from 'vscode';
 import { sortNotesForHover, resolveNotesFromCache } from '../features/hover/resolveNotes';
 import {
   formatRichNoteHover,
+  formatRichNotesHoverParts,
   RICH_HOVER_COMMANDS,
   truncateMarkdownContent,
 } from '../features/hover/richHover';
@@ -56,58 +57,68 @@ suite('Rich hover preview', () => {
   });
 
   test('formatRichNoteHover renders symbol anchor metadata without line kind labels', () => {
-    const markdown = formatRichNoteHover(
-      {
-        source_file: 'src/a.ts',
-        note: {
-          id: 'note-1',
-          content: 'Optimize parser initialization.',
-          anchor: { type: 'Symbol', name: 'parseYaml', kind: 'Function', line_hint: 4 },
-          tags: ['TODO'],
-          updated_at: '2026-07-24T00:00:00Z',
-          created_at: '2026-07-24T00:00:00Z',
+    const parts = formatRichNotesHoverParts(
+      [
+        {
+          source_file: 'src/a.ts',
+          note: {
+            id: 'note-1',
+            content: 'Optimize parser initialization.',
+            anchor: { type: 'Symbol', name: 'parseYaml', kind: 'Function', line_hint: 4 },
+            tags: ['TODO'],
+            updated_at: '2026-07-24T00:00:00Z',
+            created_at: '2026-07-24T00:00:00Z',
+          },
+          resolved: { line: 4, column: 1 },
         },
-        resolved: { line: 4, column: 1 },
-      },
+      ],
       '/tmp/workspace',
       'src/a.ts',
       800,
     );
 
-    assert.match(markdown.value, /Anchor/);
-    assert.match(markdown.value, /Function: parseYaml/);
-    assert.doesNotMatch(markdown.value, /Kind:/);
-    assert.doesNotMatch(markdown.value, /Type: Line/);
+    const content = parts.contents[0]?.value ?? '';
+
+    assert.match(content, /Symbol: parseYaml/);
+    assert.doesNotMatch(content, /Kind:/);
+    assert.doesNotMatch(content, /Type: Line/);
+    assert.doesNotMatch(content, /Function: parseYaml/);
   });
 
   test('formatRichNoteHover renders markdown metadata and fenced code', () => {
-    const markdown = formatRichNoteHover(
-      {
-        source_file: 'src/a.ts',
-        note: {
-          id: 'note-1',
-          content: '# Title\n\n```ts\nconst value = 1;\n```',
-          anchor: { type: 'Line', line: 4, column: 2 },
-          tags: ['bug'],
-          updated_at: '2026-01-02T00:00:00Z',
-          created_at: '2026-01-01T00:00:00Z',
+    const parts = formatRichNotesHoverParts(
+      [
+        {
+          source_file: 'src/a.ts',
+          note: {
+            id: 'note-1',
+            content: '# Title\n\n```ts\nconst value = 1;\n```',
+            anchor: { type: 'Line', line: 4, column: 2 },
+            tags: ['bug'],
+            updated_at: '2026-01-02T00:00:00Z',
+            created_at: '2026-01-01T00:00:00Z',
+          },
         },
-      },
+      ],
       '/tmp/workspace',
       'src/a.ts',
       800,
     );
 
-    assert.match(markdown.value, /Anchor/);
-    assert.match(markdown.value, /\*\*Tags:\*\* bug/);
-    assert.match(markdown.value, /\[Edit\]/);
-    assert.match(markdown.value, /\[Delete\]/);
-    assert.match(markdown.value, /\[Copy Link\]/);
-    assert.match(markdown.value, /```ts/);
-    assert.strictEqual(markdown.supportHtml, false);
-    assert.ok(typeof markdown.isTrusted === 'object' && markdown.isTrusted !== null);
-    if (typeof markdown.isTrusted === 'object' && markdown.isTrusted !== null) {
-      assert.deepStrictEqual(markdown.isTrusted.enabledCommands, [...RICH_HOVER_COMMANDS]);
+    const content = parts.contents[0]?.value ?? '';
+    const actions = parts.contents[1];
+
+    assert.match(content, /Line 4:2/);
+    assert.match(content, /Tags: bug/);
+    assert.match(content, /```ts/);
+    assert.strictEqual(content.includes('[Edit]'), false);
+    assert.match(actions?.value ?? '', /\[Edit\]/);
+    assert.match(actions?.value ?? '', /\[Delete\]/);
+    assert.match(actions?.value ?? '', /\[Copy Link\]/);
+    assert.strictEqual(actions?.supportHtml, false);
+    assert.ok(typeof actions?.isTrusted === 'object' && actions?.isTrusted !== null);
+    if (typeof actions?.isTrusted === 'object' && actions?.isTrusted !== null) {
+      assert.deepStrictEqual(actions.isTrusted.enabledCommands, [...RICH_HOVER_COMMANDS]);
     }
   });
 

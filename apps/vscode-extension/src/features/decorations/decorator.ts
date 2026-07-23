@@ -9,7 +9,7 @@ import {
   resolveNoteRange,
   truncateInlineContent,
 } from '../presentation/editorNoteView';
-import { formatEditorNotesHover } from '../presentation/noteHover';
+import { buildEditorNotesHoverParts } from '../presentation/noteHover';
 import { getConfiguredPreviewLength } from '../hover/richHover';
 import { aggregateNotesByLine } from './aggregate';
 import { createSymbolNoteDecorationType } from './gutter';
@@ -134,12 +134,12 @@ export class FrilVaultDecorator implements vscode.Disposable {
 
       return {
         range: editor.document.lineAt(group.line).range,
-        hoverMessage: formatEditorNotesHover(
+        hoverMessage: buildEditorNotesHoverParts(
           group.notes,
           workspaceRoot,
           sourceFile,
           getConfiguredPreviewLength(),
-        ),
+        ).contents,
         renderOptions: markerRenderOptions(this.markerStyle, group.notes.length),
       };
     });
@@ -148,11 +148,11 @@ export class FrilVaultDecorator implements vscode.Disposable {
     editor.setDecorations(this.gutterDecorationType, gutterDecorations);
     editor.setDecorations(
       this.inlineLineDecorationType,
-      this.buildInlineLineDecorations(editor, notes, sourceFile, workspaceRoot),
+      this.buildInlineLineDecorations(editor, notes),
     );
     editor.setDecorations(
       this.symbolDecorationType,
-      this.buildSymbolDecorations(editor, notes, sourceFile, workspaceRoot),
+      this.buildSymbolDecorations(editor, notes),
     );
     this.previousEditor = editor;
     this.pendingEditorUri = undefined;
@@ -161,8 +161,6 @@ export class FrilVaultDecorator implements vscode.Disposable {
   private buildInlineLineDecorations(
     editor: vscode.TextEditor,
     notes: NoteView[],
-    sourceFile: string,
-    workspaceRoot: string,
   ): vscode.DecorationOptions[] {
     if (!isInlineLineNotesEnabled()) {
       return [];
@@ -201,12 +199,6 @@ export class FrilVaultDecorator implements vscode.Disposable {
 
       return {
         range: new vscode.Range(line, Number.MAX_SAFE_INTEGER, line, Number.MAX_SAFE_INTEGER),
-        hoverMessage: formatEditorNotesHover(
-          lineNotes,
-          workspaceRoot,
-          sourceFile,
-          getConfiguredPreviewLength(),
-        ),
         renderOptions: {
           after: {
             contentText: text,
@@ -222,8 +214,6 @@ export class FrilVaultDecorator implements vscode.Disposable {
   private buildSymbolDecorations(
     editor: vscode.TextEditor,
     notes: NoteView[],
-    sourceFile: string,
-    workspaceRoot: string,
   ): vscode.DecorationOptions[] {
     const decorations: vscode.DecorationOptions[] = [];
 
@@ -240,12 +230,6 @@ export class FrilVaultDecorator implements vscode.Disposable {
 
       decorations.push({
         range,
-        hoverMessage: formatEditorNotesHover(
-          [note],
-          workspaceRoot,
-          sourceFile,
-          getConfiguredPreviewLength(),
-        ),
       });
     }
 

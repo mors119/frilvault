@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import type { NoteView } from '../../types';
 import {
+  buildEditorNotesHoverParts,
   formatEditorNoteHover,
   formatEditorNotesHover,
   NOTE_HOVER_COMMANDS,
@@ -39,6 +40,15 @@ export function formatRichNotesHover(
   previewLength = getConfiguredPreviewLength(),
 ): vscode.MarkdownString {
   return formatEditorNotesHover(notes, workspaceRoot, sourceFile, previewLength);
+}
+
+export function formatRichNotesHoverParts(
+  notes: NoteView[],
+  workspaceRoot: string,
+  sourceFile: string,
+  previewLength = getConfiguredPreviewLength(),
+) {
+  return buildEditorNotesHoverParts(notes, workspaceRoot, sourceFile, previewLength);
 }
 
 export function truncateMarkdownContent(

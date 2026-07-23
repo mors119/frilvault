@@ -2,7 +2,7 @@ import * as path from 'node:path';
 
 import * as vscode from 'vscode';
 
-import { formatEditorNoteHover } from '../features/presentation/noteHover';
+import { buildEditorNotesHoverParts } from '../features/presentation/noteHover';
 import { getConfiguredPreviewLength } from '../features/hover/richHover';
 import type { NoteAttachment, NoteView } from '../types';
 
@@ -40,10 +40,12 @@ export function formatNoteHover(
   workspaceRoot: string,
   sourceFile = note.source_file,
 ): vscode.MarkdownString {
-  return formatEditorNoteHover(
-    note,
+  const parts = buildEditorNotesHoverParts(
+    [note],
     workspaceRoot,
     sourceFile,
     getConfiguredPreviewLength(),
   );
+
+  return parts.contents[0] ?? new vscode.MarkdownString('');
 }
