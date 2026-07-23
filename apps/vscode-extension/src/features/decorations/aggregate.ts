@@ -1,4 +1,5 @@
 import type { NoteView } from '../../types';
+import { resolveNoteLine as resolvePresentationNoteLine } from '../presentation/editorNoteView';
 
 export interface LineNoteGroup {
   line: number;
@@ -6,15 +7,7 @@ export interface LineNoteGroup {
 }
 
 export function resolveNoteLine(note: NoteView): number {
-  if (note.note.anchor.type === 'Line') {
-    return note.note.anchor.line ?? 1;
-  }
-
-  if (note.resolved?.line) {
-    return note.resolved.line;
-  }
-
-  return note.note.anchor.line_hint ?? 1;
+  return resolvePresentationNoteLine(note) ?? Number.NaN;
 }
 
 export function sortNotesDeterministic(notes: NoteView[]): NoteView[] {
@@ -40,7 +33,13 @@ export function aggregateNotesByLine(
   const byLine = new Map<number, NoteView[]>();
 
   for (const note of notes) {
-    const line = resolveNoteLine(note) - 1;
+    const lineNumber = resolvePresentationNoteLine(note);
+
+    if (lineNumber === undefined) {
+      continue;
+    }
+
+    const line = lineNumber - 1;
 
     if (line < 0 || line >= lineCount) {
       continue;

@@ -1,8 +1,18 @@
 import * as vscode from 'vscode';
 
-import type { CurrentFileNotesStore } from '../current-file/store';
+import type { NoteView } from '../../types';
+import {
+  getInlineLineNotesMaxLength,
+  isInlineLineNotesEnabled,
+  normalizeInlineContent,
+  resolveNoteLine,
+  resolveNoteRange,
+  truncateInlineContent,
+} from '../presentation/editorNoteView';
+import { formatEditorNotesHover } from '../presentation/noteHover';
+import { getConfiguredPreviewLength } from '../hover/richHover';
 import { aggregateNotesByLine } from './aggregate';
-import { formatGutterHoverSummary } from './gutterHover';
+import { createSymbolNoteDecorationType } from './gutter';
 import {
   createMarkerDecorationType,
   getConfiguredMarkerStyle,
@@ -11,8 +21,14 @@ import {
 } from './markerStyle';
 import type { GutterNoteRegistry } from './registry';
 
+const INLINE_NOTE_PREFIX = 'Note: ';
+
 export class FrilVaultDecorator implements vscode.Disposable {
-  private decorationType: vscode.TextEditorDecorationType;
+  private gutterDecorationType: vscode.TextEditorDecorationType;
+
+  private inlineLineDecorationType: vscode.TextEditorDecorationType;
+
+  private symbolDecorationType: vscode.TextEditorDecorationType;
 
   private markerStyle: GutterMarkerStyle;
 
@@ -24,19 +40,34 @@ export class FrilVaultDecorator implements vscode.Disposable {
 
   public constructor(
     private readonly extensionPath: string,
-    private readonly store: CurrentFileNotesStore,
+    private readonly store: import('../current-file/store').CurrentFileNotesStore,
     private readonly registry: GutterNoteRegistry,
     private readonly getWorkspaceRoot: () => string,
     private readonly isEnabled: () => boolean = () => true,
   ) {
     this.markerStyle = getConfiguredMarkerStyle();
-    this.decorationType = createMarkerDecorationType(this.extensionPath, this.markerStyle);
+    this.gutterDecorationType = createMarkerDecorationType(this.extensionPath, this.markerStyle);
+    this.inlineLineDecorationType = vscode.window.createTextEditorDecorationType({
+      after: {
+        margin: '0 0 0 1em',
+        color: new vscode.ThemeColor('editorCodeLens.foreground'),
+        fontStyle: 'italic',
+      },
+    });
+    this.symbolDecorationType = createSymbolNoteDecorationType(this.extensionPath);
     this.configListener = vscode.workspace.onDidChangeConfiguration((event) => {
-      if (!event.affectsConfiguration('frilvault.gutterMarkerStyle')) {
+      if (
+        !event.affectsConfiguration('frilvault.gutterMarkerStyle') &&
+        !event.affectsConfiguration('frilvault.inlineLineNotes.enabled') &&
+        !event.affectsConfiguration('frilvault.inlineLineNotes.maxLength')
+      ) {
         return;
       }
 
-      this.recreateDecorationType();
+      if (event.affectsConfiguration('frilvault.gutterMarkerStyle')) {
+        this.recreateGutterDecorationType();
+      }
+
       void this.refresh();
     });
   }
@@ -74,45 +105,156 @@ export class FrilVaultDecorator implements vscode.Disposable {
   }
 
   public clear(editor = vscode.window.activeTextEditor): void {
-    editor?.setDecorations(this.decorationType, []);
+    editor?.setDecorations(this.gutterDecorationType, []);
+    editor?.setDecorations(this.inlineLineDecorationType, []);
+    editor?.setDecorations(this.symbolDecorationType, []);
   }
 
   public dispose(): void {
     this.configListener.dispose();
-    this.decorationType.dispose();
+    this.gutterDecorationType.dispose();
+    this.inlineLineDecorationType.dispose();
+    this.symbolDecorationType.dispose();
   }
 
   private renderNotes(
     editor: vscode.TextEditor,
-    notes: ReturnType<CurrentFileNotesStore['getSnapshot']>['notes'],
+    notes: NoteView[],
     sourceFile: string,
   ): void {
     if (this.pendingEditorUri !== editor.document.uri.toString()) {
       return;
     }
 
+    const workspaceRoot = this.getWorkspaceRoot();
     const groups = aggregateNotesByLine(notes, editor.document.lineCount);
-    const lineNotes = new Map<number, ReturnType<typeof aggregateNotesByLine>[number]['notes']>();
-
-    const decorations: vscode.DecorationOptions[] = groups.map((group) => {
+    const lineNotes = new Map<number, NoteView[]>();
+    const gutterDecorations: vscode.DecorationOptions[] = groups.map((group) => {
       lineNotes.set(group.line, group.notes);
 
       return {
         range: editor.document.lineAt(group.line).range,
-        hoverMessage: formatGutterHoverSummary(group.notes, sourceFile),
+        hoverMessage: formatEditorNotesHover(
+          group.notes,
+          workspaceRoot,
+          sourceFile,
+          getConfiguredPreviewLength(),
+        ),
         renderOptions: markerRenderOptions(this.markerStyle, group.notes.length),
       };
     });
 
     this.registry.set(editor.document.uri.toString(), lineNotes);
-    editor.setDecorations(this.decorationType, decorations);
+    editor.setDecorations(this.gutterDecorationType, gutterDecorations);
+    editor.setDecorations(
+      this.inlineLineDecorationType,
+      this.buildInlineLineDecorations(editor, notes, sourceFile, workspaceRoot),
+    );
+    editor.setDecorations(
+      this.symbolDecorationType,
+      this.buildSymbolDecorations(editor, notes, sourceFile, workspaceRoot),
+    );
     this.previousEditor = editor;
     this.pendingEditorUri = undefined;
   }
 
-  private recreateDecorationType(): void {
-    this.decorationType.dispose();
+  private buildInlineLineDecorations(
+    editor: vscode.TextEditor,
+    notes: NoteView[],
+    sourceFile: string,
+    workspaceRoot: string,
+  ): vscode.DecorationOptions[] {
+    if (!isInlineLineNotesEnabled()) {
+      return [];
+    }
+
+    const maxLength = getInlineLineNotesMaxLength();
+    const byLine = new Map<number, NoteView[]>();
+
+    for (const note of notes) {
+      if (note.note.anchor.type !== 'Line') {
+        continue;
+      }
+
+      const line = resolveNoteLine(note);
+
+      if (line === undefined) {
+        continue;
+      }
+
+      const zeroBasedLine = line - 1;
+
+      if (zeroBasedLine < 0 || zeroBasedLine >= editor.document.lineCount) {
+        continue;
+      }
+
+      const group = byLine.get(zeroBasedLine) ?? [];
+      group.push(note);
+      byLine.set(zeroBasedLine, group);
+    }
+
+    return [...byLine.entries()].map(([line, lineNotes]) => {
+      const content = lineNotes
+        .map((note) => truncateInlineContent(note.note.content, maxLength))
+        .join(' | ');
+      const text = `${INLINE_NOTE_PREFIX}${content}`;
+
+      return {
+        range: new vscode.Range(line, Number.MAX_SAFE_INTEGER, line, Number.MAX_SAFE_INTEGER),
+        hoverMessage: formatEditorNotesHover(
+          lineNotes,
+          workspaceRoot,
+          sourceFile,
+          getConfiguredPreviewLength(),
+        ),
+        renderOptions: {
+          after: {
+            contentText: text,
+            color: new vscode.ThemeColor('editorInfo.foreground'),
+            fontStyle: 'italic',
+            textDecoration: 'none',
+          },
+        },
+      };
+    });
+  }
+
+  private buildSymbolDecorations(
+    editor: vscode.TextEditor,
+    notes: NoteView[],
+    sourceFile: string,
+    workspaceRoot: string,
+  ): vscode.DecorationOptions[] {
+    const decorations: vscode.DecorationOptions[] = [];
+
+    for (const note of notes) {
+      if (note.note.anchor.type !== 'Symbol' || !note.resolved) {
+        continue;
+      }
+
+      const range = resolveNoteRange(note, editor.document.lineCount);
+
+      if (!range) {
+        continue;
+      }
+
+      decorations.push({
+        range,
+        hoverMessage: formatEditorNotesHover(
+          [note],
+          workspaceRoot,
+          sourceFile,
+          getConfiguredPreviewLength(),
+        ),
+      });
+    }
+
+    return decorations;
+  }
+
+  private recreateGutterDecorationType(): void {
+    this.gutterDecorationType.dispose();
     this.markerStyle = getConfiguredMarkerStyle();
-    this.decorationType = createMarkerDecorationType(this.extensionPath, this.markerStyle);
+    this.gutterDecorationType = createMarkerDecorationType(this.extensionPath, this.markerStyle);
   }
 }

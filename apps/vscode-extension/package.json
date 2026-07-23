@@ -241,6 +241,17 @@
           "default": 800,
           "minimum": 100,
           "description": "Maximum number of characters shown in rich note hover previews before offering Open Note."
+        },
+        "frilvault.inlineLineNotes.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show line notes as inline after-text decorations in the editor."
+        },
+        "frilvault.inlineLineNotes.maxLength": {
+          "type": "number",
+          "default": 120,
+          "minimum": 20,
+          "description": "Maximum inline preview length for line note decorations."
         }
       }
     }

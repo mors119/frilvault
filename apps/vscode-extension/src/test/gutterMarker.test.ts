@@ -12,10 +12,30 @@ import { formatGutterHoverSummary } from '../features/decorations/gutterHover';
 import type { NoteView } from '../types';
 
 suite('Gutter marker helpers', () => {
+  test('aggregateNotesByLine skips unresolved symbol notes', () => {
+    const notes = [
+      createLineNoteView('src/a.ts', 4, 'first'),
+      createSymbolNoteView('src/a.ts', 'MissingFn', 4, 'unresolved'),
+      createSymbolNoteView('src/a.ts', 'fn', 4, 'resolved', undefined, {
+        line: 4,
+        column: 1,
+      }),
+    ];
+
+    const groups = aggregateNotesByLine(notes, 20);
+
+    assert.strictEqual(groups.length, 1);
+    assert.strictEqual(groups[0]?.line, 3);
+    assert.strictEqual(groups[0]?.notes.length, 2);
+  });
+
   test('aggregateNotesByLine merges multiple notes on one line', () => {
     const notes = [
       createLineNoteView('src/a.ts', 4, 'first'),
-      createSymbolNoteView('src/a.ts', 'fn', 4, 'second'),
+      createSymbolNoteView('src/a.ts', 'fn', 4, 'second', undefined, {
+        line: 4,
+        column: 1,
+      }),
       createLineNoteView('src/a.ts', 9, 'other line'),
     ];
 
@@ -60,11 +80,12 @@ suite('Gutter marker helpers', () => {
         },
       ],
       'src/a.ts',
+      '/tmp/workspace',
     );
 
-    assert.match(markdown.value, /Line note/);
-    assert.match(markdown.value, /Tags: bug/);
-    assert.match(markdown.value, /\[View\]/);
+    assert.match(markdown.value, /Anchor/);
+    assert.match(markdown.value, /Tags:/);
+    assert.match(markdown.value, /\[Open Note\]/);
     assert.match(markdown.value, /frilvault\.gutter\.viewNote/);
   });
 

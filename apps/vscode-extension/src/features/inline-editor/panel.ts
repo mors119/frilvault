@@ -173,7 +173,6 @@ function renderPanelHtml(draft: InlineNoteDraft): string {
       <strong id="mode-label">${escapeHtml(draft.mode === 'create' ? 'Create note' : 'Edit note')}</strong>
       <div class="meta" aria-label="Anchor summary">${escapeHtml(draft.anchorSummary)}</div>
       <div class="meta" aria-label="Source file">${escapeHtml(draft.sourceFile)}</div>
-      <div class="meta" aria-label="Note kind">Kind: ${escapeHtml(draft.kind)}</div>
     </div>
 
     <label for="content">

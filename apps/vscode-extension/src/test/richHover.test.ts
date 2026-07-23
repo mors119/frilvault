@@ -55,6 +55,31 @@ suite('Rich hover preview', () => {
     assert.strictEqual(sorted[0]?.note.id, 'a-id');
   });
 
+  test('formatRichNoteHover renders symbol anchor metadata without line kind labels', () => {
+    const markdown = formatRichNoteHover(
+      {
+        source_file: 'src/a.ts',
+        note: {
+          id: 'note-1',
+          content: 'Optimize parser initialization.',
+          anchor: { type: 'Symbol', name: 'parseYaml', kind: 'Function', line_hint: 4 },
+          tags: ['TODO'],
+          updated_at: '2026-07-24T00:00:00Z',
+          created_at: '2026-07-24T00:00:00Z',
+        },
+        resolved: { line: 4, column: 1 },
+      },
+      '/tmp/workspace',
+      'src/a.ts',
+      800,
+    );
+
+    assert.match(markdown.value, /Anchor/);
+    assert.match(markdown.value, /Function: parseYaml/);
+    assert.doesNotMatch(markdown.value, /Kind:/);
+    assert.doesNotMatch(markdown.value, /Type: Line/);
+  });
+
   test('formatRichNoteHover renders markdown metadata and fenced code', () => {
     const markdown = formatRichNoteHover(
       {
@@ -73,9 +98,11 @@ suite('Rich hover preview', () => {
       800,
     );
 
-    assert.match(markdown.value, /Kind:/);
+    assert.match(markdown.value, /Anchor/);
     assert.match(markdown.value, /\*\*Tags:\*\* bug/);
     assert.match(markdown.value, /\[Edit\]/);
+    assert.match(markdown.value, /\[Delete\]/);
+    assert.match(markdown.value, /\[Copy Link\]/);
     assert.match(markdown.value, /```ts/);
     assert.strictEqual(markdown.supportHtml, false);
     assert.ok(typeof markdown.isTrusted === 'object' && markdown.isTrusted !== null);
