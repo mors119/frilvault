@@ -91,8 +91,25 @@ impl VaultContext {
         self.note_cache.contains(source_file)
     }
 
-    pub fn list_all_note_files(&self) -> FrilVaultResult<Vec<NoteFileRecord>> {
-        self.note_repository.list_all_note_files()
+    pub fn list_all_note_files(&mut self) -> FrilVaultResult<Vec<NoteFileRecord>> {
+        let index = self.load_index()?;
+        let mut records = Vec::new();
+
+        for indexed_file in index.files {
+            if indexed_file.note_count == 0 {
+                continue;
+            }
+
+            let source_file = PathBuf::from(&indexed_file.source_file);
+            let note_file = self.load_notes(&source_file)?;
+
+            records.push(NoteFileRecord {
+                source_file,
+                note_file,
+            });
+        }
+
+        Ok(records)
     }
 
     pub fn scan_workspace_files(&self) -> FrilVaultResult<Vec<String>> {
