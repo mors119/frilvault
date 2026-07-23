@@ -72,9 +72,11 @@ function symbolNotesAtPosition(
     return [];
   }
 
-  const symbolNotes = notes.filter((note) => note.note.anchor.type === 'Symbol');
+  const symbolNotes = notes.filter(
+    (note) => note.note.anchor.type === 'Symbol' && note.resolved,
+  );
   const byPosition = symbolNotes.filter((note) => {
-    const line = (note.resolved?.line ?? note.note.anchor.line_hint ?? 1) - 1;
+    const line = (note.resolved?.line ?? 1) - 1;
     return line === position.line;
   });
 

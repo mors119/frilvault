@@ -2,6 +2,8 @@ import * as path from 'node:path';
 
 import * as vscode from 'vscode';
 
+import { formatEditorNoteHover } from '../features/presentation/noteHover';
+import { getConfiguredPreviewLength } from '../features/hover/richHover';
 import type { NoteAttachment, NoteView } from '../types';
 
 export function appendNoteAttachments(
@@ -33,9 +35,15 @@ export function attachmentPath(
   );
 }
 
-export function formatNoteHover(note: NoteView, workspaceRoot: string): vscode.MarkdownString {
-  const markdown = new vscode.MarkdownString();
-  markdown.appendMarkdown(`**FrilVault Note**\n\n${note.note.content}`);
-  appendNoteAttachments(markdown, note, workspaceRoot);
-  return markdown;
+export function formatNoteHover(
+  note: NoteView,
+  workspaceRoot: string,
+  sourceFile = note.source_file,
+): vscode.MarkdownString {
+  return formatEditorNoteHover(
+    note,
+    workspaceRoot,
+    sourceFile,
+    getConfiguredPreviewLength(),
+  );
 }

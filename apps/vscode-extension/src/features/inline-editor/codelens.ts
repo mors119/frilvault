@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import type { NoteView } from '../../types';
 import type { CurrentFileNotesStore } from '../current-file/store';
+import { resolveNoteLine as resolvePresentationNoteLine } from '../presentation/editorNoteView';
 
 export function registerInlineNoteCodeLensProvider(
   context: vscode.ExtensionContext,
@@ -22,7 +23,13 @@ export function registerInlineNoteCodeLensProvider(
       const lenses: vscode.CodeLens[] = [];
 
       for (const note of notes) {
-        const line = resolveNoteLine(note) - 1;
+        const lineNumber = resolvePresentationNoteLine(note);
+
+        if (lineNumber === undefined) {
+          continue;
+        }
+
+        const line = lineNumber - 1;
         lenses.push(
           new vscode.CodeLens(new vscode.Range(line, 0, line, 0), {
             title: 'Edit FrilVault Note',
@@ -35,9 +42,11 @@ export function registerInlineNoteCodeLensProvider(
       const activeEditor = vscode.window.activeTextEditor;
       if (activeEditor && activeEditor.document.uri.toString() === document.uri.toString()) {
         const activeLine = activeEditor.selection.active.line;
-        const hasNoteOnActiveLine = notes.some(
-          (note) => resolveNoteLine(note) - 1 === activeLine,
-        );
+        const hasNoteOnActiveLine = notes.some((note) => {
+          const lineNumber = resolvePresentationNoteLine(note);
+
+          return lineNumber !== undefined && lineNumber - 1 === activeLine;
+        });
 
         if (!hasNoteOnActiveLine) {
           lenses.push(
@@ -67,12 +76,4 @@ function relativePathForDocument(document: vscode.TextDocument, workspaceRoot: s
   }
 
   return vscode.workspace.asRelativePath(document.uri, false);
-}
-
-function resolveNoteLine(note: NoteView): number {
-  if (note.note.anchor.type === 'Line') {
-    return note.note.anchor.line ?? 1;
-  }
-
-  return note.resolved?.line ?? note.note.anchor.line_hint ?? 1;
 }
