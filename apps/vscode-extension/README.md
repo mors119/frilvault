@@ -112,3 +112,18 @@ live in `src/constants/ids.ts` and must stay aligned with `package.json`.
 
 - line-note UX is the most complete path today
 - symbol anchors exist in the shared model, but editor UX around them is still limited
+
+## Hover and Clipboard
+
+FrilVault renders note hovers through a single registered hover provider. Gutter
+and inline decorations do not attach duplicate hover messages, so each note
+appears once when you hover editor content.
+
+Note content and interactive action links are built as separate Markdown
+sections. FrilVault copy commands (`Copy Link`, `Copy Content`, `Copy Markdown`)
+write only the intended payload and never include hover action labels.
+
+VS Code controls manual text selection inside the native hover. If you select
+and copy the entire hover yourself, action link text may be included. FrilVault
+does not patch that native behavior; use the provided copy commands for clean
+clipboard output.

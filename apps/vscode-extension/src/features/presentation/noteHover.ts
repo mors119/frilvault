@@ -20,6 +20,8 @@ export const NOTE_HOVER_COMMANDS = [
   'frilvault.gutter.editNote',
   'frilvault.gutter.deleteNote',
   'frilvault.gutter.copyLink',
+  COMMAND_IDS.gutterCopyNoteContent,
+  COMMAND_IDS.gutterCopyNoteMarkdown,
   COMMAND_IDS.notesPanelOpenNote,
 ] as const;
 
@@ -211,6 +213,8 @@ function buildHoverActions(
     `[Edit](${commandUri('frilvault.gutter.editNote', [noteId, sourceFile])})`,
     `[Delete](${commandUri('frilvault.gutter.deleteNote', [noteId, sourceFile])})`,
     `[Copy Link](${commandUri('frilvault.gutter.copyLink', [noteId, sourceFile])})`,
+    `[Copy Content](${commandUri(COMMAND_IDS.gutterCopyNoteContent, [noteId, sourceFile])})`,
+    `[Copy Markdown](${commandUri(COMMAND_IDS.gutterCopyNoteMarkdown, [noteId, sourceFile])})`,
   ];
 
   if (multipleNotes) {

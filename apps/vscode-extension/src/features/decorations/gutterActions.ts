@@ -3,6 +3,10 @@ import * as vscode from 'vscode';
 import type { CliClient } from '../../core/cliClient';
 import type { NoteView } from '../../types';
 import { getRelativeFilePath, revealNote } from '../../utils/file';
+import {
+  buildNoteContentForClipboard,
+  buildNoteMarkdownForClipboard,
+} from '../presentation/noteClipboard';
 import { sortNotesDeterministic } from './aggregate';
 import type { GutterNoteRegistry } from './registry';
 
@@ -118,6 +122,32 @@ export class GutterNoteActions {
     await this.showInfo('FrilVault note link copied to clipboard.');
   }
 
+  public async copyNoteContent(noteId: string, sourceFile: string): Promise<void> {
+    const note = this.findNote(noteId, sourceFile);
+
+    if (!note) {
+      await this.showError(`Note ${noteId} was not found on this file.`);
+      return;
+    }
+
+    await vscode.env.clipboard.writeText(buildNoteContentForClipboard(note));
+    await this.showInfo('FrilVault note content copied to clipboard.');
+  }
+
+  public async copyNoteMarkdown(noteId: string, sourceFile: string): Promise<void> {
+    const note = this.findNote(noteId, sourceFile);
+
+    if (!note) {
+      await this.showError(`Note ${noteId} was not found on this file.`);
+      return;
+    }
+
+    await vscode.env.clipboard.writeText(
+      buildNoteMarkdownForClipboard(note, this.dependencies.getWorkspaceRoot()),
+    );
+    await this.showInfo('FrilVault note markdown copied to clipboard.');
+  }
+
   private async showActionMenu(note: NoteView, sourceFile: string): Promise<void> {
     const showQuickPick = this.dependencies.showQuickPick ?? vscode.window.showQuickPick;
     const choice = await showQuickPick(
@@ -126,6 +156,8 @@ export class GutterNoteActions {
         { label: 'Edit', action: 'edit' as const },
         { label: 'Delete', action: 'delete' as const },
         { label: 'Copy Link', action: 'copy' as const },
+        { label: 'Copy Content', action: 'copyContent' as const },
+        { label: 'Copy Markdown', action: 'copyMarkdown' as const },
       ],
       { title: noteKindLabel(note), placeHolder: truncateContent(note.note.content) },
     );
@@ -146,6 +178,12 @@ export class GutterNoteActions {
         break;
       case 'copy':
         await this.copyLink(note.note.id, sourceFile);
+        break;
+      case 'copyContent':
+        await this.copyNoteContent(note.note.id, sourceFile);
+        break;
+      case 'copyMarkdown':
+        await this.copyNoteMarkdown(note.note.id, sourceFile);
         break;
     }
   }

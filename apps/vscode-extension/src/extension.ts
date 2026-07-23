@@ -24,6 +24,7 @@ import { GutterNoteActions } from './features/decorations/gutterActions';
 import { registerGutterCommands } from './features/decorations/gutterCommands';
 import { GutterNoteRegistry } from './features/decorations/registry';
 import { FrilVaultHoverProvider } from './features/hover/hoverProvider';
+import { registerFrilVaultHoverProvider } from './features/hover/register';
 import { registerInlineNoteCodeLensProvider } from './features/inline-editor/codelens';
 import {
   createCreateNoteHereCommand,
@@ -151,7 +152,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     store,
     decorator,
-    vscode.languages.registerHoverProvider({ scheme: 'file' }, hoverProvider),
+    registerFrilVaultHoverProvider(context, hoverProvider),
     vscode.commands.registerCommand(COMMAND_IDS.notesPanelOpenNote, async (noteView: NoteView) => {
       if (!isEnabled()) {
         return;

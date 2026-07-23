@@ -113,6 +113,14 @@
       {
         "command": "frilvault.gutter.copyLink",
         "title": "FrilVault: Copy Gutter Note Link"
+      },
+      {
+        "command": "frilvault.gutter.copyNoteContent",
+        "title": "FrilVault: Copy Gutter Note Content"
+      },
+      {
+        "command": "frilvault.gutter.copyNoteMarkdown",
+        "title": "FrilVault: Copy Gutter Note as Markdown"
       }
     ],
     "menus": {
