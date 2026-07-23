@@ -1,5 +1,14 @@
 import * as vscode from 'vscode';
 
+/**
+ * Finds the innermost document symbol at a cursor position.
+ *
+ * Used when creating symbol notes from the active editor context.
+ *
+ * 커서 위치의 가장 안쪽 document symbol을 찾습니다.
+ *
+ * 활성 editor context에서 symbol note를 만들 때 사용합니다.
+ */
 export async function findSymbolAtPosition(
   document: vscode.TextDocument,
   position: vscode.Position,

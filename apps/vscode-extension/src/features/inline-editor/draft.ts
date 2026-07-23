@@ -1,3 +1,8 @@
+/**
+ * Draft and validation helpers for the inline note editor UI.
+ *
+ * inline note editor UI용 draft와 validation helper입니다.
+ */
 import type { NoteView } from '../../types';
 
 export type InlineEditorMode = 'create' | 'edit';

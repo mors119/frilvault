@@ -1,3 +1,8 @@
+/**
+ * Persists inline editor drafts through the CLI/Core boundary.
+ *
+ * inline editor draft를 CLI/Core 경계를 통해 저장합니다.
+ */
 import type { CliClient } from '../../core/cliClient';
 import type { NoteView } from '../../types';
 import {

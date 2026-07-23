@@ -231,6 +231,8 @@ fn update_note_changes_tags() {
     assert_eq!(notes[0].note.tags, vec!["beta", "gamma"]);
 }
 
+// Regression: stale expected_updated_at must not overwrite a newer note revision.
+// 회귀 검증: stale expected_updated_at로 더 새로운 note revision을 덮어쓰면 안 됩니다.
 #[test]
 fn update_note_rejects_stale_expected_updated_at() {
     let workspace = create_test_workspace();

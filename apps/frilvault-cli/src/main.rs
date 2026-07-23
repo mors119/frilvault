@@ -1,3 +1,12 @@
+//! FrilVault command-line interface.
+//!
+//! The CLI parses arguments, opens the current workspace, invokes `frilvault-core`,
+//! and formats results for humans or JSON consumers.
+//!
+//! FrilVault CLI입니다.
+//!
+//! CLI는 인자를 파싱하고 현재 workspace를 연 뒤 `frilvault-core`를 호출하여
+//! 사람이 읽거나 JSON consumer가 사용할 결과를 출력합니다.
 mod cli;
 mod command;
 mod output;

@@ -6,6 +6,9 @@ use crate::{
     output::{OutputFormat, print_json, resolve_format},
 };
 
+/// Executes `flvt add` by building a core `AddNoteRequest`.
+///
+/// `frilvault-core` `AddNoteRequest`를 구성해 `flvt add`를 실행합니다.
 pub fn execute(command: AddCommand) -> Result<()> {
     let vault = FrilVault::open(std::env::current_dir()?)?;
     let mut service = vault.notes()?;

@@ -1,7 +1,10 @@
 //! Workspace-level application services.
 //!
-//! This module provides statistics,
-//! health checks, and repair workflows.
+//! Provides statistics, health checks, sync, and repair workflows that operate
+//! across the whole workspace rather than a single note file.
+//!
+//! 워크스페이스 전체를 대상으로 하는 통계, 상태 점검, 동기화, 복구
+//! 워크플로를 제공합니다.
 
 use crate::{
     FrilVaultResult, NoteAnchor, RepairSuggestion, SyncResult, WorkspaceExplorer, WorkspaceHealth,
@@ -16,13 +19,11 @@ use crate::{
 
 const REPAIR_MIN_CONFIDENCE: f32 = 0.7;
 
-/// Application service responsible for
-/// workspace-level operations.
+/// Application service responsible for workspace-level operations.
 ///
-/// Examples:
-/// - statistics
-/// - health checks
-/// - repair suggestions
+/// Examples include stats, health checks, and repair suggestions.
+///
+/// 통계, 상태 점검, 복구 제안 같은 workspace 수준 연산을 담당합니다.
 pub struct WorkspaceService {
     pub vault_context: VaultContext,
     pub index_repository: WorkspaceIndexRepository,

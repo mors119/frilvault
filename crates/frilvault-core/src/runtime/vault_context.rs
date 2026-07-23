@@ -9,14 +9,15 @@ use crate::{
 
 /// Runtime container for FrilVault.
 ///
-/// VaultContext owns shared runtime resources:
+/// `VaultContext` owns shared runtime resources such as repositories, the note cache,
+/// and workspace index access. Services should use it instead of touching repositories
+/// directly so cache invalidation stays consistent.
 ///
-/// - repositories
-/// - caches
-/// - indexes
+/// FrilVault 런타임 컨테이너입니다.
 ///
-/// Services should use VaultContext instead of
-/// accessing repositories directly.
+/// `VaultContext`는 저장소, note cache, workspace index 접근 같은 공유 런타임
+/// 리소스를 소유합니다. 캐시 무효화 일관성을 위해 서비스는 저장소를 직접
+/// 건드리지 않고 이 타입을 사용해야 합니다.
 #[derive(Clone)]
 pub struct VaultContext {
     pub note_repository: NoteRepository,
@@ -37,7 +38,8 @@ impl VaultContext {
     }
 
     pub fn load_notes(&mut self, source_file: &Path) -> FrilVaultResult<NoteFile> {
-        // 1. CACHE HIT
+        // Serve cached note files when possible to avoid repeated JSON reads.
+        // 가능하면 캐시된 note file을 제공해 JSON 반복 읽기를 줄입니다.
         if let Some(cached) = self.note_cache.get(source_file) {
             return Ok(cached.clone());
         }
@@ -45,7 +47,8 @@ impl VaultContext {
         // 2. REPOSITORY LOAD
         let note_file = self.note_repository.load_by_source_file(source_file)?;
 
-        // 3. CACHE STORE
+        // Populate the cache after a repository miss.
+        // repository miss 이후 cache를 채웁니다.
         self.note_cache
             .insert(source_file.to_path_buf(), note_file.clone());
 
@@ -64,6 +67,8 @@ impl VaultContext {
     }
 
     pub fn invalidate_notes(&mut self, source_file: &Path) {
+        // Drop cached note JSON after writes or external vault changes.
+        // 쓰기 또는 외부 vault 변경 후 캐시된 note JSON을 제거합니다.
         self.note_cache.invalidate(source_file);
     }
 
