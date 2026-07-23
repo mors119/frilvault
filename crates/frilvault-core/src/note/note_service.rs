@@ -78,6 +78,10 @@ impl NoteService {
             .collect())
     }
 
+    pub fn preload_notes(&mut self, source_file: impl AsRef<Path>) -> FrilVaultResult<()> {
+        self.vault_context.preload_notes(source_file.as_ref())
+    }
+
     pub fn delete_note(
         &mut self,
         source_file: impl AsRef<Path>,

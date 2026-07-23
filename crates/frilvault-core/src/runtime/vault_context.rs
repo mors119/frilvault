@@ -52,6 +52,17 @@ impl VaultContext {
         Ok(note_file)
     }
 
+    pub fn preload_notes(&mut self, source_file: &Path) -> FrilVaultResult<()> {
+        if self.note_cache.contains(source_file) {
+            return Ok(());
+        }
+
+        let note_file = self.note_repository.load_by_source_file(source_file)?;
+        self.note_cache.insert(source_file.to_path_buf(), note_file);
+
+        Ok(())
+    }
+
     pub fn invalidate_notes(&mut self, source_file: &Path) {
         self.note_cache.invalidate(source_file);
     }

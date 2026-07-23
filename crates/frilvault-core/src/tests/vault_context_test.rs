@@ -61,6 +61,81 @@ fn load_notes_uses_cache_on_second_load() {
 }
 
 #[test]
+fn preload_notes_populates_cache() {
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut vault_context = create_test_vault_context(workspace_root);
+    let source_file = Path::new("src/main.rs");
+
+    vault_context
+        .note_repository
+        .append_note(
+            source_file,
+            &Note::new(AddNoteRequest {
+                source_file: "src/main.rs".into(),
+                anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+                content: "preload me".to_string(),
+            }),
+        )
+        .unwrap();
+
+    assert!(!vault_context.contains_cached_notes(source_file));
+
+    vault_context.preload_notes(source_file).unwrap();
+
+    assert!(vault_context.contains_cached_notes(source_file));
+}
+
+#[test]
+fn preload_notes_skips_disk_when_cache_is_warm() {
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut vault_context = create_test_vault_context(workspace_root);
+    let source_file = Path::new("src/main.rs");
+
+    vault_context
+        .note_repository
+        .append_note(
+            source_file,
+            &Note::new(AddNoteRequest {
+                source_file: "src/main.rs".into(),
+                anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+                content: "cached".to_string(),
+            }),
+        )
+        .unwrap();
+
+    vault_context.preload_notes(source_file).unwrap();
+    fs::remove_file(vault_context.resolve_note_path("src/main.rs")).unwrap();
+
+    vault_context.preload_notes(source_file).unwrap();
+
+    assert!(vault_context.contains_cached_notes(source_file));
+}
+
+#[test]
+fn note_service_preloads_notes_for_source_file() {
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut service = create_test_note_service(workspace_root);
+    let source_file = Path::new("src/main.rs");
+
+    service
+        .add_note(AddNoteRequest {
+            source_file: source_file.to_path_buf(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "service preload".to_string(),
+        })
+        .unwrap();
+
+    service.preload_notes(source_file).unwrap();
+
+    let notes = service.list_notes(source_file).unwrap();
+    assert_eq!(notes.len(), 1);
+    assert_eq!(notes[0].note.content, "service preload");
+}
+
+#[test]
 fn invalidate_notes_removes_cached_entry() {
     let workspace = create_test_workspace();
     let workspace_root = workspace.root();
