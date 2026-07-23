@@ -146,6 +146,44 @@ fn parses_symbol_add_command() {
 }
 
 #[test]
+fn parses_add_command_with_tags() {
+    let cli = Cli::parse_from([
+        "flvt",
+        "add",
+        "--file",
+        "src/main.rs",
+        "--line",
+        "1",
+        "--content",
+        "note",
+        "--tag",
+        "bug",
+        "--tag",
+        "architecture",
+    ]);
+
+    match cli.command {
+        Commands::Add(command) => {
+            assert_eq!(command.tags, vec!["bug", "architecture"]);
+        }
+        _ => panic!("expected add command"),
+    }
+}
+
+#[test]
+fn parses_search_with_tag() {
+    let cli = Cli::parse_from(["flvt", "search", "--tag", "bug", "--format", "json"]);
+
+    match cli.command {
+        Commands::Search(command) => {
+            assert_eq!(command.tag.as_deref(), Some("bug"));
+            assert!(matches!(command.format, Some(FormatArg::Json)));
+        }
+        _ => panic!("expected search command"),
+    }
+}
+
+#[test]
 fn parses_gitignore_check_json_format() {
     let cli = Cli::parse_from(["flvt", "gitignore", "check", "--format", "json"]);
 

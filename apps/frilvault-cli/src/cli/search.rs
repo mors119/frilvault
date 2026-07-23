@@ -9,6 +9,9 @@ pub struct SearchCommand {
     #[arg(long)]
     pub file: Option<String>,
 
+    #[arg(long)]
+    pub tag: Option<String>,
+
     #[arg(long, value_enum)]
     pub format: Option<FormatArg>,
 }

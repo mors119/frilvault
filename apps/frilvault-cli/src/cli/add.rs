@@ -25,6 +25,9 @@ pub struct AddCommand {
 
     #[arg(long)]
     pub content: String,
+
+    #[arg(long = "tag")]
+    pub tags: Vec<String>,
 }
 
 #[derive(Debug, Clone, ValueEnum)]

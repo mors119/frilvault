@@ -14,6 +14,7 @@ fn frilvault_open_creates_note_service() {
             source_file: "src/main.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
             content: "facade note".to_string(),
+            tags: None,
         })
         .unwrap();
 

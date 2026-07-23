@@ -19,6 +19,7 @@ fn load_notes_populates_cache() {
                 source_file: "src/main.rs".into(),
                 anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
                 content: "test".to_string(),
+                tags: None,
             }),
         )
         .unwrap();
@@ -45,6 +46,7 @@ fn load_notes_uses_cache_on_second_load() {
                 source_file: "src/main.rs".into(),
                 anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
                 content: "cached".to_string(),
+                tags: None,
             }),
         )
         .unwrap();
@@ -75,6 +77,7 @@ fn preload_notes_populates_cache() {
                 source_file: "src/main.rs".into(),
                 anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
                 content: "preload me".to_string(),
+                tags: None,
             }),
         )
         .unwrap();
@@ -101,6 +104,7 @@ fn preload_notes_skips_disk_when_cache_is_warm() {
                 source_file: "src/main.rs".into(),
                 anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
                 content: "cached".to_string(),
+                tags: None,
             }),
         )
         .unwrap();
@@ -125,6 +129,7 @@ fn note_service_preloads_notes_for_source_file() {
             source_file: source_file.to_path_buf(),
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
             content: "service preload".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -150,6 +155,7 @@ fn invalidate_notes_removes_cached_entry() {
                 source_file: "src/main.rs".into(),
                 anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
                 content: "test".to_string(),
+                tags: None,
             }),
         )
         .unwrap();
@@ -176,6 +182,7 @@ fn clear_notes_cache_removes_all_entries() {
                 source_file: "src/main.rs".into(),
                 anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
                 content: "test".to_string(),
+                tags: None,
             }),
         )
         .unwrap();
@@ -200,6 +207,7 @@ fn add_note_invalidates_cached_entry() {
             source_file: "src/main.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
             content: "first".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -211,6 +219,7 @@ fn add_note_invalidates_cached_entry() {
             source_file: "src/main.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 2, column: 1 }),
             content: "second".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -230,6 +239,7 @@ fn delete_note_invalidates_cached_entry() {
             source_file: source_file.to_path_buf(),
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
             content: "delete me".to_string(),
+            tags: None,
         })
         .unwrap();
     service
@@ -237,6 +247,7 @@ fn delete_note_invalidates_cached_entry() {
             source_file: source_file.to_path_buf(),
             anchor: NoteAnchor::Line(LineAnchor { line: 2, column: 1 }),
             content: "keep me".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -261,6 +272,7 @@ fn update_note_invalidates_cached_entry() {
             source_file: source_file.to_path_buf(),
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
             content: "old content".to_string(),
+            tags: None,
         })
         .unwrap();
 

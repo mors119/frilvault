@@ -13,6 +13,7 @@ pub fn execute(command: AddCommand) -> Result<()> {
         source_file: command.file.into(),
         anchor,
         content: command.content,
+        tags: (!command.tags.is_empty()).then_some(command.tags),
     })?;
 
     println!("Note added successfully");
@@ -68,6 +69,7 @@ mod tests {
             signature: None,
             line_hint: None,
             content: "note".to_string(),
+            tags: vec![],
         };
 
         let anchor = create_anchor(&command).unwrap();
@@ -92,6 +94,7 @@ mod tests {
             signature: Some("fn main()".to_string()),
             line_hint: Some(1),
             content: "note".to_string(),
+            tags: vec![],
         };
 
         let anchor = create_anchor(&command).unwrap();

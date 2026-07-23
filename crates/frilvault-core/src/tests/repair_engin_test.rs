@@ -21,6 +21,7 @@ fn repair_engine_moves_note_files() {
                 source_file: "src/main.rs".into(),
                 anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
                 content: "test note".to_string(),
+                tags: None,
             }),
         )
         .unwrap();
@@ -79,6 +80,7 @@ fn repair_engine_applies_high_confidence_moves_when_threshold_allows() {
                 source_file: "src/parser/lib.rs".into(),
                 anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
                 content: "test note".to_string(),
+                tags: None,
             }),
         )
         .unwrap();
