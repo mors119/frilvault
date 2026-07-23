@@ -14,6 +14,7 @@
 import * as vscode from 'vscode';
 
 import { CliClient } from './core/cliClient';
+import { COMMAND_IDS } from './constants/ids';
 import { CurrentFileNotesStore } from './features/current-file/store';
 import { createDisableCommand, createEnableCommand } from './features/enablement/command';
 import { isFrilVaultEnabled, syncEnabledContext } from './features/enablement/state';
@@ -31,6 +32,7 @@ import {
 import { createInlineNoteEditor } from './features/inline-editor/editor';
 import { createShowNotesForCurrentFileCommand } from './features/notes-panel/command';
 import { FrilVaultNotesProvider } from './features/notes-panel/provider';
+import { registerNotesTreeDataProvider, disposeNotesTreeDataProvider } from './features/notes-panel/register';
 import { NotesPanelService } from './features/notes-panel/service';
 import { createSearchCommand } from './features/search/command';
 import { createApplyRepairsCommand, createShowHealthCommand } from './features/workspace/health';
@@ -151,9 +153,8 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     store,
     decorator,
-    vscode.window.registerTreeDataProvider('frilvault.notes', notesProvider),
     vscode.languages.registerHoverProvider({ scheme: 'file' }, hoverProvider),
-    vscode.commands.registerCommand('frilvault.notesPanel.openNote', async (noteView: NoteView) => {
+    vscode.commands.registerCommand(COMMAND_IDS.notesPanelOpenNote, async (noteView: NoteView) => {
       if (!isEnabled()) {
         return;
       }
@@ -161,7 +162,7 @@ export function activate(context: vscode.ExtensionContext): void {
       await revealNote(noteView, getWorkspaceRoot());
     }),
     vscode.commands.registerCommand(
-      'frilvault.enable',
+      COMMAND_IDS.enable,
       createEnableCommand({
         getWorkspaceRoot,
         workspaceState: context.workspaceState,
@@ -170,7 +171,7 @@ export function activate(context: vscode.ExtensionContext): void {
       }),
     ),
     vscode.commands.registerCommand(
-      'frilvault.disable',
+      COMMAND_IDS.disable,
       createDisableCommand({
         getWorkspaceRoot,
         workspaceState: context.workspaceState,
@@ -179,19 +180,19 @@ export function activate(context: vscode.ExtensionContext): void {
       }),
     ),
     vscode.commands.registerCommand(
-      'frilvault.addNote',
+      COMMAND_IDS.addNote,
       runWhenEnabled(createCreateNoteHereCommand(inlineNoteEditor)),
     ),
     vscode.commands.registerCommand(
-      'frilvault.createNoteHere',
+      COMMAND_IDS.createNoteHere,
       runWhenEnabled(createCreateNoteHereCommand(inlineNoteEditor)),
     ),
     vscode.commands.registerCommand(
-      'frilvault.editNote',
+      COMMAND_IDS.editNote,
       runWhenEnabled(createEditNoteCommand(inlineNoteEditor)),
     ),
     vscode.commands.registerCommand(
-      'frilvault.notesPanel.editNote',
+      COMMAND_IDS.notesPanelEditNote,
       runWhenEnabled((item: { noteView?: NoteView }) => {
         if (!item?.noteView) {
           return;
@@ -227,7 +228,7 @@ export function activate(context: vscode.ExtensionContext): void {
       runWhenEnabled(createApplyRepairsCommand(cliClient, getWorkspaceRoot, invalidateViews)),
     ),
     vscode.commands.registerCommand(
-      'frilvault.refresh',
+      COMMAND_IDS.refresh,
       runWhenEnabled(async () => {
         await refreshUi();
       }),
@@ -239,6 +240,8 @@ export function activate(context: vscode.ExtensionContext): void {
       await refreshUi();
     }),
   );
+
+  registerNotesTreeDataProvider(context, notesProvider);
 
   registerSourceRenameHandler(context, cliClient, isEnabled, invalidateViews);
   registerWorkspaceWatcher(context, cliClient, isEnabled, invalidateViews);
@@ -271,6 +274,7 @@ export function activate(context: vscode.ExtensionContext): void {
  * extension 비활성화 시 in-memory UI state를 정리합니다.
  */
 export function deactivate(): void {
+  disposeNotesTreeDataProvider();
   activeDecorator?.clear();
   activeStore?.clear();
   activeRegistry?.clear();

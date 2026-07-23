@@ -24,6 +24,7 @@ import {
   isTrackedSourcePath,
   isTrackedVaultPath,
 } from '../features/workspace/watcher';
+import { notesViewFocusCommand } from '../constants/ids';
 import { createShowNotesForCurrentFileCommand } from '../features/notes-panel/command';
 import { FrilVaultNotesProvider } from '../features/notes-panel/provider';
 import { NotesPanelService } from '../features/notes-panel/service';
@@ -280,7 +281,7 @@ suite('Extension Test Suite', () => {
     await command();
 
     assert.strictEqual(treeRefreshCount, 1);
-    assert.strictEqual(focusedCommand, 'frilvault.notes.focus');
+    assert.strictEqual(focusedCommand, notesViewFocusCommand());
     assert.strictEqual(infoMessage, `No notes for ${path.join('src', 'sample.ts')}.`);
     assert.strictEqual(errorMessage, '');
   });
@@ -316,7 +317,7 @@ suite('Extension Test Suite', () => {
     await command();
 
     assert.strictEqual(treeRefreshCount, 1);
-    assert.strictEqual(focusedCommand, 'frilvault.notes.focus');
+    assert.strictEqual(focusedCommand, notesViewFocusCommand());
     assert.strictEqual(infoMessage, '');
   });
 

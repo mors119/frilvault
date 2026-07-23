@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 
+import { CONTEXT_KEYS } from '../../constants/ids';
+
 export const FRILVAULT_ENABLED_KEY = 'frilvaultEnabled';
 
 export function isFrilVaultEnabled(
@@ -27,5 +29,5 @@ export async function setFrilVaultEnabled(
 }
 
 export async function syncEnabledContext(enabled: boolean): Promise<void> {
-  await vscode.commands.executeCommand('setContext', 'frilvault.enabled', enabled);
+  await vscode.commands.executeCommand('setContext', CONTEXT_KEYS.enabled, enabled);
 }

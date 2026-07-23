@@ -1,0 +1,48 @@
+/**
+ * Shared VS Code extension identifiers.
+ *
+ * Keep `package.json` contributes/activation values aligned with these constants.
+ *
+ * VS Code extension identifier의 단일 출처입니다.
+ *
+ * `package.json` contributes/activation 값은 이 상수와 일치해야 합니다.
+ */
+export const VIEW_IDS = {
+  notes: 'frilvault.notes',
+} as const;
+
+export const COMMAND_IDS = {
+  addNote: 'frilvault.addNote',
+  createNoteHere: 'frilvault.createNoteHere',
+  editNote: 'frilvault.editNote',
+  enable: 'frilvault.enable',
+  disable: 'frilvault.disable',
+  refresh: 'frilvault.refresh',
+  notesPanelOpenNote: 'frilvault.notesPanel.openNote',
+  notesPanelEditNote: 'frilvault.notesPanel.editNote',
+  gutterShowActions: 'frilvault.gutter.showActions',
+  gutterViewNote: 'frilvault.gutter.viewNote',
+  gutterEditNote: 'frilvault.gutter.editNote',
+  gutterDeleteNote: 'frilvault.gutter.deleteNote',
+  gutterCopyLink: 'frilvault.gutter.copyLink',
+} as const;
+
+export const CONTEXT_KEYS = {
+  enabled: 'frilvault.enabled',
+} as const;
+
+export const VIEW_ITEM_CONTEXT = {
+  note: 'frilvault.note',
+  notesLineGroup: 'frilvault.notesLineGroup',
+  notesSymbolGroup: 'frilvault.notesSymbolGroup',
+} as const;
+
+/** VS Code focus command for the notes sidebar view. */
+export function notesViewFocusCommand(): string {
+  return `${VIEW_IDS.notes}.focus`;
+}
+
+/** Activation event emitted when the notes view becomes visible. */
+export function notesViewActivationEvent(): string {
+  return `onView:${VIEW_IDS.notes}`;
+}
