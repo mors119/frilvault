@@ -9,7 +9,7 @@ import {
   formatResolutionWarning,
   resolveNoteLine,
   toEditorNoteView,
-  truncateInlineContent,
+  createInlinePreview,
 } from '../features/presentation/editorNoteView';
 import type { NoteView } from '../types';
 
@@ -56,9 +56,9 @@ suite('Editor note presentation', () => {
   });
 
   test('truncateInlineContent normalizes whitespace and truncates long previews', () => {
-    const truncated = truncateInlineContent('abcdefghijklmnop', 12);
+    const truncated = createInlinePreview('abcdefghijklmnop', 12);
 
-    assert.strictEqual(truncated, 'abcdefghi...');
+    assert.strictEqual(truncated, 'abcdefghijkl…');
   });
 });
 

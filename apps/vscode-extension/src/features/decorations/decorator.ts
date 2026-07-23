@@ -2,12 +2,12 @@ import * as vscode from 'vscode';
 
 import type { NoteView } from '../../types';
 import {
-  getInlineLineNotesMaxLength,
-  isInlineLineNotesEnabled,
-  normalizeInlineContent,
+  formatInlineNotesPreview,
+  getInlineNotesMaxLength,
   resolveNoteLine,
   resolveNoteRange,
-  truncateInlineContent,
+  showInlineLineNotes,
+  showInlineSymbolNotes,
 } from '../presentation/editorNoteView';
 import { buildEditorNotesHoverParts } from '../presentation/noteHover';
 import { getConfiguredPreviewLength } from '../hover/richHover';
@@ -21,12 +21,10 @@ import {
 } from './markerStyle';
 import type { GutterNoteRegistry } from './registry';
 
-const INLINE_NOTE_PREFIX = 'Note: ';
-
 export class FrilVaultDecorator implements vscode.Disposable {
   private gutterDecorationType: vscode.TextEditorDecorationType;
 
-  private inlineLineDecorationType: vscode.TextEditorDecorationType;
+  private inlinePreviewDecorationType: vscode.TextEditorDecorationType;
 
   private symbolDecorationType: vscode.TextEditorDecorationType;
 
@@ -47,7 +45,7 @@ export class FrilVaultDecorator implements vscode.Disposable {
   ) {
     this.markerStyle = getConfiguredMarkerStyle();
     this.gutterDecorationType = createMarkerDecorationType(this.extensionPath, this.markerStyle);
-    this.inlineLineDecorationType = vscode.window.createTextEditorDecorationType({
+    this.inlinePreviewDecorationType = vscode.window.createTextEditorDecorationType({
       after: {
         margin: '0 0 0 1em',
         color: new vscode.ThemeColor('editorCodeLens.foreground'),
@@ -58,8 +56,8 @@ export class FrilVaultDecorator implements vscode.Disposable {
     this.configListener = vscode.workspace.onDidChangeConfiguration((event) => {
       if (
         !event.affectsConfiguration('frilvault.gutterMarkerStyle') &&
-        !event.affectsConfiguration('frilvault.inlineLineNotes.enabled') &&
-        !event.affectsConfiguration('frilvault.inlineLineNotes.maxLength')
+        !event.affectsConfiguration('frilvault.inlineNotes') &&
+        !event.affectsConfiguration('frilvault.inlineLineNotes')
       ) {
         return;
       }
@@ -106,14 +104,14 @@ export class FrilVaultDecorator implements vscode.Disposable {
 
   public clear(editor = vscode.window.activeTextEditor): void {
     editor?.setDecorations(this.gutterDecorationType, []);
-    editor?.setDecorations(this.inlineLineDecorationType, []);
+    editor?.setDecorations(this.inlinePreviewDecorationType, []);
     editor?.setDecorations(this.symbolDecorationType, []);
   }
 
   public dispose(): void {
     this.configListener.dispose();
     this.gutterDecorationType.dispose();
-    this.inlineLineDecorationType.dispose();
+    this.inlinePreviewDecorationType.dispose();
     this.symbolDecorationType.dispose();
   }
 
@@ -147,40 +145,42 @@ export class FrilVaultDecorator implements vscode.Disposable {
     this.registry.set(editor.document.uri.toString(), lineNotes);
     editor.setDecorations(this.gutterDecorationType, gutterDecorations);
     editor.setDecorations(
-      this.inlineLineDecorationType,
-      this.buildInlineLineDecorations(editor, notes),
+      this.inlinePreviewDecorationType,
+      this.buildInlinePreviewDecorations(editor, notes, sourceFile, workspaceRoot),
     );
     editor.setDecorations(
       this.symbolDecorationType,
-      this.buildSymbolDecorations(editor, notes),
+      this.buildSymbolGutterDecorations(editor, notes),
     );
     this.previousEditor = editor;
     this.pendingEditorUri = undefined;
   }
 
-  private buildInlineLineDecorations(
+  private buildInlinePreviewDecorations(
     editor: vscode.TextEditor,
     notes: NoteView[],
+    sourceFile: string,
+    workspaceRoot: string,
   ): vscode.DecorationOptions[] {
-    if (!isInlineLineNotesEnabled()) {
-      return [];
-    }
-
-    const maxLength = getInlineLineNotesMaxLength();
+    const maxLength = getInlineNotesMaxLength();
     const byLine = new Map<number, NoteView[]>();
 
     for (const note of notes) {
-      if (note.note.anchor.type !== 'Line') {
+      const isLineNote = note.note.anchor.type === 'Line' && showInlineLineNotes();
+      const isSymbolNote =
+        note.note.anchor.type === 'Symbol' && note.resolved && showInlineSymbolNotes();
+
+      if (!isLineNote && !isSymbolNote) {
         continue;
       }
 
-      const line = resolveNoteLine(note);
+      const lineNumber = resolveNoteLine(note);
 
-      if (line === undefined) {
+      if (lineNumber === undefined) {
         continue;
       }
 
-      const zeroBasedLine = line - 1;
+      const zeroBasedLine = lineNumber - 1;
 
       if (zeroBasedLine < 0 || zeroBasedLine >= editor.document.lineCount) {
         continue;
@@ -191,27 +191,26 @@ export class FrilVaultDecorator implements vscode.Disposable {
       byLine.set(zeroBasedLine, group);
     }
 
-    return [...byLine.entries()].map(([line, lineNotes]) => {
-      const content = lineNotes
-        .map((note) => truncateInlineContent(note.note.content, maxLength))
-        .join(' | ');
-      const text = `${INLINE_NOTE_PREFIX}${content}`;
-
-      return {
-        range: new vscode.Range(line, Number.MAX_SAFE_INTEGER, line, Number.MAX_SAFE_INTEGER),
-        renderOptions: {
-          after: {
-            contentText: text,
-            color: new vscode.ThemeColor('editorInfo.foreground'),
-            fontStyle: 'italic',
-            textDecoration: 'none',
-          },
+    return [...byLine.entries()].map(([line, groupedNotes]) => ({
+      range: new vscode.Range(line, Number.MAX_SAFE_INTEGER, line, Number.MAX_SAFE_INTEGER),
+      hoverMessage: buildEditorNotesHoverParts(
+        groupedNotes,
+        workspaceRoot,
+        sourceFile,
+        getConfiguredPreviewLength(),
+      ).contents,
+      renderOptions: {
+        after: {
+          contentText: formatInlineNotesPreview(groupedNotes, maxLength),
+          color: new vscode.ThemeColor('editorInfo.foreground'),
+          fontStyle: 'italic',
+          textDecoration: 'none',
         },
-      };
-    });
+      },
+    }));
   }
 
-  private buildSymbolDecorations(
+  private buildSymbolGutterDecorations(
     editor: vscode.TextEditor,
     notes: NoteView[],
   ): vscode.DecorationOptions[] {
@@ -228,9 +227,7 @@ export class FrilVaultDecorator implements vscode.Disposable {
         continue;
       }
 
-      decorations.push({
-        range,
-      });
+      decorations.push({ range });
     }
 
     return decorations;

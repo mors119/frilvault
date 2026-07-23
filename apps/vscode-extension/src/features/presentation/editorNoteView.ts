@@ -121,35 +121,22 @@ export function formatResolutionWarning(anchor: ResolvedNoteAnchor): string | un
   return 'Could not resolve the current declaration.';
 }
 
-export function normalizeInlineContent(content: string): string {
-  return content.replace(/\s+/g, ' ').trim();
-}
+export {
+  createInlinePreview,
+  formatInlineNotesPreview,
+  normalizeInlineContent,
+  normalizeNoteForInlineDisplay,
+  truncateInlineContent,
+} from './inlinePreview';
 
-export function truncateInlineContent(content: string, maxLength: number): string {
-  const normalized = normalizeInlineContent(content);
-
-  if (normalized.length <= maxLength) {
-    return normalized;
-  }
-
-  return `${normalized.slice(0, Math.max(maxLength - 3, 0))}...`;
-}
-
-export function isInlineLineNotesEnabled(): boolean {
-  return vscode.workspace.getConfiguration('frilvault').get<boolean>('inlineLineNotes.enabled', true);
-}
-
-export function getInlineLineNotesMaxLength(): number {
-  const configured = vscode.workspace
-    .getConfiguration('frilvault')
-    .get<number>('inlineLineNotes.maxLength', 120);
-
-  if (!Number.isFinite(configured) || configured < 20) {
-    return 120;
-  }
-
-  return Math.floor(configured);
-}
+export {
+  getInlineLineNotesMaxLength,
+  getInlineNotesMaxLength,
+  isInlineLineNotesEnabled,
+  isInlineNotesEnabled,
+  showInlineLineNotes,
+  showInlineSymbolNotes,
+} from './inlinePreviewSettings';
 
 function resolveNoteAnchor(note: NoteView): ResolvedNoteAnchor {
   if (note.note.anchor.type === 'Line') {
