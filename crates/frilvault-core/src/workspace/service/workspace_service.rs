@@ -6,7 +6,7 @@
 use crate::{
     FrilVaultResult, NoteAnchor, RepairSuggestion, WorkspaceHealth, WorkspaceStats,
     runtime::VaultContext,
-    workspace::{FileMove, RepairEngine, WorkspaceIndexRepository},
+    workspace::{FileMove, RepairEngine, WorkspaceIndex, WorkspaceIndexRepository},
 };
 
 /// Application service responsible for
@@ -27,6 +27,10 @@ impl WorkspaceService {
             vault_context,
             index_repository,
         }
+    }
+
+    pub fn warm_up(&mut self) -> FrilVaultResult<WorkspaceIndex> {
+        self.index_repository.rebuild()
     }
 
     pub fn stats(&mut self) -> FrilVaultResult<WorkspaceStats> {
