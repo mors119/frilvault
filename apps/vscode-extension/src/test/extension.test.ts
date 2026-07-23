@@ -9,6 +9,7 @@ import * as vscode from 'vscode';
 import { CliClient } from '../core/cliClient';
 import { createAddNoteCommand } from '../features/add-note/command';
 import { AddNoteService } from '../features/add-note/service';
+import { createShowNotesForCurrentFileCommand } from '../features/notes-panel/command';
 import { FrilVaultNotesProvider } from '../features/notes-panel/provider';
 import { NotesPanelService } from '../features/notes-panel/service';
 
@@ -141,6 +142,79 @@ suite('Extension Test Suite', () => {
     assert.strictEqual(decorationRefreshCount, 1);
     assert.match(successMessage, /FrilVault note added at 2:5\./);
     assert.strictEqual(errorMessage, '');
+  });
+
+  test('Show Notes For Current File command focuses the panel and reports empty files', async () => {
+    const workspace = createTestWorkspace();
+    await configureExtension(workspace);
+    await openFile(workspace.sourceFile);
+
+    let treeRefreshCount = 0;
+    let focusedCommand = '';
+    let infoMessage = '';
+    let errorMessage = '';
+    const cliClient = new CliClient(() => workspace.cliPath);
+
+    const command = createShowNotesForCurrentFileCommand({
+      getWorkspaceRoot: () => workspace.root,
+      service: new NotesPanelService(cliClient),
+      refreshNotesPanel: () => {
+        treeRefreshCount += 1;
+      },
+      executeCommand: async (commandId) => {
+        focusedCommand = commandId;
+      },
+      showInformationMessage: async (message) => {
+        infoMessage = message;
+        return undefined;
+      },
+      showErrorMessage: async (message) => {
+        errorMessage = message;
+        return undefined;
+      },
+    });
+
+    await command();
+
+    assert.strictEqual(treeRefreshCount, 1);
+    assert.strictEqual(focusedCommand, 'frilvault.notes.focus');
+    assert.strictEqual(infoMessage, `No notes for ${path.join('src', 'sample.ts')}.`);
+    assert.strictEqual(errorMessage, '');
+  });
+
+  test('Show Notes For Current File command focuses the panel when notes exist', async () => {
+    const workspace = createTestWorkspace();
+    writeNotesState(workspace, [
+      createLineNoteView('src/sample.ts', 1, 1, 'existing note'),
+    ]);
+    await configureExtension(workspace);
+    await openFile(workspace.sourceFile);
+
+    let treeRefreshCount = 0;
+    let focusedCommand = '';
+    let infoMessage = '';
+    const cliClient = new CliClient(() => workspace.cliPath);
+
+    const command = createShowNotesForCurrentFileCommand({
+      getWorkspaceRoot: () => workspace.root,
+      service: new NotesPanelService(cliClient),
+      refreshNotesPanel: () => {
+        treeRefreshCount += 1;
+      },
+      executeCommand: async (commandId) => {
+        focusedCommand = commandId;
+      },
+      showInformationMessage: async (message) => {
+        infoMessage = message;
+        return undefined;
+      },
+    });
+
+    await command();
+
+    assert.strictEqual(treeRefreshCount, 1);
+    assert.strictEqual(focusedCommand, 'frilvault.notes.focus');
+    assert.strictEqual(infoMessage, '');
   });
 });
 
