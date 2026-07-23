@@ -5,6 +5,7 @@ import { createAddNoteCommand } from './features/add-note/command';
 import { AddNoteService } from './features/add-note/service';
 import { FrilVaultDecorator } from './features/decorations/decorator';
 import { FrilVaultHoverProvider } from './features/hover/hoverProvider';
+import { createShowNotesForCurrentFileCommand } from './features/notes-panel/command';
 import { FrilVaultNotesProvider } from './features/notes-panel/provider';
 import { NotesPanelService } from './features/notes-panel/service';
 import { createSearchCommand } from './features/search/command';
@@ -40,6 +41,14 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand(
       'frilvault.searchNotes',
       createSearchCommand(cliClient, getWorkspaceRoot),
+    ),
+    vscode.commands.registerCommand(
+      'frilvault.showNotesForCurrentFile',
+      createShowNotesForCurrentFileCommand({
+        getWorkspaceRoot,
+        service: notesPanelService,
+        refreshNotesPanel: () => notesProvider.refresh(),
+      }),
     ),
     vscode.commands.registerCommand(
       'frilvault.showStats',

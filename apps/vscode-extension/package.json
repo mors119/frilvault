@@ -19,6 +19,7 @@
     "onCommand:frilvault.addNote",
     "onCommand:frilvault.notesPanel.openNote",
     "onCommand:frilvault.searchNotes",
+    "onCommand:frilvault.showNotesForCurrentFile",
     "onCommand:frilvault.showStats",
     "onCommand:frilvault.showHealth",
     "onCommand:frilvault.applyRepairs",
@@ -42,6 +43,10 @@
       {
         "command": "frilvault.searchNotes",
         "title": "FrilVault: Search Notes"
+      },
+      {
+        "command": "frilvault.showNotesForCurrentFile",
+        "title": "FrilVault: Show Notes For Current File"
       },
       {
         "command": "frilvault.showStats",
@@ -78,6 +83,11 @@
           "command": "frilvault.addNote",
           "when": "editorHasSelection || editorTextFocus",
           "group": "navigation"
+        },
+        {
+          "command": "frilvault.showNotesForCurrentFile",
+          "when": "editorTextFocus",
+          "group": "navigation"
         }
       ],
       "commandPalette": [
@@ -86,6 +96,9 @@
         },
         {
           "command": "frilvault.searchNotes"
+        },
+        {
+          "command": "frilvault.showNotesForCurrentFile"
         },
         {
           "command": "frilvault.showStats"
