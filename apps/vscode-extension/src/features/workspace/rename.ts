@@ -30,11 +30,16 @@ export function registerSourceRenameHandler(
   context: vscode.ExtensionContext,
   cliClient: CliClient,
   getWorkspaceRoot: () => string,
+  isEnabled: () => boolean,
   refreshNotesPanel: () => void,
   refreshDecorations: () => Promise<void>,
 ): void {
   context.subscriptions.push(
     vscode.workspace.onDidRenameFiles(async (event) => {
+      if (!isEnabled()) {
+        return;
+      }
+
       const workspaceRoot = getWorkspaceRoot();
       const hasSourceRename = event.files.some(({ oldUri, newUri }) =>
         isTrackedSourceRename(workspaceRoot, oldUri, newUri),

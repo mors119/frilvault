@@ -39,12 +39,17 @@ export function registerWorkspaceWatcher(
   context: vscode.ExtensionContext,
   cliClient: CliClient,
   getWorkspaceRoot: () => string,
+  isEnabled: () => boolean,
   refreshNotesPanel: () => void,
   refreshDecorations: () => Promise<void>,
 ): void {
   let debounceTimer: NodeJS.Timeout | undefined;
 
   const scheduleSync = () => {
+    if (!isEnabled()) {
+      return;
+    }
+
     if (debounceTimer) {
       clearTimeout(debounceTimer);
     }

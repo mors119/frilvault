@@ -16,6 +16,8 @@
   ],
   "activationEvents": [
     "onView:frilvault.notes",
+    "onCommand:frilvault.enable",
+    "onCommand:frilvault.disable",
     "onCommand:frilvault.addNote",
     "onCommand:frilvault.notesPanel.openNote",
     "onCommand:frilvault.searchNotes",
@@ -63,51 +65,85 @@
       {
         "command": "frilvault.refresh",
         "title": "FrilVault: Refresh"
+      },
+      {
+        "command": "frilvault.enable",
+        "title": "FrilVault: Turn On",
+        "icon": "$(debug-start)"
+      },
+      {
+        "command": "frilvault.disable",
+        "title": "FrilVault: Turn Off",
+        "icon": "$(debug-pause)"
       }
     ],
     "menus": {
       "view/title": [
         {
+          "command": "frilvault.enable",
+          "when": "view == frilvault.notes && !frilvault.enabled",
+          "group": "navigation@0"
+        },
+        {
+          "command": "frilvault.disable",
+          "when": "view == frilvault.notes && frilvault.enabled",
+          "group": "navigation@0"
+        },
+        {
           "command": "frilvault.addNote",
-          "when": "view == frilvault.notes",
+          "when": "view == frilvault.notes && frilvault.enabled",
           "group": "navigation"
         },
         {
           "command": "frilvault.refresh",
-          "when": "view == frilvault.notes",
+          "when": "view == frilvault.notes && frilvault.enabled",
           "group": "navigation"
         }
       ],
       "editor/context": [
         {
           "command": "frilvault.addNote",
-          "when": "editorHasSelection || editorTextFocus",
+          "when": "(editorHasSelection || editorTextFocus) && frilvault.enabled",
           "group": "navigation"
         },
         {
           "command": "frilvault.showNotesForCurrentFile",
-          "when": "editorTextFocus",
+          "when": "editorTextFocus && frilvault.enabled",
           "group": "navigation"
         }
       ],
       "commandPalette": [
         {
-          "command": "frilvault.addNote"
+          "command": "frilvault.enable",
+          "when": "!frilvault.enabled"
         },
         {
-          "command": "frilvault.searchNotes"
+          "command": "frilvault.disable",
+          "when": "frilvault.enabled"
         },
         {
-          "command": "frilvault.showNotesForCurrentFile"
+          "command": "frilvault.addNote",
+          "when": "frilvault.enabled"
         },
         {
-          "command": "frilvault.showStats"
+          "command": "frilvault.searchNotes",
+          "when": "frilvault.enabled"
         },
         {
-          "command": "frilvault.showHealth"
+          "command": "frilvault.showNotesForCurrentFile",
+          "when": "frilvault.enabled"
         },
         {
-          "command": "frilvault.applyRepairs"
+          "command": "frilvault.showStats",
+          "when": "frilvault.enabled"
+        },
+        {
+          "command": "frilvault.showHealth",
+          "when": "frilvault.enabled"
+        },
+        {
+          "command": "frilvault.applyRepairs",
+          "when": "frilvault.enabled"
         }
       ]
     },

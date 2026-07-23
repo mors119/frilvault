@@ -16,12 +16,19 @@ export class FrilVaultDecorator implements vscode.Disposable {
     extensionPath: string,
     private readonly cliClient: CliClient,
     private readonly getWorkspaceRoot: () => string,
+    private readonly isEnabled: () => boolean = () => true,
   ) {
     this.lineDecorationType = createLineNoteDecorationType(extensionPath);
     this.symbolDecorationType = createSymbolNoteDecorationType(extensionPath);
   }
 
   public async refresh(editor = vscode.window.activeTextEditor): Promise<void> {
+    if (!this.isEnabled()) {
+      this.clear(editor);
+      this.previousEditor = editor;
+      return;
+    }
+
     if (this.previousEditor && this.previousEditor !== editor) {
       this.clear(this.previousEditor);
     }
