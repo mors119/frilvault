@@ -5,6 +5,10 @@ import * as vscode from 'vscode';
 
 import { buildNoteUri } from '../features/decorations/gutterActions';
 import { deduplicateNotesById } from '../features/presentation/deduplicateNotes';
+import {
+  buildNoteContentForClipboard,
+  buildNoteMarkdownForClipboard,
+} from '../features/presentation/noteClipboard';
 import { buildEditorNotesHoverParts } from '../features/presentation/noteHover';
 import { resolveNotesFromCache } from '../features/hover/resolveNotes';
 import { RICH_HOVER_COMMANDS, formatRichNotesHoverParts } from '../features/hover/richHover';
@@ -122,6 +126,72 @@ suite('Hover presentation', () => {
     assert.strictEqual(uri, 'frilvault://note/v1/note-1?workspace=%2Ftmp%2Fworkspace');
     assert.doesNotMatch(uri, /Open Note/);
   });
+
+  test('renders each note section once for duplicate note IDs', () => {
+    const note = createLineNoteView('test context', 'note-a');
+    const parts = buildEditorNotesHoverParts(
+      [note, { ...note }, { ...note, source_file: 'src/b.ts' }],
+      '/tmp/workspace',
+      'src/a.ts',
+      800,
+    );
+
+    const content = parts.contents[0]?.value ?? '';
+    const actions = parts.contents[1]?.value ?? '';
+
+    assert.strictEqual(countOccurrences(content, '**FrilVault**'), 1);
+    assert.strictEqual(countOccurrences(content, 'test context'), 1);
+    assert.strictEqual(countOccurrences(content, 'Line 8:12'), 1);
+    assert.strictEqual(countOccurrences(actions, '[Open Note]'), 1);
+    assert.strictEqual(countOccurrences(actions, '[Copy Content]'), 1);
+    assert.strictEqual(countOccurrences(actions, '[Copy Markdown]'), 1);
+  });
+
+  test('symbol note resolved to a line renders once from cache lookup', () => {
+    const note = createSymbolNoteView('ConfigKey', 'test context', { line: 1, column: 1 });
+    const matched = resolveNotesFromCache(
+      [note, { ...note }, note],
+      new vscode.Position(0, 0),
+      'ConfigKey',
+    );
+
+    assert.strictEqual(matched.length, 1);
+
+    const parts = buildEditorNotesHoverParts(
+      matched,
+      '/tmp/workspace',
+      'src/a.ts',
+      800,
+    );
+
+    const content = parts.contents[0]?.value ?? '';
+
+    assert.strictEqual(countOccurrences(content, '**FrilVault**'), 1);
+    assert.strictEqual(countOccurrences(content, 'test context'), 1);
+    assert.strictEqual(countOccurrences(content, 'Symbol: ConfigKey'), 1);
+  });
+
+  test('copy note content excludes hover action labels', () => {
+    const note = createLineNoteView('plain body', 'note-1');
+    const content = buildNoteContentForClipboard(note);
+
+    assert.strictEqual(content, 'plain body');
+    assert.doesNotMatch(content, /Open Note/);
+    assert.doesNotMatch(content, /Copy Link/);
+  });
+
+  test('copy note markdown excludes hover action labels', () => {
+    const note = createLineNoteView('plain body', 'note-1');
+    const markdown = buildNoteMarkdownForClipboard(note, '/tmp/workspace');
+
+    assert.match(markdown, /# FrilVault/);
+    assert.match(markdown, /plain body/);
+    assert.match(markdown, /Line 8:12/);
+    assert.match(markdown, /Tags: test/);
+    assert.doesNotMatch(markdown, /Open Note/);
+    assert.doesNotMatch(markdown, /Copy Link/);
+    assert.doesNotMatch(markdown, /Copy Content/);
+  });
 });
 
 function createLineNoteView(content: string, id: string): NoteView {
@@ -154,4 +224,12 @@ function createSymbolNoteView(
     },
     resolved,
   };
+}
+
+function countOccurrences(haystack: string, needle: string): number {
+  if (needle.length === 0) {
+    return 0;
+  }
+
+  return haystack.split(needle).length - 1;
 }

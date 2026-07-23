@@ -26,6 +26,8 @@ export const COMMAND_IDS = {
   gutterEditNote: 'frilvault.gutter.editNote',
   gutterDeleteNote: 'frilvault.gutter.deleteNote',
   gutterCopyLink: 'frilvault.gutter.copyLink',
+  gutterCopyNoteContent: 'frilvault.gutter.copyNoteContent',
+  gutterCopyNoteMarkdown: 'frilvault.gutter.copyNoteMarkdown',
 } as const;
 
 export const CONTEXT_KEYS = {

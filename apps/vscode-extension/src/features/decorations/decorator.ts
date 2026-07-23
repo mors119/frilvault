@@ -9,8 +9,6 @@ import {
   showInlineLineNotes,
   showInlineSymbolNotes,
 } from '../presentation/editorNoteView';
-import { buildEditorNotesHoverParts } from '../presentation/noteHover';
-import { getConfiguredPreviewLength } from '../hover/richHover';
 import { aggregateNotesByLine } from './aggregate';
 import { createSymbolNoteDecorationType } from './gutter';
 import {
@@ -118,13 +116,12 @@ export class FrilVaultDecorator implements vscode.Disposable {
   private renderNotes(
     editor: vscode.TextEditor,
     notes: NoteView[],
-    sourceFile: string,
+    _sourceFile: string,
   ): void {
     if (this.pendingEditorUri !== editor.document.uri.toString()) {
       return;
     }
 
-    const workspaceRoot = this.getWorkspaceRoot();
     const groups = aggregateNotesByLine(notes, editor.document.lineCount);
     const lineNotes = new Map<number, NoteView[]>();
     const gutterDecorations: vscode.DecorationOptions[] = groups.map((group) => {
@@ -132,12 +129,6 @@ export class FrilVaultDecorator implements vscode.Disposable {
 
       return {
         range: editor.document.lineAt(group.line).range,
-        hoverMessage: buildEditorNotesHoverParts(
-          group.notes,
-          workspaceRoot,
-          sourceFile,
-          getConfiguredPreviewLength(),
-        ).contents,
         renderOptions: markerRenderOptions(this.markerStyle, group.notes.length),
       };
     });
@@ -146,7 +137,7 @@ export class FrilVaultDecorator implements vscode.Disposable {
     editor.setDecorations(this.gutterDecorationType, gutterDecorations);
     editor.setDecorations(
       this.inlinePreviewDecorationType,
-      this.buildInlinePreviewDecorations(editor, notes, sourceFile, workspaceRoot),
+      this.buildInlinePreviewDecorations(editor, notes),
     );
     editor.setDecorations(
       this.symbolDecorationType,
@@ -159,8 +150,6 @@ export class FrilVaultDecorator implements vscode.Disposable {
   private buildInlinePreviewDecorations(
     editor: vscode.TextEditor,
     notes: NoteView[],
-    sourceFile: string,
-    workspaceRoot: string,
   ): vscode.DecorationOptions[] {
     const maxLength = getInlineNotesMaxLength();
     const byLine = new Map<number, NoteView[]>();
@@ -193,12 +182,6 @@ export class FrilVaultDecorator implements vscode.Disposable {
 
     return [...byLine.entries()].map(([line, groupedNotes]) => ({
       range: new vscode.Range(line, Number.MAX_SAFE_INTEGER, line, Number.MAX_SAFE_INTEGER),
-      hoverMessage: buildEditorNotesHoverParts(
-        groupedNotes,
-        workspaceRoot,
-        sourceFile,
-        getConfiguredPreviewLength(),
-      ).contents,
       renderOptions: {
         after: {
           contentText: formatInlineNotesPreview(groupedNotes, maxLength),

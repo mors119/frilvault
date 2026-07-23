@@ -37,5 +37,17 @@ export function registerGutterCommands(
         await actions.copyLink(noteId, sourceFile);
       },
     ),
+    vscode.commands.registerCommand(
+      'frilvault.gutter.copyNoteContent',
+      async (noteId: string, sourceFile: string) => {
+        await actions.copyNoteContent(noteId, sourceFile);
+      },
+    ),
+    vscode.commands.registerCommand(
+      'frilvault.gutter.copyNoteMarkdown',
+      async (noteId: string, sourceFile: string) => {
+        await actions.copyNoteMarkdown(noteId, sourceFile);
+      },
+    ),
   );
 }
