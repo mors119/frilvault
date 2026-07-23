@@ -27,9 +27,15 @@ cargo test -p frilvault-cli
 ```bash
 cd apps/vscode-extension
 npm install
+npm run check-types
+npm run lint
 npm run compile
 npm test
 ```
+
+Use the exact script names from `apps/vscode-extension/package.json`. The current package exposes `check-types`, not `typecheck`.
+
+If `npm test` aborts with `SIGABRT` under `vscode-test`, treat that as unresolved validation until the cause or workaround is documented in the change or release checklist.
 
 ## Contribution Guidelines
 

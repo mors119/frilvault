@@ -36,6 +36,17 @@ FrilVault is a local-first workspace knowledge layer. Notes live under `.vault/`
 
 The current checkout contains a CLI and a VS Code extension. Repository guidance still reserves room for a future desktop application, but there is no desktop application source tree in the current layout.
 
+## Current Release Status
+
+As of July 23, 2026, the Rust workspace is passing its format, lint, test, and release-build checks.
+
+The repository is not yet release-ready as a whole because the VS Code extension still has open release blockers:
+
+- a post-save `.gitignore` prompt failure can be surfaced to the user as if note persistence failed
+- malformed FrilVault note URIs can still escape the extension's normal error handling path
+- CodeLens path matching is brittle for nested configured roots and Windows-style paths
+- `npm test` currently aborts with `SIGABRT` under `vscode-test`
+
 ## Storage Model
 
 ```text
@@ -74,12 +85,18 @@ flvt repair --apply
 
 ```bash
 cargo fmt --all --check
+cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace
+cargo build --workspace --release
 ```
 
 ```bash
 cd apps/vscode-extension
 npm install
+npm run check-types
+npm run lint
 npm run compile
 npm test
 ```
+
+Use `npm run check-types`, not `npm run typecheck`; that script does not exist in the current extension package.

@@ -2,6 +2,12 @@
 
 This document defines the release workflow for FrilVault.
 
+Repository reality as of July 23, 2026:
+
+- the active source trees are `crates/frilvault-core`, `apps/frilvault-cli`, and `apps/vscode-extension`
+- there is no desktop application source tree in this repository checkout
+- the VS Code extension is CLI-backed at runtime; native bridge files remain as inactive scaffolding
+
 The first objective is to publish a small, usable release. Do not delay a release solely to include optional infrastructure or future-facing architecture.
 
 ## Release Principles
@@ -71,6 +77,13 @@ Confirm:
 - artifact names are predictable
 - checksums or signatures are produced when configured
 - known limitations are documented
+
+For the current repository, also confirm:
+
+- the release scope names the actual deliverables being shipped
+- extension validation uses the real script names from `apps/vscode-extension/package.json`
+- no known extension bug can make a successful note save appear to fail
+- any inactive legacy runtime path is either removed from the release scope or documented as unsupported
 
 ## Version Update
 
@@ -165,7 +178,18 @@ cargo build --workspace --release
 
 Run relevant frontend, extension, and desktop commands defined by their actual package files.
 
+For the current VS Code extension checkout, the relevant scripts are:
+
+```bash
+npm run check-types
+npm run lint
+npm run compile
+npm test
+```
+
 Record unsupported platform validation explicitly.
+
+If `npm test` exits with `SIGABRT` under `vscode-test`, do not treat the extension as release-ready until the failure is either fixed or explicitly accepted as an external environment limitation by the maintainer and recorded in the release checklist.
 
 ## Release Pull Request
 
@@ -338,14 +362,13 @@ Destructive release or tag operations require explicit maintainer approval.
 
 ## First Release Recommendation
 
-For `v0.0.1`, prioritize:
+For the current repository, prioritize:
 
-- a working desktop application
-- basic local vault behavior
-- current-file note display
-- stable storage behavior
-- clear installation instructions
-- GitHub Release artifacts
+- a working Rust core and CLI
+- stable local vault behavior
+- current-file note display in the VS Code extension
+- clear installation and validation instructions
+- release artifacts only for surfaces that actually exist in the repository
 
 Defer when necessary:
 
@@ -355,3 +378,23 @@ Defer when necessary:
 - rename and repair automation
 - image attachments
 - advanced symbol resolution
+
+## Current Release Assessment
+
+As of July 23, 2026, this checkout is not ready for a repository-level release that includes the VS Code extension.
+
+Release blockers currently visible in the source tree and validation results:
+
+- `apps/vscode-extension/src/features/inline-editor/editor.ts` and `apps/vscode-extension/src/features/gitignore/prompt.ts`
+  a successful note save can still be surfaced as a failure if the post-save `.gitignore` check or prompt path throws
+- `apps/vscode-extension/src/features/uri/handler.ts`
+  malformed `frilvault://` URIs can escape the handler's normal user-facing error path during query decoding
+- `apps/vscode-extension/src/features/inline-editor/codelens.ts`
+  path matching is more fragile than the shared path helpers and is risky for Windows or nested configured roots
+- `apps/vscode-extension`
+  `npm test` currently aborts with `SIGABRT` under `vscode-test`, so the extension release gate is not green
+
+Non-blocking cleanup items:
+
+- `apps/vscode-extension/src/core/nodeBridge.ts` remains inactive legacy scaffolding
+- `apps/vscode-extension/src/features/add-note/*` is legacy command code that is no longer part of active command registration
