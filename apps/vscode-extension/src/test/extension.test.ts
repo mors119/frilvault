@@ -13,6 +13,11 @@ import {
   GITIGNORE_PROMPT_DISABLED_KEY,
   maybePromptForGitignore,
 } from '../features/gitignore/prompt';
+import {
+  FRILVAULT_ENABLED_KEY,
+  isFrilVaultEnabled,
+  setFrilVaultEnabled,
+} from '../features/enablement/state';
 import { isTrackedSourceRename } from '../features/workspace/rename';
 import {
   isTrackedSourcePath,
@@ -68,6 +73,45 @@ suite('Extension Test Suite', () => {
     assert.strictEqual(notes.length, 1);
     assert.strictEqual(notes[0]?.note.content, 'service note');
     assert.strictEqual(notes[0]?.note.anchor.type, 'Line');
+  });
+
+  test('FrilVault Notes provider returns empty tree when extension is disabled', async () => {
+    const workspace = createTestWorkspace();
+    writeNotesState(workspace, [
+      createLineNoteView('src/sample.ts', 7, 2, 'first file note'),
+    ]);
+
+    await configureExtension(workspace);
+    await openFile(workspace.sourceFile);
+
+    const cliClient = new CliClient(() => workspace.cliPath);
+    const provider = new FrilVaultNotesProvider(
+      new NotesPanelService(cliClient),
+      () => workspace.root,
+      () => false,
+    );
+    const children = await provider.getChildren();
+
+    assert.strictEqual(children.length, 0);
+  });
+
+  test('Enablement state defaults to enabled and persists per workspace', async () => {
+    const workspace = createTestWorkspace();
+    const workspaceState = createMockWorkspaceState();
+
+    assert.strictEqual(isFrilVaultEnabled(workspaceState, workspace.root), true);
+
+    await setFrilVaultEnabled(workspaceState, workspace.root, false);
+
+    assert.strictEqual(
+      workspaceState.get<Record<string, boolean>>(FRILVAULT_ENABLED_KEY)?.[workspace.root],
+      false,
+    );
+    assert.strictEqual(isFrilVaultEnabled(workspaceState, workspace.root), false);
+
+    await setFrilVaultEnabled(workspaceState, workspace.root, true);
+
+    assert.strictEqual(isFrilVaultEnabled(workspaceState, workspace.root), true);
   });
 
   test('FrilVault Notes provider reads the active editor file', async () => {

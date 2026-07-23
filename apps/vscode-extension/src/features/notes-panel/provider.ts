@@ -15,6 +15,7 @@ export class FrilVaultNotesProvider implements vscode.TreeDataProvider<TreeNode>
   public constructor(
     private readonly service: NotesPanelService,
     private readonly getWorkspaceRoot: () => string,
+    private readonly isEnabled: () => boolean = () => true,
   ) {}
 
   public refresh(): void {
@@ -26,6 +27,10 @@ export class FrilVaultNotesProvider implements vscode.TreeDataProvider<TreeNode>
   }
 
   public async getChildren(element?: TreeNode): Promise<TreeNode[]> {
+    if (!this.isEnabled()) {
+      return [];
+    }
+
     if (element instanceof NotesAnchorGroupItem) {
       return element.notes.map((note) => new NotesPanelItem(note, this.getWorkspaceRoot()));
     }

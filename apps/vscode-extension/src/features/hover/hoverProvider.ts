@@ -8,13 +8,14 @@ export class FrilVaultHoverProvider implements vscode.HoverProvider {
   public constructor(
     private readonly cliClient: CliClient,
     private readonly getWorkspaceRoot: () => string,
+    private readonly isEnabled: () => boolean = () => true,
   ) {}
 
   public async provideHover(
     document: vscode.TextDocument,
     position: vscode.Position,
   ): Promise<vscode.Hover | undefined> {
-    if (document.uri.scheme !== 'file') {
+    if (!this.isEnabled() || document.uri.scheme !== 'file') {
       return undefined;
     }
 
