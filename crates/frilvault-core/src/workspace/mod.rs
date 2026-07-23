@@ -5,6 +5,7 @@ mod repair_engine;
 mod snapshot;
 mod watcher;
 
+pub mod gitignore;
 mod repository;
 mod service;
 

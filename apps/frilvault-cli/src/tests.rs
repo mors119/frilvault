@@ -1,8 +1,8 @@
 use clap::Parser;
 
 use crate::cli::{
-    Cli, Commands, add::SymbolKindArg, health::HealthFormatArg, list::ListFormatArg,
-    repair::RepairFormatArg, search::SearchFormatArg, stats::StatsFormatArg,
+    Cli, Commands, add::SymbolKindArg, gitignore::GitignoreFormatArg, health::HealthFormatArg,
+    list::ListFormatArg, repair::RepairFormatArg, search::SearchFormatArg, stats::StatsFormatArg,
 };
 
 #[test]
@@ -128,5 +128,23 @@ fn parses_symbol_add_command() {
             assert_eq!(command.content, "note");
         }
         _ => panic!("expected add command"),
+    }
+}
+
+#[test]
+fn parses_gitignore_check_json_format() {
+    use crate::cli::gitignore::GitignoreAction;
+
+    let cli = Cli::parse_from(["flvt", "gitignore", "check", "--format", "json"]);
+
+    match cli.command {
+        Commands::Gitignore(command) => match command.action {
+            GitignoreAction::Check(check) => {
+                assert!(matches!(check.format, Some(GitignoreFormatArg::Json)));
+                assert!(!check.json);
+            }
+            _ => panic!("expected gitignore check command"),
+        },
+        _ => panic!("expected gitignore command"),
     }
 }
