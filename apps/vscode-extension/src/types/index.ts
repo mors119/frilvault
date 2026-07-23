@@ -26,6 +26,7 @@ export type NoteView = {
     id: string;
     content: string;
     anchor: NoteAnchor;
+    tags?: string[];
     attachments?: NoteAttachment[];
     created_at?: string;
     updated_at?: string;

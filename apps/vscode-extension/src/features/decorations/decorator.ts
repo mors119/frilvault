@@ -1,26 +1,44 @@
 import * as vscode from 'vscode';
 
 import type { CurrentFileNotesStore } from '../current-file/store';
-import { formatNoteHover } from '../../utils/noteMarkdown';
-import { createLineNoteDecorationType, createSymbolNoteDecorationType } from './gutter';
+import { aggregateNotesByLine } from './aggregate';
+import { formatGutterHoverSummary } from './gutterHover';
+import {
+  createMarkerDecorationType,
+  getConfiguredMarkerStyle,
+  markerRenderOptions,
+  type GutterMarkerStyle,
+} from './markerStyle';
+import type { GutterNoteRegistry } from './registry';
 
 export class FrilVaultDecorator implements vscode.Disposable {
-  private readonly lineDecorationType: vscode.TextEditorDecorationType;
+  private decorationType: vscode.TextEditorDecorationType;
 
-  private readonly symbolDecorationType: vscode.TextEditorDecorationType;
+  private markerStyle: GutterMarkerStyle;
 
   private previousEditor: vscode.TextEditor | undefined;
 
   private pendingEditorUri: string | undefined;
 
+  private readonly configListener: vscode.Disposable;
+
   public constructor(
-    extensionPath: string,
+    private readonly extensionPath: string,
     private readonly store: CurrentFileNotesStore,
+    private readonly registry: GutterNoteRegistry,
     private readonly getWorkspaceRoot: () => string,
     private readonly isEnabled: () => boolean = () => true,
   ) {
-    this.lineDecorationType = createLineNoteDecorationType(extensionPath);
-    this.symbolDecorationType = createSymbolNoteDecorationType(extensionPath);
+    this.markerStyle = getConfiguredMarkerStyle();
+    this.decorationType = createMarkerDecorationType(this.extensionPath, this.markerStyle);
+    this.configListener = vscode.workspace.onDidChangeConfiguration((event) => {
+      if (!event.affectsConfiguration('frilvault.gutterMarkerStyle')) {
+        return;
+      }
+
+      this.recreateDecorationType();
+      void this.refresh();
+    });
   }
 
   public async refresh(editor = vscode.window.activeTextEditor): Promise<void> {
@@ -28,11 +46,13 @@ export class FrilVaultDecorator implements vscode.Disposable {
       this.clear(editor);
       this.previousEditor = editor;
       this.pendingEditorUri = undefined;
+      this.registry.clear(editor?.document.uri.toString());
       return;
     }
 
     if (this.previousEditor && this.previousEditor !== editor) {
       this.clear(this.previousEditor);
+      this.registry.clear(this.previousEditor.document.uri.toString());
     }
 
     if (!editor || editor.document.uri.scheme !== 'file') {
@@ -50,52 +70,49 @@ export class FrilVaultDecorator implements vscode.Disposable {
       return;
     }
 
-    this.renderNotes(editor, snapshot.notes);
+    this.renderNotes(editor, snapshot.notes, snapshot.sourceFile ?? '');
   }
 
   public clear(editor = vscode.window.activeTextEditor): void {
-    editor?.setDecorations(this.lineDecorationType, []);
-    editor?.setDecorations(this.symbolDecorationType, []);
+    editor?.setDecorations(this.decorationType, []);
   }
 
   public dispose(): void {
-    this.lineDecorationType.dispose();
-    this.symbolDecorationType.dispose();
+    this.configListener.dispose();
+    this.decorationType.dispose();
   }
 
-  private renderNotes(editor: vscode.TextEditor, notes: ReturnType<CurrentFileNotesStore['getSnapshot']>['notes']): void {
+  private renderNotes(
+    editor: vscode.TextEditor,
+    notes: ReturnType<CurrentFileNotesStore['getSnapshot']>['notes'],
+    sourceFile: string,
+  ): void {
     if (this.pendingEditorUri !== editor.document.uri.toString()) {
       return;
     }
 
-    const lineDecorations: vscode.DecorationOptions[] = [];
-    const symbolDecorations: vscode.DecorationOptions[] = [];
+    const groups = aggregateNotesByLine(notes, editor.document.lineCount);
+    const lineNotes = new Map<number, ReturnType<typeof aggregateNotesByLine>[number]['notes']>();
 
-    for (const note of notes) {
-      const line =
-        note.note.anchor.type === 'Line'
-          ? (note.note.anchor.line ?? 1) - 1
-          : (note.note.anchor.line_hint ?? 1) - 1;
+    const decorations: vscode.DecorationOptions[] = groups.map((group) => {
+      lineNotes.set(group.line, group.notes);
 
-      if (line < 0 || line >= editor.document.lineCount) {
-        continue;
-      }
-
-      const decoration = {
-        range: editor.document.lineAt(line).range,
-        hoverMessage: formatNoteHover(note, this.getWorkspaceRoot()),
+      return {
+        range: editor.document.lineAt(group.line).range,
+        hoverMessage: formatGutterHoverSummary(group.notes, sourceFile),
+        renderOptions: markerRenderOptions(this.markerStyle, group.notes.length),
       };
+    });
 
-      if (note.note.anchor.type === 'Line') {
-        lineDecorations.push(decoration);
-      } else {
-        symbolDecorations.push(decoration);
-      }
-    }
-
-    editor.setDecorations(this.lineDecorationType, lineDecorations);
-    editor.setDecorations(this.symbolDecorationType, symbolDecorations);
+    this.registry.set(editor.document.uri.toString(), lineNotes);
+    editor.setDecorations(this.decorationType, decorations);
     this.previousEditor = editor;
     this.pendingEditorUri = undefined;
+  }
+
+  private recreateDecorationType(): void {
+    this.decorationType.dispose();
+    this.markerStyle = getConfiguredMarkerStyle();
+    this.decorationType = createMarkerDecorationType(this.extensionPath, this.markerStyle);
   }
 }
