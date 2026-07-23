@@ -197,6 +197,21 @@ impl NoteService {
             .collect())
     }
 
+    pub fn search_by_tag(&mut self, tag: &str) -> FrilVaultResult<Vec<NoteView>> {
+        let tag = tag.to_lowercase();
+
+        Ok(self
+            .all_note_views()?
+            .into_iter()
+            .filter(|view| {
+                view.note
+                    .tags
+                    .iter()
+                    .any(|note_tag| note_tag.to_lowercase() == tag)
+            })
+            .collect())
+    }
+
     pub fn list_symbol_notes(
         &mut self,
         source_file: impl AsRef<Path>,

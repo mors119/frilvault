@@ -20,6 +20,7 @@ fn add_line_type_note_creates_json_file() {
             column: 5,
         }),
         content: "여기서 스캔이 시작된다.".to_string(),
+        tags: None,
     };
 
     service.add_note(input).unwrap();
@@ -53,6 +54,7 @@ fn add_symbol_type_note_creates_json_file() {
             line_hint: Some(34),
         }),
         content: "symbol anchor test".to_string(),
+        tags: None,
     };
 
     service.add_note(input).unwrap();
@@ -92,6 +94,7 @@ fn load_notes_from_existing_json() {
             source_file: "src/lib.rs".into(),
             anchor: crate::note::NoteAnchor::Line(crate::note::LineAnchor { line: 1, column: 1 }),
             content: "lib 진입점".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -115,6 +118,7 @@ fn add_note_and_load_note() {
                 column: 5,
             }),
             content: "여기서 스캔 시작".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -147,6 +151,7 @@ fn delete_note_removes_note() {
                 column: 5,
             }),
             content: "delete me".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -171,6 +176,7 @@ fn update_note_changes_content() {
                 column: 5,
             }),
             content: "old content".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -201,6 +207,7 @@ fn search_notes_finds_matching_notes() {
             }),
 
             content: "parser 개선 필요".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -211,6 +218,7 @@ fn search_notes_finds_matching_notes() {
             anchor: NoteAnchor::Line(LineAnchor { line: 3, column: 1 }),
 
             content: "Parser trait 검토".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -221,6 +229,7 @@ fn search_notes_finds_matching_notes() {
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
 
             content: "hello world".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -261,6 +270,7 @@ fn search_finds_symbol_anchor() {
             }),
 
             content: "service logic".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -290,6 +300,7 @@ fn search_by_symbol_returns_matching_notes() {
             }),
 
             content: "main symbol note".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -321,6 +332,7 @@ fn search_by_symbol_returns_empty_when_not_found() {
             }),
 
             content: "main symbol note".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -340,6 +352,7 @@ fn list_symbol_notes_returns_only_symbol_notes() {
             source_file: "src/main.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
             content: "line".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -353,6 +366,7 @@ fn list_symbol_notes_returns_only_symbol_notes() {
                 line_hint: None,
             }),
             content: "symbol".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -384,6 +398,7 @@ fn find_symbol_note_returns_matching_symbol() {
                 line_hint: None,
             }),
             content: "parser note".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -407,6 +422,7 @@ fn add_note_updates_persisted_index() {
             source_file: "src/main.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
             content: "indexed note".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -433,6 +449,7 @@ fn delete_note_updates_persisted_index_count() {
             source_file: "src/main.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
             content: "first".to_string(),
+            tags: None,
         })
         .unwrap();
     service
@@ -440,6 +457,7 @@ fn delete_note_updates_persisted_index_count() {
             source_file: "src/main.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 2, column: 1 }),
             content: "second".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -465,6 +483,7 @@ fn search_notes_by_file_returns_notes_for_source_file() {
             source_file: "src/main.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
             content: "main note".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -473,6 +492,7 @@ fn search_notes_by_file_returns_notes_for_source_file() {
             source_file: "src/parser/lib.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 3, column: 2 }),
             content: "parser note".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -495,6 +515,7 @@ fn search_notes_by_file_accepts_absolute_workspace_paths() {
             source_file: "src/main.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
             content: "absolute path note".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -504,4 +525,47 @@ fn search_notes_by_file_accepts_absolute_workspace_paths() {
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].source_file, PathBuf::from("src/main.rs"));
+}
+
+#[test]
+fn search_by_tag_returns_matching_notes() {
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+
+    let mut service = create_test_note_service(workspace_root);
+
+    service
+        .add_note(AddNoteRequest {
+            source_file: "src/main.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "bug fix".to_string(),
+            tags: Some(vec!["bug".to_string(), "optimization".to_string()]),
+        })
+        .unwrap();
+
+    service
+        .add_note(AddNoteRequest {
+            source_file: "src/lib.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "architecture note".to_string(),
+            tags: Some(vec!["architecture".to_string()]),
+        })
+        .unwrap();
+
+    service
+        .add_note(AddNoteRequest {
+            source_file: "src/other.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "untagged".to_string(),
+            tags: None,
+        })
+        .unwrap();
+
+    let bug_notes = service.search_by_tag("bug").unwrap();
+    assert_eq!(bug_notes.len(), 1);
+    assert_eq!(bug_notes[0].note.content, "bug fix");
+
+    let architecture_notes = service.search_by_tag("ARCHITECTURE").unwrap();
+    assert_eq!(architecture_notes.len(), 1);
+    assert_eq!(architecture_notes[0].note.content, "architecture note");
 }

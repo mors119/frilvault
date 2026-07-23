@@ -15,6 +15,10 @@ pub struct Note {
     /// content: the content of the note.
     pub content: String,
 
+    /// tags: optional labels attached to the note.
+    #[serde(default)]
+    pub tags: Vec<String>,
+
     /// created_at: the time when the note was created.
     pub created_at: DateTime<Utc>,
 
@@ -30,6 +34,7 @@ impl Note {
             id: Uuid::new_v4(),
             anchor: input.anchor,
             content: input.content,
+            tags: input.tags.unwrap_or_default(),
             created_at: now,
             updated_at: now,
         }

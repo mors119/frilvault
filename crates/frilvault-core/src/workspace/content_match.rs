@@ -75,6 +75,7 @@ mod tests {
                     line_hint: None,
                 }),
                 content: "note".to_string(),
+                tags: None,
             })],
         };
 
@@ -90,6 +91,7 @@ mod tests {
                 source_file: "src/service.rs".into(),
                 anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
                 content: "note".to_string(),
+                tags: None,
             })],
         };
 

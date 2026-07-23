@@ -15,6 +15,7 @@ fn list_all_note_files_returns_all_note_files() {
                 column: 5,
             }),
             content: "main note".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -23,6 +24,7 @@ fn list_all_note_files_returns_all_note_files() {
             source_file: "src/lib.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 3, column: 1 }),
             content: "lib note".to_string(),
+            tags: None,
         })
         .unwrap();
 

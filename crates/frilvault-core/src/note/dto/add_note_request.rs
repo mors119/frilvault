@@ -12,4 +12,7 @@ pub struct AddNoteRequest {
 
     /// content: the content of the note to be saved.
     pub content: String,
+
+    /// tags: optional labels attached to the note.
+    pub tags: Option<Vec<String>>,
 }

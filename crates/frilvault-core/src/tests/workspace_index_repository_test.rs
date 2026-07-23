@@ -77,6 +77,7 @@ fn load_or_rebuild_scans_when_index_file_is_missing() {
                 source_file: "src/main.rs".into(),
                 anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
                 content: "indexed note".to_string(),
+                tags: None,
             }),
         )
         .unwrap();
@@ -117,6 +118,7 @@ fn load_or_rebuild_loads_existing_index_without_scanning() {
             source_file: "src/other.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
             content: "unindexed note".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -147,6 +149,7 @@ fn rebuild_creates_index_from_note_files() {
                 column: 5,
             }),
             content: "main note".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -155,6 +158,7 @@ fn rebuild_creates_index_from_note_files() {
             source_file: "src/lib.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 3, column: 1 }),
             content: "lib note".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -163,6 +167,7 @@ fn rebuild_creates_index_from_note_files() {
             source_file: "src/lib.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 7, column: 2 }),
             content: "second lib note".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -202,6 +207,7 @@ fn rebuild_marks_missing_files_as_not_existing() {
             source_file: "src/missing.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
             content: "orphan".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -227,6 +233,7 @@ fn health_check_detects_missing_files_from_note_repository() {
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
 
             content: "orphan".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -280,6 +287,7 @@ fn stats_counts_line_and_symbol_notes() {
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
 
             content: "line note".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -298,6 +306,7 @@ fn stats_counts_line_and_symbol_notes() {
             }),
 
             content: "symbol note".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -332,6 +341,7 @@ fn repair_suggests_matching_file_names() {
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
 
             content: "orphan".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -364,6 +374,7 @@ fn apply_repairs_moves_note_file() {
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
 
             content: "repair me".to_string(),
+            tags: None,
         })
         .unwrap();
 

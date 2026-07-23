@@ -51,6 +51,7 @@ fn warm_up_builds_index_from_note_files() {
                 column: 5,
             }),
             content: "warm up note".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -76,6 +77,7 @@ fn warm_up_uses_persisted_index_without_rescanning() {
             source_file: "src/main.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
             content: "first note".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -88,6 +90,7 @@ fn warm_up_uses_persisted_index_without_rescanning() {
             source_file: "src/other.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
             content: "second note".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -110,6 +113,7 @@ fn sync_notes_directory_changes_clears_cache_and_rebuilds_index() {
             source_file: "src/main.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
             content: "first note".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -132,6 +136,7 @@ fn sync_notes_directory_changes_clears_cache_and_rebuilds_index() {
             source_file: "src/other.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
             content: "external note".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -184,6 +189,7 @@ fn sync_notes_directory_changes_detects_renamed_note_files() {
             source_file: "src/main.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
             content: "move me".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -216,6 +222,7 @@ fn sync_source_file_changes_relocates_notes_after_source_rename() {
             source_file: "src/parser/lib.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
             content: "keep this note".to_string(),
+            tags: None,
         })
         .unwrap();
 
@@ -270,6 +277,7 @@ fn repair_suggests_content_match_when_source_file_is_renamed() {
                 line_hint: None,
             }),
             content: "track service".to_string(),
+            tags: None,
         })
         .unwrap();
 

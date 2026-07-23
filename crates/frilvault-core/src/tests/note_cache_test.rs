@@ -8,6 +8,7 @@ fn sample_note_file() -> NoteFile {
             source_file: "src/main.rs".into(),
             anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
             content: "cached note".to_string(),
+            tags: None,
         })],
     }
 }
