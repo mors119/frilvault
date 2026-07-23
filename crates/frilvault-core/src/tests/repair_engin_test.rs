@@ -63,3 +63,40 @@ fn repair_engine_invalidates_cache_correctly() {
     assert!(!vault_context.contains_cached_notes(Path::new("src/main.rs")));
     assert!(vault_context.contains_cached_notes(Path::new("src/main_renamed.rs")));
 }
+
+#[test]
+fn repair_engine_applies_high_confidence_moves_when_threshold_allows() {
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let resolver = PathResolver::new(workspace_root);
+    let mut vault_context = create_test_vault_context(workspace_root);
+
+    vault_context
+        .note_repository
+        .append_note(
+            Path::new("src/parser/lib.rs"),
+            &Note::new(AddNoteRequest {
+                source_file: "src/parser/lib.rs".into(),
+                anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+                content: "test note".to_string(),
+            }),
+        )
+        .unwrap();
+
+    let moves = vec![FileMove {
+        from: "src/parser/lib.rs".to_string(),
+        to: "src/core/lib.rs".to_string(),
+        confidence: 0.8,
+    }];
+
+    let repaired =
+        RepairEngine::apply_moves_with_min_confidence(&mut vault_context, moves, 0.7).unwrap();
+
+    assert_eq!(repaired, 1);
+
+    let old_path = resolver.note_path_for_source_file("src/parser/lib.rs");
+    let new_path = resolver.note_path_for_source_file("src/core/lib.rs");
+
+    assert!(!old_path.exists());
+    assert!(new_path.exists());
+}

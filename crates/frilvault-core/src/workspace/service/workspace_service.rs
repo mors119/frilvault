@@ -7,9 +7,12 @@ use crate::{
     FrilVaultResult, NoteAnchor, RepairSuggestion, WorkspaceHealth, WorkspaceStats,
     runtime::VaultContext,
     workspace::{
-        FileMove, RepairEngine, WorkspaceIndex, WorkspaceIndexRepository, WorkspaceWatcher,
+        FileMove, IndexDiff, RepairEngine, WorkspaceIndex, WorkspaceIndexRepository,
+        WorkspaceWatcher,
     },
 };
+
+const REPAIR_MIN_CONFIDENCE: f32 = 0.7;
 
 /// Application service responsible for
 /// workspace-level operations.
@@ -48,6 +51,22 @@ impl WorkspaceService {
     /// `.vault/notes` is created, modified, moved, or deleted outside FrilVault.
     pub fn sync_notes_directory_changes(&mut self) -> FrilVaultResult<()> {
         self.notes_watcher.sync(&mut self.vault_context)
+    }
+
+    /// Synchronize note files after source files are renamed or moved in the workspace.
+    ///
+    /// Editor integrations should invoke this from a file rename/move callback when
+    /// a tracked source file changes path outside FrilVault.
+    pub fn sync_source_file_changes(&mut self) -> FrilVaultResult<usize> {
+        self.index_repository.rebuild()?;
+        let repaired = self.apply_repairs()?;
+
+        if repaired > 0 {
+            let index = self.index_repository.rebuild()?;
+            self.notes_watcher.seed_snapshot(index);
+        }
+
+        Ok(repaired)
     }
 
     pub fn is_vault_gitignored(&self) -> FrilVaultResult<bool> {
@@ -113,28 +132,24 @@ impl WorkspaceService {
         let mut suggestions = Vec::new();
 
         for missing_file in health.missing_source_files {
-            let missing_name = std::path::Path::new(&missing_file)
-                .file_name()
-                .and_then(|name| name.to_str());
-
-            let Some(missing_name) = missing_name else {
-                continue;
-            };
-
-            let candidates = workspace_files
+            let mut candidates: Vec<(String, f32)> = workspace_files
                 .iter()
-                .filter(|candidate| {
-                    std::path::Path::new(candidate)
-                        .file_name()
-                        .and_then(|name| name.to_str())
-                        == Some(missing_name)
+                .filter_map(|candidate| {
+                    let score = IndexDiff::similarity_score(&missing_file, candidate);
+
+                    if score >= REPAIR_MIN_CONFIDENCE {
+                        Some((candidate.clone(), score))
+                    } else {
+                        None
+                    }
                 })
-                .cloned()
                 .collect();
+
+            candidates.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
             suggestions.push(RepairSuggestion {
                 missing_file,
-                candidates,
+                candidates: candidates.into_iter().map(|(path, _)| path).collect(),
             });
         }
 
@@ -149,14 +164,26 @@ impl WorkspaceService {
             .filter_map(|suggestion| {
                 let from = suggestion.missing_file.clone();
                 let to = suggestion.best_candidate()?.clone();
+                let confidence = IndexDiff::similarity_score(&from, &to);
+
                 Some(FileMove {
                     from,
                     to,
-                    confidence: 1.0,
+                    confidence,
                 })
             })
             .collect();
 
-        RepairEngine::apply_moves(&mut self.vault_context, moves)
+        let repaired = RepairEngine::apply_moves_with_min_confidence(
+            &mut self.vault_context,
+            moves,
+            REPAIR_MIN_CONFIDENCE,
+        )?;
+
+        if repaired > 0 {
+            self.index_repository.rebuild()?;
+        }
+
+        Ok(repaired)
     }
 }

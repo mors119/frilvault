@@ -199,3 +199,48 @@ fn sync_notes_directory_changes_detects_renamed_note_files() {
     assert_eq!(index.files.len(), 1);
     assert_eq!(index.files[0].source_file, "src/main_renamed.rs");
 }
+
+#[test]
+fn sync_source_file_changes_relocates_notes_after_source_rename() {
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let resolver = PathResolver::new(workspace_root);
+    fs::create_dir_all(workspace_root.join("src/parser")).unwrap();
+    fs::create_dir_all(workspace_root.join("src/core")).unwrap();
+    fs::write(workspace_root.join("src/parser/lib.rs"), "fn lib() {}").unwrap();
+
+    let mut note_service = create_test_note_service(workspace_root);
+    note_service
+        .add_note(AddNoteRequest {
+            source_file: "src/parser/lib.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "keep this note".to_string(),
+        })
+        .unwrap();
+
+    fs::rename(
+        workspace_root.join("src/parser/lib.rs"),
+        workspace_root.join("src/core/lib.rs"),
+    )
+    .unwrap();
+
+    let mut workspace_service = create_test_workspace_service(workspace_root);
+    workspace_service.warm_up().unwrap();
+
+    let old_note_path = resolver.note_path_for_source_file("src/parser/lib.rs");
+    let new_note_path = resolver.note_path_for_source_file("src/core/lib.rs");
+
+    assert!(old_note_path.exists());
+    assert!(!new_note_path.exists());
+
+    let repaired = workspace_service.sync_source_file_changes().unwrap();
+
+    assert_eq!(repaired, 1);
+    assert!(!old_note_path.exists());
+    assert!(new_note_path.exists());
+
+    let index = workspace_service.index_repository.load().unwrap();
+    assert_eq!(index.files.len(), 1);
+    assert_eq!(index.files[0].source_file, "src/core/lib.rs");
+    assert!(index.files[0].exists);
+}

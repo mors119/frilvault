@@ -9,6 +9,7 @@ use crate::{
 pub fn execute(command: RepairCommand) -> Result<()> {
     let vault = FrilVault::open(std::env::current_dir()?)?;
     let mut service = vault.workspace()?;
+    service.warm_up()?;
     let format = resolve_format(command.format);
 
     if command.apply {
