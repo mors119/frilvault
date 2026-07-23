@@ -259,7 +259,7 @@
         },
         "frilvault.inlineEditor.autoSaveDebounceMs": {
           "type": "number",
-          "default": 500,
+          "default": 900,
           "minimum": 100,
           "description": "Delay in milliseconds before auto-saving inline note edits."
         },

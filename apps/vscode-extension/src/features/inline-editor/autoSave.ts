@@ -4,26 +4,113 @@ export function draftFingerprint(content: string, tagsText: string): string {
   return `${content.trim()}\u0000${tagsText.trim()}`;
 }
 
-export class DebouncedAutoSave {
+export interface AutoSaveController {
+  reset(persistedFingerprint: string): void;
+  schedule(fingerprint: string, revision: number): void;
+  flush(): Promise<void>;
+  cancel(): void;
+  startComposition(): void;
+  endComposition(): void;
+}
+
+export class DebouncedAutoSave implements AutoSaveController {
   private timer: ReturnType<typeof setTimeout> | undefined;
 
-  private saveGeneration = 0;
-
   private lastPersistedFingerprint = '';
+
+  private pendingFingerprint = '';
+
+  private pendingRevision = 0;
+
+  private activeSave: Promise<void> | undefined;
+
+  private saveQueued = false;
+
+  private composing = false;
+
+  private canceled = false;
 
   public constructor(
     private readonly debounceMs: number,
     private readonly onStatusChange: (status: AutoSaveStatus) => void,
-    private readonly persist: (generation: number) => Promise<void>,
+    private readonly persist: (revision: number) => Promise<void>,
   ) {}
 
-  public setPersistedFingerprint(fingerprint: string): void {
+  public reset(fingerprint: string): void {
+    this.clearTimer();
+    this.canceled = false;
+    this.composing = false;
+    this.saveQueued = false;
+    this.pendingFingerprint = fingerprint;
+    this.pendingRevision = 0;
     this.lastPersistedFingerprint = fingerprint;
   }
 
-  public schedule(fingerprint: string): void {
+  public schedule(fingerprint: string, revision: number): void {
+    this.pendingFingerprint = fingerprint;
+    this.pendingRevision = revision;
+
     if (fingerprint === this.lastPersistedFingerprint) {
+      if (!this.activeSave) {
+        this.onStatusChange('saved');
+      }
+      return;
+    }
+
+    this.onStatusChange('editing');
+    this.clearTimer();
+
+    if (this.composing) {
+      return;
+    }
+
+    this.timer = setTimeout(() => {
+      void this.flush();
+    }, this.debounceMs);
+  }
+
+  public async flush(): Promise<void> {
+    this.clearTimer();
+
+    if (this.composing || this.canceled) {
+      return;
+    }
+
+    if (this.pendingFingerprint === this.lastPersistedFingerprint) {
       this.onStatusChange('saved');
+      return;
+    }
+
+    if (this.activeSave) {
+      this.saveQueued = true;
+      await this.activeSave;
+      return;
+    }
+
+    this.activeSave = this.runSaveLoop();
+
+    try {
+      await this.activeSave;
+    } finally {
+      this.activeSave = undefined;
+    }
+  }
+
+  public cancel(): void {
+    this.clearTimer();
+    this.canceled = true;
+    this.saveQueued = false;
+  }
+
+  public startComposition(): void {
+    this.composing = true;
+    this.clearTimer();
+  }
+
+  public endComposition(): void {
+    this.composing = false;
+
+    if (this.pendingFingerprint === this.lastPersistedFingerprint || this.canceled) {
       return;
     }
 
@@ -34,33 +121,38 @@ export class DebouncedAutoSave {
     }, this.debounceMs);
   }
 
-  public async flush(): Promise<void> {
-    this.clearTimer();
-    const generation = ++this.saveGeneration;
-    this.onStatusChange('saving');
+  private async runSaveLoop(): Promise<void> {
+    while (
+      !this.canceled &&
+      !this.composing &&
+      this.pendingFingerprint !== this.lastPersistedFingerprint
+    ) {
+      const revision = this.pendingRevision;
+      const fingerprint = this.pendingFingerprint;
+      this.saveQueued = false;
+      this.onStatusChange('saving');
 
-    try {
-      await this.persist(generation);
+      try {
+        await this.persist(revision);
+      } catch {
+        if (!this.canceled && revision === this.pendingRevision) {
+          this.onStatusChange('failed');
+        }
 
-      if (generation !== this.saveGeneration) {
         return;
       }
 
-      this.onStatusChange('saved');
-    } catch {
-      if (generation === this.saveGeneration) {
-        this.onStatusChange('failed');
+      this.lastPersistedFingerprint = fingerprint;
+
+      if (this.pendingFingerprint === this.lastPersistedFingerprint) {
+        this.onStatusChange('saved');
+        return;
       }
     }
-  }
 
-  public cancel(): void {
-    this.clearTimer();
-    this.saveGeneration += 1;
-  }
-
-  public isLatestGeneration(generation: number): boolean {
-    return generation === this.saveGeneration;
+    if (!this.canceled && this.pendingFingerprint === this.lastPersistedFingerprint) {
+      this.onStatusChange('saved');
+    }
   }
 
   private clearTimer(): void {

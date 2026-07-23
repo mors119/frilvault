@@ -14,6 +14,7 @@ import {
   readSymbolSignature,
 } from '../../utils/symbols';
 import {
+  type AutoSaveController,
   AutoSaveStatus,
   DebouncedAutoSave,
   draftFingerprint,
@@ -24,8 +25,13 @@ import {
   revisionFromDraft,
   validateInlineNoteForm,
   type InlineNoteDraft,
+  type NoteRevisionSnapshot,
 } from './draft';
-import { InlineNotePanel, type InlineNotePanelMessage } from './panel';
+import {
+  InlineNotePanel,
+  type InlineNotePanelLike,
+  type InlineNotePanelMessage,
+} from './panel';
 import { InlineNoteEditorService } from './service';
 
 export interface InlineNoteEditorDependencies {
@@ -36,6 +42,11 @@ export interface InlineNoteEditorDependencies {
   showErrorMessage?: (message: string) => Thenable<string | undefined>;
   showInformationMessage?: (message: string) => Thenable<string | undefined>;
   showWarningMessage?: (message: string) => Thenable<string | undefined>;
+  createAutoSave?: (
+    onStatusChange: (status: AutoSaveStatus) => void,
+    persist: (revision: number) => Promise<void>,
+  ) => AutoSaveController;
+  panel?: InlineNotePanelLike;
 }
 
 /**
@@ -44,23 +55,34 @@ export interface InlineNoteEditorDependencies {
  * webview 기반 inline note editor이며 debounced auto-save를 사용합니다.
  */
 export class InlineNoteEditor {
-  private readonly panel = new InlineNotePanel();
+  private readonly panel: InlineNotePanelLike;
   private readonly service: InlineNoteEditorService;
-  private readonly autoSave: DebouncedAutoSave;
+  private readonly autoSave: AutoSaveController;
   private draft: InlineNoteDraft | undefined;
   private context: vscode.ExtensionContext | undefined;
   private saveStatus: AutoSaveStatus = 'saved';
   private conflictDraft: InlineNoteDraft | undefined;
+  private draftRevision = 0;
+  private lastPersistedRevision = 0;
+  private readonly draftSnapshots = new Map<number, InlineNoteDraft>();
 
   public constructor(private readonly dependencies: InlineNoteEditorDependencies) {
+    this.panel = dependencies.panel ?? new InlineNotePanel();
     this.service = new InlineNoteEditorService(dependencies.cliClient);
-    this.autoSave = new DebouncedAutoSave(
-      getInlineNotesDebounceMs(),
-      (status) => this.handleSaveStatus(status),
-      async (generation) => {
-        await this.persistDraft(generation);
-      },
-    );
+    this.autoSave =
+      dependencies.createAutoSave?.(
+        (status) => this.handleSaveStatus(status),
+        async (revision) => {
+          await this.persistDraft(revision);
+        },
+      ) ??
+      new DebouncedAutoSave(
+        getInlineNotesDebounceMs(),
+        (status) => this.handleSaveStatus(status),
+        async (revision) => {
+          await this.persistDraft(revision);
+        },
+      );
   }
 
   public register(context: vscode.ExtensionContext): void {
@@ -120,8 +142,12 @@ export class InlineNoteEditor {
     }
 
     this.draft = draft;
+    this.draftRevision = 0;
+    this.lastPersistedRevision = 0;
+    this.draftSnapshots.clear();
+    this.draftSnapshots.set(0, draft);
     this.conflictDraft = undefined;
-    this.autoSave.setPersistedFingerprint(draftFingerprint(draft.content, draft.tagsText));
+    this.autoSave.reset(draftFingerprint(draft.content, draft.tagsText));
     this.handleSaveStatus('saved');
 
     this.panel.open(
@@ -143,6 +169,13 @@ export class InlineNoteEditor {
 
     switch (message.type) {
       case 'change':
+        await this.handleChange(message.content, message.tagsText);
+        break;
+      case 'compositionStart':
+        this.autoSave.startComposition();
+        break;
+      case 'compositionEnd':
+        this.autoSave.endComposition();
         await this.handleChange(message.content, message.tagsText);
         break;
       case 'close':
@@ -169,7 +202,9 @@ export class InlineNoteEditor {
     }
 
     this.draft = applyFormInput(this.draft, { content, tagsText });
-    this.autoSave.schedule(draftFingerprint(content, tagsText));
+    this.draftRevision += 1;
+    this.draftSnapshots.set(this.draftRevision, this.draft);
+    this.autoSave.schedule(draftFingerprint(content, tagsText), this.draftRevision);
   }
 
   private async handlePanelClose(forceClose = false): Promise<void> {
@@ -233,18 +268,20 @@ export class InlineNoteEditor {
     }
   }
 
-  private async persistDraft(generation: number): Promise<void> {
-    if (!this.draft || !this.autoSave.isLatestGeneration(generation)) {
+  private async persistDraft(revision: number): Promise<void> {
+    const draftAtSaveStart = this.draftSnapshots.get(revision);
+
+    if (!this.draft || !draftAtSaveStart || revision < this.lastPersistedRevision) {
       return;
     }
 
     const validationError = validateInlineNoteForm({
-      content: this.draft.content,
-      tagsText: this.draft.tagsText,
+      content: draftAtSaveStart.content,
+      tagsText: draftAtSaveStart.tagsText,
     });
 
     if (validationError) {
-      this.panel.updateDraft(this.draft, {
+      this.panel.updateDraft(draftAtSaveStart, {
         errorMessage: validationError,
         status: 'failed',
       });
@@ -252,19 +289,18 @@ export class InlineNoteEditor {
     }
 
     try {
-      const undoSnapshot = this.draft.undoSnapshot ?? revisionFromDraft(this.draft);
-      const saved = await this.service.saveDraft(this.draft);
+      const undoSnapshot = draftAtSaveStart.undoSnapshot ?? revisionFromDraft(draftAtSaveStart);
+      const saved = await this.service.saveDraft(draftAtSaveStart);
 
-      if (!this.autoSave.isLatestGeneration(generation)) {
+      if (!this.draft || revision < this.lastPersistedRevision) {
         return;
       }
 
-      const persisted = this.service.applySavedRevision(this.draft, saved, undoSnapshot);
-      this.draft = persisted;
-      this.autoSave.setPersistedFingerprint(
-        draftFingerprint(persisted.content, persisted.tagsText),
-      );
-      this.panel.updateDraft(persisted, { status: 'saved', canDelete: true });
+      this.lastPersistedRevision = revision;
+      const savedSnapshot = this.service.snapshotAfterSave(draftAtSaveStart, saved);
+      this.syncPersistedMetadata(revision, saved, undoSnapshot, savedSnapshot);
+
+      this.panel.updateDraft(this.draft, { status: 'saved', canDelete: true });
 
       try {
         await this.dependencies.refreshNoteState();
@@ -276,7 +312,7 @@ export class InlineNoteEditor {
         await this.reportOptionalFailure('running post-save tasks', error);
       });
     } catch (error) {
-      if (!this.autoSave.isLatestGeneration(generation)) {
+      if (!this.draft || revision < this.lastPersistedRevision) {
         return;
       }
 
@@ -326,12 +362,14 @@ export class InlineNoteEditor {
       }
 
       this.draft = createEditDraft(latest, this.draft.workspaceRoot);
+      this.draftRevision = 0;
+      this.lastPersistedRevision = 0;
+      this.draftSnapshots.clear();
+      this.draftSnapshots.set(0, this.draft);
       this.conflictDraft = undefined;
-      this.autoSave.setPersistedFingerprint(
-        draftFingerprint(this.draft.content, this.draft.tagsText),
-      );
+      this.autoSave.reset(draftFingerprint(this.draft.content, this.draft.tagsText));
       this.handleSaveStatus('saved');
-      this.panel.updateDraft(this.draft, { status: 'saved' });
+      this.panel.updateDraft(this.draft, { status: 'saved', replaceInputs: true });
     } catch (error) {
       this.panel.updateDraft(this.draft, {
         errorMessage: formatError(error, 'Failed to load the external version.'),
@@ -350,6 +388,34 @@ export class InlineNoteEditor {
 
   private workspaceRoot(): string {
     return this.dependencies.getWorkspaceRoot?.() ?? getWorkspaceRoot();
+  }
+
+  private syncPersistedMetadata(
+    persistedRevision: number,
+    saved: NoteView,
+    undoSnapshot: NoteRevisionSnapshot,
+    savedSnapshot: NoteRevisionSnapshot,
+  ): void {
+    const synchronized = new Map<number, InlineNoteDraft>();
+
+    for (const [revision, snapshot] of this.draftSnapshots.entries()) {
+      if (revision < persistedRevision) {
+        continue;
+      }
+
+      const nextSnapshot = this.service.applyPersistedMetadata(snapshot, saved, undoSnapshot);
+      nextSnapshot.undoSnapshot = revision === persistedRevision ? savedSnapshot : undoSnapshot;
+      synchronized.set(revision, nextSnapshot);
+    }
+
+    this.draftSnapshots.clear();
+
+    for (const [revision, snapshot] of synchronized.entries()) {
+      this.draftSnapshots.set(revision, snapshot);
+    }
+
+    this.draft = this.draftSnapshots.get(this.draftRevision)
+      ?? synchronized.get(persistedRevision);
   }
 
   private async reportOptionalFailure(action: string, error: unknown): Promise<void> {

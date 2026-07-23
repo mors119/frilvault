@@ -114,10 +114,7 @@ export class InlineNoteEditorService {
     });
   }
 
-  public snapshotAfterSave(
-    draft: InlineNoteDraft,
-    saved: NoteView,
-  ): NoteRevisionSnapshot {
+  public snapshotAfterSave(_draft: InlineNoteDraft, saved: NoteView): NoteRevisionSnapshot {
     return {
       content: saved.note.content,
       tags: [...(saved.note.tags ?? [])],
@@ -125,7 +122,7 @@ export class InlineNoteEditorService {
     };
   }
 
-  public applySavedRevision(
+  public applyPersistedMetadata(
     draft: InlineNoteDraft,
     saved: NoteView,
     undoSnapshot: NoteRevisionSnapshot,
@@ -134,8 +131,6 @@ export class InlineNoteEditorService {
       ...draft,
       mode: 'edit',
       noteId: saved.note.id,
-      content: saved.note.content,
-      tagsText: (saved.note.tags ?? []).join(', '),
       expectedUpdatedAt: saved.note.updated_at,
       undoSnapshot,
     };
