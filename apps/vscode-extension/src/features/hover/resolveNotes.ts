@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import type { NoteView } from '../../types';
 import { findSymbolAtPosition } from '../../utils/symbols';
+import { deduplicateNotesById } from '../presentation/deduplicateNotes';
 
 export function sortNotesForHover(notes: NoteView[]): NoteView[] {
   return [...notes].sort((left, right) => {
@@ -36,7 +37,9 @@ export async function resolveNotesAtPosition(
     return [];
   }
 
-  return resolveNotesFromCache(notes, position, symbol?.name);
+  return deduplicateNotesById(
+    resolveNotesFromCache(notes, position, symbol?.name),
+  );
 }
 
 export function resolveNotesFromCache(
@@ -51,16 +54,16 @@ export function resolveNotesFromCache(
     );
 
     if (byName.length > 0) {
-      return sortNotesForHover(byName);
+      return deduplicateNotesById(sortNotesForHover(byName));
     }
   }
 
   const symbolMatches = symbolNotesAtPosition(notes, symbolName, position);
   if (symbolMatches.length > 0) {
-    return symbolMatches;
+    return deduplicateNotesById(symbolMatches);
   }
 
-  return lineNotesAtPosition(notes, position);
+  return deduplicateNotesById(lineNotesAtPosition(notes, position));
 }
 
 function symbolNotesAtPosition(

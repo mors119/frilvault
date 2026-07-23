@@ -19,8 +19,8 @@ suite('Editor note presentation', () => {
     const view = toEditorNoteView(note, '/tmp/workspace');
 
     assert.strictEqual(view.anchor.kind, 'symbol');
-    assert.strictEqual(formatAnchorHeading(view.anchor), 'Symbol');
-    assert.strictEqual(formatAnchorDetail(view.anchor), 'Function: parseYaml');
+    assert.strictEqual(formatAnchorHeading(view.anchor), 'Symbol: parseYaml');
+    assert.strictEqual(formatAnchorDetail(view.anchor), undefined);
     assert.strictEqual(formatResolutionWarning(view.anchor), undefined);
   });
 
@@ -29,7 +29,7 @@ suite('Editor note presentation', () => {
     const view = toEditorNoteView(note, '/tmp/workspace');
 
     assert.strictEqual(view.anchor.kind, 'symbol');
-    assert.strictEqual(formatResolutionWarning(view.anchor), 'Could not locate the current symbol');
+    assert.strictEqual(formatResolutionWarning(view.anchor), 'Could not resolve the current declaration.');
     assert.strictEqual(resolveNoteLine(note), undefined);
   });
 

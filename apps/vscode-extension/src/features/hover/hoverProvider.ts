@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 
 import type { CurrentFileNotesStore } from '../current-file/store';
-import { formatRichNotesHover } from './richHover';
+import { buildEditorNotesHoverParts } from '../presentation/noteHover';
+import { getConfiguredPreviewLength } from './richHover';
 import { resolveNotesAtPosition } from './resolveNotes';
 
 export class FrilVaultHoverProvider implements vscode.HoverProvider {
@@ -40,12 +41,17 @@ export class FrilVaultHoverProvider implements vscode.HoverProvider {
       return undefined;
     }
 
-    const markdown = formatRichNotesHover(
+    const parts = buildEditorNotesHoverParts(
       matched,
       this.getWorkspaceRoot(),
       snapshot.sourceFile ?? document.fileName,
+      getConfiguredPreviewLength(),
     );
 
-    return new vscode.Hover(markdown);
+    if (parts.contents.length === 0) {
+      return undefined;
+    }
+
+    return new vscode.Hover(parts.contents);
   }
 }

@@ -68,7 +68,7 @@ suite('Gutter marker helpers', () => {
   });
 
   test('formatGutterHoverSummary includes tags and action links', () => {
-    const markdown = formatGutterHoverSummary(
+    const parts = formatGutterHoverSummary(
       [
         {
           ...createLineNoteView('src/a.ts', 2, 'hello world'),
@@ -83,10 +83,12 @@ suite('Gutter marker helpers', () => {
       '/tmp/workspace',
     );
 
-    assert.match(markdown.value, /Anchor/);
-    assert.match(markdown.value, /Tags:/);
-    assert.match(markdown.value, /\[Open Note\]/);
-    assert.match(markdown.value, /frilvault\.gutter\.viewNote/);
+    const combined = parts.map((part) => part.value).join('\n');
+
+    assert.match(combined, /Line 2/);
+    assert.match(combined, /Tags: bug/);
+    assert.match(combined, /\[Open Note\]/);
+    assert.match(combined, /frilvault\.gutter\.viewNote/);
   });
 
   test('buildNoteUri encodes workspace identity', () => {
