@@ -4,4 +4,7 @@ pub const NOTE_FILE_EXTENSION: &str = "json";
 pub const NOTES_DIR_NAME: &str = "notes";
 pub const CACHE_DIR_NAME: &str = "cache";
 pub const INDEX_DIR_NAME: &str = "index";
+pub const IMAGES_DIR_NAME: &str = "images";
 pub const WORKSPACE_FILE_NAME: &str = "workspace.json";
+pub const MAX_IMAGE_BYTES: usize = 10 * 1024 * 1024;
+pub const ALLOWED_IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp"];

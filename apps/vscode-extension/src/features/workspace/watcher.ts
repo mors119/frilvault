@@ -15,7 +15,9 @@ export function isTrackedVaultPath(workspaceRoot: string, uri: vscode.Uri): bool
 
   return (
     relative === `.vault${path.sep}notes` ||
-    relative.startsWith(`.vault${path.sep}notes${path.sep}`)
+    relative.startsWith(`.vault${path.sep}notes${path.sep}`) ||
+    relative === `.vault${path.sep}images` ||
+    relative.startsWith(`.vault${path.sep}images${path.sep}`)
   );
 }
 
@@ -71,6 +73,14 @@ export function registerWorkspaceWatcher(
   notesWatcher.onDidChange(scheduleSync);
   notesWatcher.onDidDelete(scheduleSync);
 
+  const imagesWatcher = vscode.workspace.createFileSystemWatcher(
+    new vscode.RelativePattern(getWorkspaceRoot(), '.vault/images/**'),
+  );
+
+  imagesWatcher.onDidCreate(scheduleSync);
+  imagesWatcher.onDidChange(scheduleSync);
+  imagesWatcher.onDidDelete(scheduleSync);
+
   const sourceWatcher = vscode.workspace.createFileSystemWatcher(
     new vscode.RelativePattern(getWorkspaceRoot(), '**/*'),
     false,
@@ -90,7 +100,7 @@ export function registerWorkspaceWatcher(
     }
   });
 
-  context.subscriptions.push(notesWatcher, sourceWatcher, {
+  context.subscriptions.push(notesWatcher, imagesWatcher, sourceWatcher, {
     dispose: () => {
       if (debounceTimer) {
         clearTimeout(debounceTimer);

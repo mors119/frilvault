@@ -1,6 +1,9 @@
 mod helper;
 
 #[cfg(test)]
+mod attachment_test;
+
+#[cfg(test)]
 mod note_entity_test;
 
 #[cfg(test)]

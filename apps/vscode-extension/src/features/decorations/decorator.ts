@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import type { CliClient } from '../../core/cliClient';
 import { getRelativeFilePath } from '../../utils/file';
+import { formatNoteHover } from '../../utils/noteMarkdown';
 import { createLineNoteDecorationType, createSymbolNoteDecorationType } from './gutter';
 
 export class FrilVaultDecorator implements vscode.Disposable {
@@ -50,7 +51,7 @@ export class FrilVaultDecorator implements vscode.Disposable {
 
       const decoration = {
         range: editor.document.lineAt(line).range,
-        hoverMessage: new vscode.MarkdownString(note.note.content),
+        hoverMessage: formatNoteHover(note, this.getWorkspaceRoot()),
       };
 
       if (note.note.anchor.type === 'Line') {

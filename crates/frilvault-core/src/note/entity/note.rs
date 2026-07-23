@@ -19,6 +19,10 @@ pub struct Note {
     #[serde(default)]
     pub tags: Vec<String>,
 
+    /// attachments: optional image files stored under `.vault/images/`.
+    #[serde(default)]
+    pub attachments: Vec<crate::note::NoteAttachment>,
+
     /// created_at: the time when the note was created.
     pub created_at: DateTime<Utc>,
 
@@ -35,6 +39,7 @@ impl Note {
             anchor: input.anchor,
             content: input.content,
             tags: input.tags.unwrap_or_default(),
+            attachments: Vec::new(),
             created_at: now,
             updated_at: now,
         }

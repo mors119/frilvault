@@ -1,7 +1,8 @@
 use crate::{
     FrilVaultError, FrilVaultResult,
     constants::{
-        INDEX_DIR_NAME, NOTE_FILE_EXTENSION, NOTES_DIR_NAME, VAULT_DIR_NAME, WORKSPACE_FILE_NAME,
+        IMAGES_DIR_NAME, INDEX_DIR_NAME, NOTE_FILE_EXTENSION, NOTES_DIR_NAME, VAULT_DIR_NAME,
+        WORKSPACE_FILE_NAME,
     },
 };
 use std::path::{Path, PathBuf};
@@ -32,6 +33,24 @@ impl PathResolver {
 
     pub fn notes_root(&self) -> PathBuf {
         self.vault_root().join(NOTES_DIR_NAME)
+    }
+
+    pub fn images_root(&self) -> PathBuf {
+        self.vault_root().join(IMAGES_DIR_NAME)
+    }
+
+    pub fn note_images_dir(&self, note_id: uuid::Uuid) -> PathBuf {
+        self.images_root().join(note_id.to_string())
+    }
+
+    pub fn resolve_attachment_path(
+        &self,
+        note_id: uuid::Uuid,
+        attachment_id: uuid::Uuid,
+        extension: &str,
+    ) -> PathBuf {
+        self.note_images_dir(note_id)
+            .join(format!("{attachment_id}.{extension}"))
     }
 
     pub fn workspace_metadata_path(&self) -> PathBuf {

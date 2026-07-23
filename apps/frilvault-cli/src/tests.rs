@@ -225,6 +225,32 @@ fn parses_gitignore_check_json_format() {
 }
 
 #[test]
+fn parses_attach_command() {
+    let cli = Cli::parse_from([
+        "flvt",
+        "attach",
+        "--file",
+        "src/main.rs",
+        "--id",
+        "550e8400-e29b-41d4-a716-446655440000",
+        "--image",
+        "screenshot.png",
+        "--format",
+        "json",
+    ]);
+
+    match cli.command {
+        Commands::Attach(command) => {
+            assert_eq!(command.file, "src/main.rs");
+            assert_eq!(command.id, "550e8400-e29b-41d4-a716-446655440000");
+            assert_eq!(command.image, "screenshot.png");
+            assert!(matches!(command.format, Some(FormatArg::Json)));
+        }
+        _ => panic!("expected attach command"),
+    }
+}
+
+#[test]
 fn resolve_format_defaults_to_text() {
     use crate::output::{OutputFormat, resolve_format};
 

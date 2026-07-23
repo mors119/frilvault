@@ -1,4 +1,5 @@
 pub mod add;
+pub mod attach;
 pub mod delete;
 pub mod doctor;
 pub mod explorer;

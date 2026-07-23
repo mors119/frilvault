@@ -14,6 +14,10 @@ fn main() -> Result<()> {
             command::add::execute(cmd)?;
         }
 
+        Commands::Attach(cmd) => {
+            command::attach::execute(cmd)?;
+        }
+
         Commands::List(cmd) => {
             command::list::execute(cmd)?;
         }

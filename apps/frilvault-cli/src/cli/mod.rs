@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 
 pub mod add;
+pub mod attach;
 pub mod delete;
 pub mod explorer;
 pub mod format;
@@ -14,6 +15,7 @@ pub mod sync;
 pub mod update;
 
 use add::AddCommand;
+use attach::AttachCommand;
 use delete::DeleteCommand;
 use explorer::ExplorerCommand;
 use gitignore::GitignoreCommand;
@@ -35,6 +37,7 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
     Add(AddCommand),
+    Attach(AttachCommand),
     List(ListCommand),
     Update(UpdateCommand),
     Delete(DeleteCommand),

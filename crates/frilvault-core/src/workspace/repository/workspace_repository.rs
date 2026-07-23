@@ -2,7 +2,7 @@ use std::fs;
 
 use crate::{
     FrilVaultResult,
-    constants::{CACHE_DIR_NAME, INDEX_DIR_NAME, NOTES_DIR_NAME},
+    constants::{CACHE_DIR_NAME, IMAGES_DIR_NAME, INDEX_DIR_NAME, NOTES_DIR_NAME},
     workspace::{PathResolver, WorkspaceMetadata},
 };
 
@@ -43,7 +43,12 @@ impl WorkspaceRepository {
     pub fn create_if_missing(&self) -> FrilVaultResult<()> {
         let vault_root = self.path_resolver.vault_root();
 
-        for directory in [NOTES_DIR_NAME, CACHE_DIR_NAME, INDEX_DIR_NAME] {
+        for directory in [
+            NOTES_DIR_NAME,
+            CACHE_DIR_NAME,
+            INDEX_DIR_NAME,
+            IMAGES_DIR_NAME,
+        ] {
             fs::create_dir_all(vault_root.join(directory))?;
         }
 
