@@ -24,9 +24,12 @@ export type NoteView = {
   source_file: string;
   note: {
     id: string;
+    title?: string;
     content: string;
     anchor: NoteAnchor;
     tags?: string[];
+    priority?: number;
+    decision_metadata?: string;
     attachments?: NoteAttachment[];
     created_at?: string;
     updated_at?: string;

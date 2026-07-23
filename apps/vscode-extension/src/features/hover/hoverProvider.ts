@@ -1,42 +1,50 @@
 import * as vscode from 'vscode';
 
-import { notesAtLine, type CurrentFileNotesStore } from '../current-file/store';
-import { formatNoteHover } from '../../utils/noteMarkdown';
+import type { CurrentFileNotesStore } from '../current-file/store';
+import { formatRichNotesHover } from './richHover';
+import { resolveNotesAtPosition } from './resolveNotes';
 
 export class FrilVaultHoverProvider implements vscode.HoverProvider {
+  private hoverGeneration = 0;
+
   public constructor(
     private readonly store: CurrentFileNotesStore,
     private readonly getWorkspaceRoot: () => string,
     private readonly isEnabled: () => boolean = () => true,
   ) {}
 
-  public provideHover(
+  public async provideHover(
     document: vscode.TextDocument,
     position: vscode.Position,
-  ): vscode.Hover | undefined {
+    token: vscode.CancellationToken,
+  ): Promise<vscode.Hover | undefined> {
     if (!this.isEnabled() || document.uri.scheme !== 'file') {
       return undefined;
     }
 
-    const matched = notesAtLine(this.store.notesForDocument(document), position.line);
+    const snapshot = this.store.getSnapshot();
+    const notes = this.store.notesForDocument(document);
 
-    if (matched.length === 0) {
+    if (notes.length === 0 || snapshot.loading) {
       return undefined;
     }
 
-    if (matched.length === 1) {
-      return new vscode.Hover(formatNoteHover(matched[0], this.getWorkspaceRoot()));
+    const generation = ++this.hoverGeneration;
+    const matched = await resolveNotesAtPosition(notes, document, position, token);
+
+    if (
+      token.isCancellationRequested ||
+      generation !== this.hoverGeneration ||
+      matched.length === 0
+    ) {
+      return undefined;
     }
 
-    const markdown = new vscode.MarkdownString();
-
-    for (const [index, note] of matched.entries()) {
-      if (index > 0) {
-        markdown.appendMarkdown('\n\n---\n\n');
-      }
-
-      markdown.appendMarkdown(formatNoteHover(note, this.getWorkspaceRoot()).value);
-    }
+    const markdown = formatRichNotesHover(
+      matched,
+      this.getWorkspaceRoot(),
+      snapshot.sourceFile ?? document.fileName,
+    );
 
     return new vscode.Hover(markdown);
   }
