@@ -2,8 +2,8 @@ use anyhow::Result;
 use frilvault_core::FrilVault;
 
 use crate::{
-    cli::list::{ListCommand, ListFormatArg},
-    output::{OutputFormat, print_notes},
+    cli::list::ListCommand,
+    output::{print_notes, resolve_format},
 };
 
 pub fn execute(command: ListCommand) -> Result<()> {
@@ -11,11 +11,7 @@ pub fn execute(command: ListCommand) -> Result<()> {
     let mut service = vault.notes()?;
 
     let notes = service.list_notes(&command.file)?;
-
-    let format = match (command.format, command.json) {
-        (Some(ListFormatArg::Json), _) | (None, true) => OutputFormat::Json,
-        _ => OutputFormat::Text,
-    };
+    let format = resolve_format(command.format);
 
     print_notes(&notes, format)?;
 

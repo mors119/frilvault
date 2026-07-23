@@ -2,8 +2,8 @@ use anyhow::Result;
 use frilvault_core::FrilVault;
 
 use crate::{
-    cli::stats::{StatsCommand, StatsFormatArg},
-    output::{OutputFormat, print_json},
+    cli::stats::StatsCommand,
+    output::{OutputFormat, print_json, resolve_format},
 };
 
 pub fn execute(command: StatsCommand) -> Result<()> {
@@ -12,12 +12,7 @@ pub fn execute(command: StatsCommand) -> Result<()> {
 
     let stats = service.stats()?;
 
-    let format = match (command.format, command.json) {
-        (Some(StatsFormatArg::Json), _) | (None, true) => OutputFormat::Json,
-        _ => OutputFormat::Text,
-    };
-
-    if matches!(format, OutputFormat::Json) {
+    if matches!(resolve_format(command.format), OutputFormat::Json) {
         print_json(&stats)?;
         return Ok(());
     }

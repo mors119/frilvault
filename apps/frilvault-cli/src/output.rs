@@ -8,6 +8,13 @@ pub enum OutputFormat {
     Json,
 }
 
+pub fn resolve_format(format: Option<crate::cli::format::FormatArg>) -> OutputFormat {
+    match format {
+        Some(crate::cli::format::FormatArg::Json) => OutputFormat::Json,
+        Some(crate::cli::format::FormatArg::Text) | None => OutputFormat::Text,
+    }
+}
+
 pub fn print_note_count(count: usize) {
     println!("Found {} note{}", count, if count == 1 { "" } else { "s" });
 

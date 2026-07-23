@@ -1,8 +1,7 @@
 use clap::Parser;
 
 use crate::cli::{
-    Cli, Commands, add::SymbolKindArg, gitignore::GitignoreFormatArg, health::HealthFormatArg,
-    list::ListFormatArg, repair::RepairFormatArg, search::SearchFormatArg, stats::StatsFormatArg,
+    Cli, Commands, add::SymbolKindArg, format::FormatArg, gitignore::GitignoreAction,
 };
 
 #[test]
@@ -12,8 +11,19 @@ fn parses_list_format_json() {
     match cli.command {
         Commands::List(command) => {
             assert_eq!(command.file, "src/main.rs");
-            assert!(matches!(command.format, Some(ListFormatArg::Json)));
-            assert!(!command.json);
+            assert!(matches!(command.format, Some(FormatArg::Json)));
+        }
+        _ => panic!("expected list command"),
+    }
+}
+
+#[test]
+fn parses_list_format_text() {
+    let cli = Cli::parse_from(["flvt", "list", "--file", "src/main.rs", "--format", "text"]);
+
+    match cli.command {
+        Commands::List(command) => {
+            assert!(matches!(command.format, Some(FormatArg::Text)));
         }
         _ => panic!("expected list command"),
     }
@@ -34,7 +44,7 @@ fn parses_search_with_file_and_json_format() {
         Commands::Search(command) => {
             assert_eq!(command.keyword, None);
             assert_eq!(command.file.as_deref(), Some("src/main.rs"));
-            assert!(matches!(command.format, Some(SearchFormatArg::Json)));
+            assert!(matches!(command.format, Some(FormatArg::Json)));
         }
         _ => panic!("expected search command"),
     }
@@ -47,7 +57,6 @@ fn parses_health_command_alias() {
     match cli.command {
         Commands::Health(command) => {
             assert!(command.format.is_none());
-            assert!(!command.json);
         }
         _ => panic!("expected health command"),
     }
@@ -59,23 +68,17 @@ fn parses_stats_json_format() {
 
     match cli.command {
         Commands::Stats(command) => {
-            assert!(matches!(command.format, Some(StatsFormatArg::Json)));
-            assert!(!command.json);
+            assert!(matches!(command.format, Some(FormatArg::Json)));
         }
         _ => panic!("expected stats command"),
     }
 }
 
 #[test]
-fn parses_doctor_hidden_json_flag() {
-    let cli = Cli::parse_from(["flvt", "doctor", "--json"]);
-
-    match cli.command {
-        Commands::Doctor(command) => {
-            assert!(command.format.is_none());
-            assert!(command.json);
-        }
-        _ => panic!("expected doctor command"),
+fn rejects_legacy_json_flag() {
+    match Cli::try_parse_from(["flvt", "doctor", "--json"]) {
+        Err(error) => assert!(error.to_string().contains("--json")),
+        Ok(_) => panic!("expected legacy --json flag to be rejected"),
     }
 }
 
@@ -86,8 +89,7 @@ fn parses_repair_json_format() {
     match cli.command {
         Commands::Repair(command) => {
             assert!(!command.apply);
-            assert!(matches!(command.format, Some(RepairFormatArg::Json)));
-            assert!(!command.json);
+            assert!(matches!(command.format, Some(FormatArg::Json)));
         }
         _ => panic!("expected repair command"),
     }
@@ -99,8 +101,7 @@ fn parses_health_json_format() {
 
     match cli.command {
         Commands::Health(command) => {
-            assert!(matches!(command.format, Some(HealthFormatArg::Json)));
-            assert!(!command.json);
+            assert!(matches!(command.format, Some(FormatArg::Json)));
         }
         _ => panic!("expected health command"),
     }
@@ -133,18 +134,30 @@ fn parses_symbol_add_command() {
 
 #[test]
 fn parses_gitignore_check_json_format() {
-    use crate::cli::gitignore::GitignoreAction;
-
     let cli = Cli::parse_from(["flvt", "gitignore", "check", "--format", "json"]);
 
     match cli.command {
         Commands::Gitignore(command) => match command.action {
             GitignoreAction::Check(check) => {
-                assert!(matches!(check.format, Some(GitignoreFormatArg::Json)));
-                assert!(!check.json);
+                assert!(matches!(check.format, Some(FormatArg::Json)));
             }
             _ => panic!("expected gitignore check command"),
         },
         _ => panic!("expected gitignore command"),
     }
+}
+
+#[test]
+fn resolve_format_defaults_to_text() {
+    use crate::output::{OutputFormat, resolve_format};
+
+    assert!(matches!(resolve_format(None), OutputFormat::Text));
+    assert!(matches!(
+        resolve_format(Some(FormatArg::Text)),
+        OutputFormat::Text
+    ));
+    assert!(matches!(
+        resolve_format(Some(FormatArg::Json)),
+        OutputFormat::Json
+    ));
 }

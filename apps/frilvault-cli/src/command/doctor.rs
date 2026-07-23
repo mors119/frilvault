@@ -2,8 +2,8 @@ use anyhow::Result;
 use frilvault_core::FrilVault;
 
 use crate::{
-    cli::health::{HealthCommand, HealthFormatArg},
-    output::{OutputFormat, print_json},
+    cli::health::HealthCommand,
+    output::{OutputFormat, print_json, resolve_format},
 };
 
 pub fn execute(command: HealthCommand) -> Result<()> {
@@ -12,12 +12,7 @@ pub fn execute(command: HealthCommand) -> Result<()> {
 
     let health = service.health_check()?;
 
-    let format = match (command.format, command.json) {
-        (Some(HealthFormatArg::Json), _) | (None, true) => OutputFormat::Json,
-        _ => OutputFormat::Text,
-    };
-
-    if matches!(format, OutputFormat::Json) {
+    if matches!(resolve_format(command.format), OutputFormat::Json) {
         print_json(&health)?;
         return Ok(());
     }

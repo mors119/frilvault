@@ -2,18 +2,14 @@ use anyhow::Result;
 use frilvault_core::FrilVault;
 
 use crate::{
-    cli::repair::{RepairCommand, RepairFormatArg},
-    output::{OutputFormat, print_json},
+    cli::repair::RepairCommand,
+    output::{OutputFormat, print_json, resolve_format},
 };
 
 pub fn execute(command: RepairCommand) -> Result<()> {
     let vault = FrilVault::open(std::env::current_dir()?)?;
     let mut service = vault.workspace()?;
-
-    let format = match (command.format, command.json) {
-        (Some(RepairFormatArg::Json), _) | (None, true) => OutputFormat::Json,
-        _ => OutputFormat::Text,
-    };
+    let format = resolve_format(command.format);
 
     if command.apply {
         let repaired = service.apply_repairs()?;

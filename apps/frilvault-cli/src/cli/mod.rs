@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 
 pub mod add;
 pub mod delete;
+pub mod format;
 pub mod gitignore;
 pub mod health;
 pub mod list;
