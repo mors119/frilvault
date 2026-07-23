@@ -50,6 +50,10 @@ FrilVault CLI / core
 JSON persistence
 ```
 
+`FrilVault: Add Note` currently opens the inline note editor path. The older `features/add-note` command/service implementation remains in the repository as legacy code and is not the active command registration path.
+
+Native bridge files also remain in the repository as scaffolding, but the active extension runtime does not instantiate `src/core/nodeBridge.ts`.
+
 ## Feature Structure
 
 ```text
@@ -74,10 +78,15 @@ If `flvt` is not on `PATH`, set `frilvault.cliPath` in VS Code settings.
 ## Build
 
 ```bash
+npm run check-types
+npm run lint
 npm run compile
+npm test
 ```
 
 This builds the extension bundle at `dist/extension.js`.
+
+Use `npm run check-types`, not `npm run typecheck`; the latter script does not exist in the current package.
 
 ## Test
 
@@ -97,7 +106,7 @@ Current integration tests cover:
 
 - CLI JSON parsing
 - active-editor notes panel behavior
-- canonical add note command registration
+- legacy add-note command coverage
 - post-save boundary handling
 - notes view registration idempotency and disposal
 
@@ -120,6 +129,7 @@ live in `src/constants/ids.ts` and must stay aligned with `package.json`.
 
 - line-note UX is the most complete path today
 - symbol anchors exist in the shared model, but editor UX around them is still limited
+- the current release gate is not fully green while `npm test` still aborts with `SIGABRT` under `vscode-test`
 
 ## Hover and Clipboard
 

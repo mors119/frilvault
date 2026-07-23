@@ -107,14 +107,21 @@ Common checks may include:
 ```bash
 npm run format:check
 npm run lint
-npm run typecheck
+npm run check-types
 npm test
-npm run build
+npm run compile
+npm run package
 ```
 
 Use only scripts that exist in the relevant `package.json`.
 
 When the extension calls the CLI or native bridge, test the boundary instead of duplicating core behavior in JavaScript tests.
+
+Current repository reality:
+
+- `apps/vscode-extension/package.json` exposes `check-types`, not `typecheck`.
+- `npm run compile` is the normal local validation path for the extension bundle.
+- `npm test` currently runs `vscode-test` and may abort with `SIGABRT` after reusing a cached Electron host. Treat that as an unresolved validation problem until the failure is either fixed or proven to be an external environment limitation with a documented workaround.
 
 ## Desktop Application
 
