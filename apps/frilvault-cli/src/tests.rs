@@ -96,6 +96,19 @@ fn parses_repair_json_format() {
 }
 
 #[test]
+fn parses_repair_interactive_flag() {
+    let cli = Cli::parse_from(["flvt", "repair", "--interactive"]);
+
+    match cli.command {
+        Commands::Repair(command) => {
+            assert!(command.interactive);
+            assert!(!command.apply);
+        }
+        _ => panic!("expected repair command"),
+    }
+}
+
+#[test]
 fn parses_health_json_format() {
     let cli = Cli::parse_from(["flvt", "health", "--format", "json"]);
 

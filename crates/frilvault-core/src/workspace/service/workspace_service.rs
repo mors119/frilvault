@@ -7,8 +7,8 @@ use crate::{
     FrilVaultResult, NoteAnchor, RepairSuggestion, WorkspaceHealth, WorkspaceStats,
     runtime::VaultContext,
     workspace::{
-        FileMove, IndexDiff, RepairEngine, WorkspaceIndex, WorkspaceIndexRepository,
-        WorkspaceWatcher,
+        ContentMatcher, FileMove, IndexDiff, RepairEngine, WorkspaceIndex,
+        WorkspaceIndexRepository, WorkspaceWatcher, content_match::read_source_file_content,
     },
 };
 
@@ -128,14 +128,33 @@ impl WorkspaceService {
     pub fn repair_suggestions(&mut self) -> FrilVaultResult<Vec<RepairSuggestion>> {
         let health = self.health_check()?;
         let workspace_files = self.vault_context.scan_workspace_files()?;
+        let workspace_root = self.index_repository.workspace_root();
 
         let mut suggestions = Vec::new();
 
         for missing_file in health.missing_source_files {
+            let markers = self
+                .vault_context
+                .load_notes(std::path::Path::new(&missing_file))
+                .ok()
+                .map(|note_file| ContentMatcher::extract_markers(&note_file))
+                .unwrap_or_default();
+
             let mut candidates: Vec<(String, f32)> = workspace_files
                 .iter()
+                .filter(|candidate| *candidate != &missing_file)
                 .filter_map(|candidate| {
-                    let score = IndexDiff::similarity_score(&missing_file, candidate);
+                    let path_score = IndexDiff::similarity_score(&missing_file, candidate);
+                    let content_score = if markers.is_empty() {
+                        0.0
+                    } else if let Some(content) =
+                        read_source_file_content(workspace_root, candidate)
+                    {
+                        ContentMatcher::match_score(&markers, &content)
+                    } else {
+                        0.0
+                    };
+                    let score = IndexDiff::combined_repair_score(path_score, content_score);
 
                     if score >= REPAIR_MIN_CONFIDENCE {
                         Some((candidate.clone(), score))
@@ -156,24 +175,32 @@ impl WorkspaceService {
         Ok(suggestions)
     }
 
-    pub fn apply_repairs(&mut self) -> FrilVaultResult<usize> {
-        let suggestions = self.repair_suggestions()?;
+    pub fn repair_confidence(
+        &mut self,
+        missing_file: &str,
+        candidate: &str,
+    ) -> FrilVaultResult<f32> {
+        let markers = self
+            .vault_context
+            .load_notes(std::path::Path::new(missing_file))
+            .ok()
+            .map(|note_file| ContentMatcher::extract_markers(&note_file))
+            .unwrap_or_default();
+        let path_score = IndexDiff::similarity_score(missing_file, candidate);
+        let content_score = if markers.is_empty() {
+            0.0
+        } else if let Some(content) =
+            read_source_file_content(self.index_repository.workspace_root(), candidate)
+        {
+            ContentMatcher::match_score(&markers, &content)
+        } else {
+            0.0
+        };
 
-        let moves = suggestions
-            .into_iter()
-            .filter_map(|suggestion| {
-                let from = suggestion.missing_file.clone();
-                let to = suggestion.best_candidate()?.clone();
-                let confidence = IndexDiff::similarity_score(&from, &to);
+        Ok(IndexDiff::combined_repair_score(path_score, content_score))
+    }
 
-                Some(FileMove {
-                    from,
-                    to,
-                    confidence,
-                })
-            })
-            .collect();
-
+    pub fn apply_repair_moves(&mut self, moves: Vec<FileMove>) -> FrilVaultResult<usize> {
         let repaired = RepairEngine::apply_moves_with_min_confidence(
             &mut self.vault_context,
             moves,
@@ -185,5 +212,26 @@ impl WorkspaceService {
         }
 
         Ok(repaired)
+    }
+
+    pub fn apply_repairs(&mut self) -> FrilVaultResult<usize> {
+        let suggestions = self.repair_suggestions()?;
+
+        let moves = suggestions
+            .into_iter()
+            .filter_map(|suggestion| {
+                let from = suggestion.missing_file.clone();
+                let to = suggestion.best_candidate()?.clone();
+                let confidence = self.repair_confidence(&from, &to).ok()?;
+
+                Some(FileMove {
+                    from,
+                    to,
+                    confidence,
+                })
+            })
+            .collect();
+
+        self.apply_repair_moves(moves)
     }
 }

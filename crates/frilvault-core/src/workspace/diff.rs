@@ -69,4 +69,8 @@ impl IndexDiff {
     pub fn similarity_score(a: &str, b: &str) -> f32 {
         Self::filename_score(a, b) + Self::directory_score(a, b)
     }
+
+    pub fn combined_repair_score(path_score: f32, content_score: f32) -> f32 {
+        path_score.max(content_score)
+    }
 }
