@@ -1,39 +1,68 @@
 import * as vscode from 'vscode';
 
-import { notesViewFocusCommand } from '../../constants/ids';
-import { getActiveEditorOrThrow, getRelativeFilePath } from '../../utils/file';
-import { NotesPanelService } from './service';
+import { COMMAND_IDS } from '../../constants/ids';
+import type { CurrentFileNotesStore } from '../current-file/store';
+import { getActiveEditorOrThrow } from '../../utils/file';
+import {
+  type CurrentFileNotesQuickPickDependencies,
+  showCurrentFileNotesQuickPick,
+} from './quickPick';
 
 export interface ShowNotesForCurrentFileDependencies {
-  getWorkspaceRoot: () => string;
-  service: NotesPanelService;
+  store: CurrentFileNotesStore;
   refreshNotesPanel: () => void;
-  executeCommand?: (command: string) => Thenable<unknown>;
-  showInformationMessage?: (message: string) => Thenable<string | undefined>;
+  quickPick: CurrentFileNotesQuickPickDependencies;
+  getActiveEditor?: () => vscode.TextEditor;
   showErrorMessage?: (message: string) => Thenable<string | undefined>;
+  showInformationMessage?: (
+    message: string,
+    ...items: string[]
+  ) => Thenable<string | undefined>;
+  executeCommand?: (command: string) => Thenable<unknown>;
 }
 
 export function createShowNotesForCurrentFileCommand(
   dependencies: ShowNotesForCurrentFileDependencies,
 ): () => Promise<void> {
-  const executeCommand = dependencies.executeCommand ?? vscode.commands.executeCommand;
+  const showErrorMessage =
+    dependencies.showErrorMessage ?? vscode.window.showErrorMessage;
   const showInformationMessage =
     dependencies.showInformationMessage ?? vscode.window.showInformationMessage;
-  const showErrorMessage = dependencies.showErrorMessage ?? vscode.window.showErrorMessage;
+  const executeCommand = dependencies.executeCommand ?? vscode.commands.executeCommand;
+  const getActiveEditor = dependencies.getActiveEditor ?? getActiveEditorOrThrow;
 
   return async () => {
     try {
-      const editor = getActiveEditorOrThrow();
-      const workspaceRoot = dependencies.getWorkspaceRoot();
-      const sourceFile = getRelativeFilePath(workspaceRoot, editor.document.uri.fsPath);
-      const notes = await dependencies.service.listNotes(workspaceRoot, sourceFile);
-
+      const editor = getActiveEditor();
+      await dependencies.store.syncActiveEditor(editor);
       dependencies.refreshNotesPanel();
-      await executeCommand(notesViewFocusCommand());
 
-      if (notes.length === 0) {
-        await showInformationMessage(`No notes for ${sourceFile}.`);
+      const snapshot = dependencies.store.getSnapshot();
+
+      if (snapshot.error) {
+        await showErrorMessage(`FrilVault: ${snapshot.error}`);
+        return;
       }
+
+      if (!snapshot.sourceFile) {
+        await showInformationMessage('Open a workspace file to view its notes.');
+        return;
+      }
+
+      if (snapshot.notes.length === 0) {
+        const choice = await showInformationMessage(
+          'No FrilVault notes are attached to this file.',
+          'Create Note Here',
+        );
+
+        if (choice === 'Create Note Here') {
+          await executeCommand(COMMAND_IDS.createNoteHere);
+        }
+
+        return;
+      }
+
+      await showCurrentFileNotesQuickPick(snapshot, dependencies.quickPick);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Failed to show notes for the current file.';

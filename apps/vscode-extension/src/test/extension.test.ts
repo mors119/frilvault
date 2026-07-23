@@ -24,8 +24,6 @@ import {
   isTrackedSourcePath,
   isTrackedVaultPath,
 } from '../features/workspace/watcher';
-import { notesViewFocusCommand } from '../constants/ids';
-import { createShowNotesForCurrentFileCommand } from '../features/notes-panel/command';
 import { FrilVaultNotesProvider } from '../features/notes-panel/provider';
 import { NotesPanelService } from '../features/notes-panel/service';
 import { NotesPanelItem } from '../features/notes-panel/view';
@@ -91,7 +89,8 @@ suite('Extension Test Suite', () => {
     const provider = new FrilVaultNotesProvider(store, () => workspace.root, () => false);
     const children = await provider.getChildren();
 
-    assert.strictEqual(children.length, 0);
+    assert.strictEqual(children.length, 1);
+    assert.match(String(children[0]?.label ?? ''), /disabled for this workspace/i);
   });
 
   test('Enablement state defaults to disabled and persists per workspace', async () => {
@@ -129,10 +128,11 @@ suite('Extension Test Suite', () => {
     const provider = new FrilVaultNotesProvider(store, () => workspace.root);
     const firstChildren = await provider.getChildren();
 
-    assert.strictEqual(firstChildren.length, 1);
-    assert.strictEqual(firstChildren[0]?.label, 'Line Notes');
-    assert.strictEqual(firstChildren[0]?.description, '1');
-    const firstNotes = await provider.getChildren(firstChildren[0]);
+    assert.strictEqual(firstChildren.length, 2);
+    assert.strictEqual(firstChildren[0]?.label, path.join('src', 'sample.ts'));
+    assert.strictEqual(firstChildren[1]?.label, 'Line Notes');
+    assert.strictEqual(firstChildren[1]?.description, '1');
+    const firstNotes = await provider.getChildren(firstChildren[1]);
     assert.strictEqual(firstNotes[0]?.label, 'first file note');
     assert.strictEqual(firstNotes[0]?.description, 'L7');
 
@@ -141,17 +141,18 @@ suite('Extension Test Suite', () => {
 
     const secondChildren = await provider.getChildren();
 
-    assert.strictEqual(secondChildren.length, 1);
-    assert.strictEqual(secondChildren[0]?.label, 'Line Notes');
-    const secondNotes = await provider.getChildren(secondChildren[0]);
+    assert.strictEqual(secondChildren.length, 2);
+    assert.strictEqual(secondChildren[1]?.label, 'Line Notes');
+    const secondNotes = await provider.getChildren(secondChildren[1]);
     assert.strictEqual(secondNotes[0]?.label, 'second file note');
     assert.strictEqual(secondNotes[0]?.description, 'L2');
   });
 
-  test('FrilVault Notes provider groups line and symbol notes separately', async () => {
+  test('FrilVault Notes provider groups symbol, line, and unresolved notes separately', async () => {
     const workspace = createTestWorkspace();
     writeNotesState(workspace, [
-      createSymbolNoteView('src/sample.ts', 'myFn', 12, 'symbol note'),
+      createSymbolNoteView('src/sample.ts', 'myFn', 12, 'symbol note', { line: 12, column: 1 }),
+      createSymbolNoteView('src/sample.ts', 'MissingFn', 15, 'unresolved note'),
       createLineNoteView('src/sample.ts', 3, 1, 'line note'),
     ]);
 
@@ -164,18 +165,23 @@ suite('Extension Test Suite', () => {
     const provider = new FrilVaultNotesProvider(store, () => workspace.root);
     const groups = await provider.getChildren();
 
-    assert.strictEqual(groups.length, 2);
-    assert.strictEqual(groups[0]?.label, 'Line Notes');
-    assert.strictEqual(groups[1]?.label, 'Symbol Notes');
-
-    const lineNotes = await provider.getChildren(groups[0]);
-    assert.strictEqual(lineNotes.length, 1);
-    assert.strictEqual(lineNotes[0]?.label, 'line note');
+    assert.strictEqual(groups.length, 4);
+    assert.strictEqual(groups[0]?.label, path.join('src', 'sample.ts'));
+    assert.strictEqual(groups[1]?.label, 'Symbol: myFn');
+    assert.strictEqual(groups[2]?.label, 'Line Notes');
+    assert.strictEqual(groups[3]?.label, 'Unresolved Anchors');
 
     const symbolNotes = await provider.getChildren(groups[1]);
     assert.strictEqual(symbolNotes.length, 1);
     assert.strictEqual(symbolNotes[0]?.label, 'symbol note');
-    assert.strictEqual(symbolNotes[0]?.description, 'L12 myFn');
+
+    const lineNotes = await provider.getChildren(groups[2]);
+    assert.strictEqual(lineNotes.length, 1);
+    assert.strictEqual(lineNotes[0]?.label, 'line note');
+
+    const unresolvedNotes = await provider.getChildren(groups[3]);
+    assert.strictEqual(unresolvedNotes.length, 1);
+    assert.strictEqual(unresolvedNotes[0]?.label, 'unresolved note');
   });
 
   test('Symbol note reveal prefers resolved coordinates', async () => {
@@ -248,77 +254,20 @@ suite('Extension Test Suite', () => {
     assert.strictEqual(errorMessage, '');
   });
 
-  test('Show Notes For Current File command focuses the panel and reports empty files', async () => {
+  test('FrilVault Notes provider shows an actionable empty state for the active file', async () => {
     const workspace = createTestWorkspace();
     await configureExtension(workspace);
     await openFile(workspace.sourceFile);
 
-    let treeRefreshCount = 0;
-    let focusedCommand = '';
-    let infoMessage = '';
-    let errorMessage = '';
     const cliClient = new CliClient(() => workspace.cliPath);
+    const store = new CurrentFileNotesStore(cliClient, () => true, () => workspace.root);
+    await store.syncActiveEditor(vscode.window.activeTextEditor);
+    const provider = new FrilVaultNotesProvider(store, () => workspace.root);
+    const children = await provider.getChildren();
 
-    const command = createShowNotesForCurrentFileCommand({
-      getWorkspaceRoot: () => workspace.root,
-      service: new NotesPanelService(cliClient),
-      refreshNotesPanel: () => {
-        treeRefreshCount += 1;
-      },
-      executeCommand: async (commandId) => {
-        focusedCommand = commandId;
-      },
-      showInformationMessage: async (message) => {
-        infoMessage = message;
-        return undefined;
-      },
-      showErrorMessage: async (message) => {
-        errorMessage = message;
-        return undefined;
-      },
-    });
-
-    await command();
-
-    assert.strictEqual(treeRefreshCount, 1);
-    assert.strictEqual(focusedCommand, notesViewFocusCommand());
-    assert.strictEqual(infoMessage, `No notes for ${path.join('src', 'sample.ts')}.`);
-    assert.strictEqual(errorMessage, '');
-  });
-
-  test('Show Notes For Current File command focuses the panel when notes exist', async () => {
-    const workspace = createTestWorkspace();
-    writeNotesState(workspace, [
-      createLineNoteView('src/sample.ts', 1, 1, 'existing note'),
-    ]);
-    await configureExtension(workspace);
-    await openFile(workspace.sourceFile);
-
-    let treeRefreshCount = 0;
-    let focusedCommand = '';
-    let infoMessage = '';
-    const cliClient = new CliClient(() => workspace.cliPath);
-
-    const command = createShowNotesForCurrentFileCommand({
-      getWorkspaceRoot: () => workspace.root,
-      service: new NotesPanelService(cliClient),
-      refreshNotesPanel: () => {
-        treeRefreshCount += 1;
-      },
-      executeCommand: async (commandId) => {
-        focusedCommand = commandId;
-      },
-      showInformationMessage: async (message) => {
-        infoMessage = message;
-        return undefined;
-      },
-    });
-
-    await command();
-
-    assert.strictEqual(treeRefreshCount, 1);
-    assert.strictEqual(focusedCommand, notesViewFocusCommand());
-    assert.strictEqual(infoMessage, '');
+    assert.strictEqual(children.length, 2);
+    assert.strictEqual(children[0]?.label, path.join('src', 'sample.ts'));
+    assert.strictEqual(children[1]?.label, 'No FrilVault notes are attached to this file.');
   });
 
   test('Gitignore prompt appends entry when user accepts', async () => {

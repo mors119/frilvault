@@ -65,7 +65,8 @@
       },
       {
         "command": "frilvault.showNotesForCurrentFile",
-        "title": "FrilVault: Show Notes For Current File"
+        "title": "FrilVault: Show Notes For Current File",
+        "icon": "$(note)"
       },
       {
         "command": "frilvault.showStats",
@@ -134,6 +135,13 @@
         {
           "command": "frilvault.refresh",
           "when": "view == frilvault.notes && frilvault.enabled",
+          "group": "navigation"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "frilvault.showNotesForCurrentFile",
+          "when": "resourceScheme == file && frilvault.enabled && workspaceFolderCount > 0",
           "group": "navigation"
         }
       ],

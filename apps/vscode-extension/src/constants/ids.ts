@@ -18,6 +18,7 @@ export const COMMAND_IDS = {
   enable: 'frilvault.enable',
   disable: 'frilvault.disable',
   refresh: 'frilvault.refresh',
+  showNotesForCurrentFile: 'frilvault.showNotesForCurrentFile',
   notesPanelOpenNote: 'frilvault.notesPanel.openNote',
   notesPanelEditNote: 'frilvault.notesPanel.editNote',
   gutterShowActions: 'frilvault.gutter.showActions',
@@ -33,8 +34,11 @@ export const CONTEXT_KEYS = {
 
 export const VIEW_ITEM_CONTEXT = {
   note: 'frilvault.note',
+  notesFileHeader: 'frilvault.notesFileHeader',
+  notesStatus: 'frilvault.notesStatus',
   notesLineGroup: 'frilvault.notesLineGroup',
   notesSymbolGroup: 'frilvault.notesSymbolGroup',
+  notesUnresolvedGroup: 'frilvault.notesUnresolvedGroup',
 } as const;
 
 /** VS Code focus command for the notes sidebar view. */

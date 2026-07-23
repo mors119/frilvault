@@ -33,7 +33,6 @@ import { createInlineNoteEditor } from './features/inline-editor/editor';
 import { createShowNotesForCurrentFileCommand } from './features/notes-panel/command';
 import { FrilVaultNotesProvider } from './features/notes-panel/provider';
 import { registerNotesTreeDataProvider, disposeNotesTreeDataProvider } from './features/notes-panel/register';
-import { NotesPanelService } from './features/notes-panel/service';
 import { createSearchCommand } from './features/search/command';
 import { createApplyRepairsCommand, createShowHealthCommand } from './features/workspace/health';
 import { registerSourceRenameHandler } from './features/workspace/rename';
@@ -59,7 +58,6 @@ const codeLensRefreshEmitter = new vscode.EventEmitter<void>();
  */
 export function activate(context: vscode.ExtensionContext): void {
   const cliClient = new CliClient();
-  const notesPanelService = new NotesPanelService(cliClient);
 
   const isEnabled = () => {
     const workspaceRoot = tryGetWorkspaceRoot();
@@ -206,12 +204,17 @@ export function activate(context: vscode.ExtensionContext): void {
       runWhenEnabled(createSearchCommand(cliClient, getWorkspaceRoot)),
     ),
     vscode.commands.registerCommand(
-      'frilvault.showNotesForCurrentFile',
+      COMMAND_IDS.showNotesForCurrentFile,
       runWhenEnabled(
         createShowNotesForCurrentFileCommand({
-          getWorkspaceRoot,
-          service: notesPanelService,
+          store,
           refreshNotesPanel: () => notesProvider.refresh(),
+          quickPick: {
+            cliClient,
+            getWorkspaceRoot,
+            invalidateViews,
+            openInlineEditor: (noteView) => inlineNoteEditor.openEdit(noteView),
+          },
         }),
       ),
     ),

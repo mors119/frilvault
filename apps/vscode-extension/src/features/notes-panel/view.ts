@@ -4,22 +4,71 @@ import { COMMAND_IDS, VIEW_ITEM_CONTEXT } from '../../constants/ids';
 import type { NoteView } from '../../types';
 import { formatNoteHover } from '../../utils/noteMarkdown';
 
-export type AnchorGroupKind = 'Line' | 'Symbol';
+export type AnchorGroupKind = 'Line' | 'Symbol' | 'Unresolved';
+
+export class NotesFileHeaderItem extends vscode.TreeItem {
+  public constructor(sourceFile: string) {
+    super(sourceFile, vscode.TreeItemCollapsibleState.None);
+    this.description = 'Active file';
+    this.iconPath = new vscode.ThemeIcon('file');
+    this.contextValue = VIEW_ITEM_CONTEXT.notesFileHeader;
+  }
+}
+
+export class NotesStatusItem extends vscode.TreeItem {
+  public constructor(message: string, icon: string, commandId?: string) {
+    super(message, vscode.TreeItemCollapsibleState.None);
+    this.iconPath = new vscode.ThemeIcon(icon);
+    this.contextValue = VIEW_ITEM_CONTEXT.notesStatus;
+
+    if (commandId) {
+      this.command = {
+        command: commandId,
+        title: message,
+      };
+    }
+  }
+}
+
+export class NotesSymbolGroupItem extends vscode.TreeItem {
+  public constructor(
+    public readonly symbolName: string,
+    public readonly notes: NoteView[],
+  ) {
+    super(`Symbol: ${symbolName}`, vscode.TreeItemCollapsibleState.Expanded);
+    this.description = `${notes.length}`;
+    this.iconPath = new vscode.ThemeIcon('symbol-method');
+    this.contextValue = VIEW_ITEM_CONTEXT.notesSymbolGroup;
+  }
+}
 
 export class NotesAnchorGroupItem extends vscode.TreeItem {
   public constructor(
     public readonly kind: AnchorGroupKind,
     public readonly notes: NoteView[],
   ) {
-    const label = kind === 'Line' ? 'Line Notes' : 'Symbol Notes';
+    const label =
+      kind === 'Line'
+        ? 'Line Notes'
+        : kind === 'Unresolved'
+          ? 'Unresolved Anchors'
+          : 'Symbol Notes';
 
     super(label, vscode.TreeItemCollapsibleState.Expanded);
     this.description = `${notes.length}`;
     this.iconPath = new vscode.ThemeIcon(
-      kind === 'Line' ? 'list-unordered' : 'symbol-method',
+      kind === 'Line'
+        ? 'list-unordered'
+        : kind === 'Unresolved'
+          ? 'warning'
+          : 'symbol-method',
     );
     this.contextValue =
-      kind === 'Line' ? VIEW_ITEM_CONTEXT.notesLineGroup : VIEW_ITEM_CONTEXT.notesSymbolGroup;
+      kind === 'Line'
+        ? VIEW_ITEM_CONTEXT.notesLineGroup
+        : kind === 'Unresolved'
+          ? VIEW_ITEM_CONTEXT.notesUnresolvedGroup
+          : VIEW_ITEM_CONTEXT.notesSymbolGroup;
   }
 }
 
@@ -55,7 +104,7 @@ function createDescription(noteView: NoteView): string {
 
   const resolvedLine = noteView.resolved?.line ?? noteView.note.anchor.line_hint;
   const lineHint =
-    typeof resolvedLine === 'number' ? `L${resolvedLine}` : 'Symbol';
+    typeof resolvedLine === 'number' ? `L${resolvedLine}` : 'Unresolved';
 
   return `${lineHint} ${noteView.note.anchor.name ?? ''}`.trim();
 }
