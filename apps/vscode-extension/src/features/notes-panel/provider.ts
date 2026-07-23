@@ -74,7 +74,7 @@ export class FrilVaultNotesProvider implements vscode.TreeDataProvider<TreeNode>
         new NotesStatusItem(
           'No FrilVault notes are attached to this file.',
           'note',
-          COMMAND_IDS.createNoteHere,
+          COMMAND_IDS.addNote,
         ),
       ];
     }

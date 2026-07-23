@@ -37,4 +37,4 @@ npm test
 
 - the side panel tracks the current active editor
 - gutter decorations refresh when notes change or when the active editor changes
-- some extension flows are still CLI-backed while others use `frilvault-node`
+- all extension flows use the `flvt` CLI through `CliClient`

@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 
 import type { CliClient } from '../../core/cliClient';
 import { revealNote, tryGetWorkspaceRoot } from '../../utils/file';
+import { InvalidFrilVaultUriError, parseWorkspaceQuery } from './parse';
 
 export interface NoteUriHandlerDependencies {
   cliClient: CliClient;
@@ -39,7 +40,14 @@ export function registerNoteUriHandler(
       }
 
       const noteUri = uri.toString(true);
-      const workspaceRoot = resolveWorkspaceRoot(uri);
+      let workspaceRoot: string | undefined;
+
+      try {
+        workspaceRoot = resolveWorkspaceRoot(uri);
+      } catch (error) {
+        void vscode.window.showErrorMessage(formatResolveError(error));
+        return;
+      }
 
       if (!workspaceRoot) {
         void vscode.window.showErrorMessage(
@@ -62,16 +70,12 @@ export function registerNoteUriHandler(
 
 function resolveWorkspaceRoot(uri: vscode.Uri): string | undefined {
   const configured = tryGetWorkspaceRoot();
-  const queryWorkspace = uri.query
-    .split('&')
-    .map((segment) => segment.split('='))
-    .find(([key]) => key === 'workspace')?.[1];
+  const decodedWorkspace = parseWorkspaceQuery(uri);
 
-  if (!queryWorkspace) {
+  if (!decodedWorkspace) {
     return configured;
   }
 
-  const decodedWorkspace = decodeURIComponent(queryWorkspace);
   const folders = vscode.workspace.workspaceFolders ?? [];
 
   const matchingFolder = folders.find(
@@ -90,6 +94,10 @@ function resolveWorkspaceRoot(uri: vscode.Uri): string | undefined {
 }
 
 function formatResolveError(error: unknown): string {
+  if (error instanceof InvalidFrilVaultUriError) {
+    return 'FrilVault note URI is malformed.';
+  }
+
   const message = error instanceof Error ? error.message : 'Failed to resolve FrilVault note URI.';
 
   if (message.includes('unknown workspace')) {

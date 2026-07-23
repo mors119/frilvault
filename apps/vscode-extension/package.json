@@ -19,7 +19,6 @@
     "onCommand:frilvault.enable",
     "onCommand:frilvault.disable",
     "onCommand:frilvault.addNote",
-    "onCommand:frilvault.createNoteHere",
     "onCommand:frilvault.editNote",
     "onCommand:frilvault.notesPanel.editNote",
     "onCommand:frilvault.notesPanel.openNote",
@@ -46,10 +45,6 @@
       {
         "command": "frilvault.addNote",
         "title": "FrilVault: Add Note"
-      },
-      {
-        "command": "frilvault.createNoteHere",
-        "title": "FrilVault: Create Note Here"
       },
       {
         "command": "frilvault.editNote",
@@ -155,11 +150,6 @@
       ],
       "editor/context": [
         {
-          "command": "frilvault.createNoteHere",
-          "when": "(editorHasSelection || editorTextFocus) && frilvault.enabled",
-          "group": "navigation"
-        },
-        {
           "command": "frilvault.addNote",
           "when": "(editorHasSelection || editorTextFocus) && frilvault.enabled",
           "group": "navigation"
@@ -192,15 +182,11 @@
           "when": "frilvault.enabled"
         },
         {
-          "command": "frilvault.createNoteHere",
+          "command": "frilvault.addNote",
           "when": "frilvault.enabled"
         },
         {
           "command": "frilvault.editNote",
-          "when": "frilvault.enabled"
-        },
-        {
-          "command": "frilvault.addNote",
           "when": "frilvault.enabled"
         },
         {
@@ -292,13 +278,12 @@
     }
   },
   "scripts": {
-    "build:native": "node scripts/build-native.js",
     "vscode:prepublish": "npm run package",
-    "compile": "npm run build:native && npm run check-types && npm run lint && node esbuild.js",
+    "compile": "npm run check-types && npm run lint && node esbuild.js",
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "node scripts/build-native.js --production && npm run check-types && npm run lint && node esbuild.js --production",
+    "package": "npm run check-types && npm run lint && node esbuild.js --production",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",

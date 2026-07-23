@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import type { NoteView } from '../../types';
 import type { InlineNoteEditor } from './editor';
 
-export function createCreateNoteHereCommand(
+export function createAddNoteCommand(
   editor: InlineNoteEditor,
 ): () => Promise<void> {
   return async () => {

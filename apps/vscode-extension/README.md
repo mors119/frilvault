@@ -36,27 +36,29 @@ FrilVault currently targets one workspace root at a time:
 
 ## Current Integration Model
 
-The extension currently uses the `flvt` CLI as its active backend:
+The extension uses the `flvt` CLI as its runtime boundary:
 
-- add note
-- notes panel
-- gutter decorations
-- search
-- stats
-- health
-- repair
-
-Native bridge scaffolding still exists in the repo, but the current shipped command path is CLI-backed.
+```text
+VS Code UI
+↓
+Extension services
+↓
+CliClient
+↓
+FrilVault CLI / core
+↓
+JSON persistence
+```
 
 ## Feature Structure
 
 ```text
 src/features
-├── add-note
 ├── current-file
 ├── decorations
 ├── enablement
 ├── hover
+├── inline-editor
 └── notes-panel
 ```
 
@@ -75,10 +77,7 @@ If `flvt` is not on `PATH`, set `frilvault.cliPath` in VS Code settings.
 npm run compile
 ```
 
-This builds:
-
-1. the extension bundle at `dist/extension.js`
-2. `dist/frilvault.node` only when the optional `frilvault-node` crate exists
+This builds the extension bundle at `dist/extension.js`.
 
 ## Test
 
@@ -86,11 +85,20 @@ This builds:
 npm test
 ```
 
+If `npm test` exits with `SIGABRT` after reusing a cached VS Code test install,
+clear the cached Electron host and retry:
+
+```bash
+rm -rf .vscode-test
+npm test
+```
+
 Current integration tests cover:
 
 - CLI JSON parsing
 - active-editor notes panel behavior
-- add note command execution and refresh behavior
+- canonical add note command registration
+- post-save boundary handling
 - notes view registration idempotency and disposal
 
 ## Extension Development Host

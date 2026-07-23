@@ -31,14 +31,11 @@ import { InlineNoteEditorService } from './service';
 export interface InlineNoteEditorDependencies {
   cliClient: CliClient;
   getWorkspaceRoot?: () => string;
-  invalidateViews: () => Promise<void>;
+  refreshNoteState: () => Promise<void>;
+  runOptionalPostSaveTasks?: () => Promise<void>;
   showErrorMessage?: (message: string) => Thenable<string | undefined>;
   showInformationMessage?: (message: string) => Thenable<string | undefined>;
-  showWarningMessage?: (
-    message: string,
-    options: vscode.MessageOptions,
-    ...items: string[]
-  ) => Thenable<string | undefined>;
+  showWarningMessage?: (message: string) => Thenable<string | undefined>;
 }
 
 /**
@@ -224,7 +221,7 @@ export class InlineNoteEditor {
         draft.sourceFile,
         noteId,
       );
-      await this.dependencies.invalidateViews();
+      await this.dependencies.refreshNoteState();
       this.autoSave.cancel();
       this.panel.close();
       this.draft = undefined;
@@ -267,8 +264,17 @@ export class InlineNoteEditor {
       this.autoSave.setPersistedFingerprint(
         draftFingerprint(persisted.content, persisted.tagsText),
       );
-      await this.dependencies.invalidateViews();
       this.panel.updateDraft(persisted, { status: 'saved', canDelete: true });
+
+      try {
+        await this.dependencies.refreshNoteState();
+      } catch (error) {
+        await this.reportOptionalFailure('refreshing note views', error);
+      }
+
+      void this.dependencies.runOptionalPostSaveTasks?.().catch(async (error) => {
+        await this.reportOptionalFailure('running post-save tasks', error);
+      });
     } catch (error) {
       if (!this.autoSave.isLatestGeneration(generation)) {
         return;
@@ -344,6 +350,14 @@ export class InlineNoteEditor {
 
   private workspaceRoot(): string {
     return this.dependencies.getWorkspaceRoot?.() ?? getWorkspaceRoot();
+  }
+
+  private async reportOptionalFailure(action: string, error: unknown): Promise<void> {
+    const showWarningMessage =
+      this.dependencies.showWarningMessage ?? vscode.window.showWarningMessage;
+    const detail = error instanceof Error ? error.message : 'Unknown error';
+
+    await showWarningMessage(`FrilVault note saved, but ${action} failed: ${detail}`);
   }
 }
 

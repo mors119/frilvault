@@ -56,7 +56,7 @@ export function createShowNotesForCurrentFileCommand(
         );
 
         if (choice === 'Create Note Here') {
-          await executeCommand(COMMAND_IDS.createNoteHere);
+          await executeCommand(COMMAND_IDS.addNote);
         }
 
         return;

@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import type { NoteView } from '../../types';
 import type { CurrentFileNotesStore } from '../current-file/store';
 import { resolveNoteLine as resolvePresentationNoteLine } from '../presentation/editorNoteView';
+import { getRelativePathForDocument } from '../../utils/file';
 
 export function registerInlineNoteCodeLensProvider(
   context: vscode.ExtensionContext,
@@ -18,7 +19,12 @@ export function registerInlineNoteCodeLensProvider(
         return [];
       }
 
-      const relativePath = relativePathForDocument(document, getWorkspaceRoot());
+      const relativePath = getRelativePathForDocument(document, getWorkspaceRoot());
+
+      if (!relativePath) {
+        return [];
+      }
+
       const notes = store.getSnapshot().notes.filter((note) => note.source_file === relativePath);
       const lenses: vscode.CodeLens[] = [];
 
@@ -52,7 +58,7 @@ export function registerInlineNoteCodeLensProvider(
           lenses.push(
             new vscode.CodeLens(new vscode.Range(activeLine, 0, activeLine, 0), {
               title: 'Create FrilVault Note Here',
-              command: 'frilvault.createNoteHere',
+              command: 'frilvault.addNote',
             }),
           );
         }
@@ -65,15 +71,4 @@ export function registerInlineNoteCodeLensProvider(
   context.subscriptions.push(
     vscode.languages.registerCodeLensProvider({ scheme: 'file' }, provider),
   );
-}
-
-function relativePathForDocument(document: vscode.TextDocument, workspaceRoot: string): string {
-  const configuredRoot = workspaceRoot.endsWith('/') ? workspaceRoot.slice(0, -1) : workspaceRoot;
-  const filePath = document.uri.fsPath;
-
-  if (filePath.startsWith(`${configuredRoot}/`)) {
-    return filePath.slice(configuredRoot.length + 1);
-  }
-
-  return vscode.workspace.asRelativePath(document.uri, false);
 }

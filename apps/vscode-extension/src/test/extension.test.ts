@@ -8,8 +8,7 @@ import * as vscode from 'vscode';
 
 import { CliClient } from '../core/cliClient';
 import { CurrentFileNotesStore } from '../features/current-file/store';
-import { createAddNoteCommand } from '../features/add-note/command';
-import { AddNoteService } from '../features/add-note/service';
+import { createAddNoteCommand } from '../features/inline-editor/command';
 import {
   GITIGNORE_PROMPT_DISABLED_KEY,
   maybePromptForGitignore,
@@ -205,53 +204,23 @@ suite('Extension Test Suite', () => {
     assert.strictEqual(editor.selection.active.character, 3);
   });
 
-  test('Add Note command executes flvt add with relative file path and refreshes', async () => {
+  test('Add Note command opens the inline editor creation flow', async () => {
     const workspace = createTestWorkspace();
     await configureExtension(workspace);
 
     const editor = await openFile(workspace.sourceFile);
     editor.selection = new vscode.Selection(new vscode.Position(1, 4), new vscode.Position(1, 4));
 
-    let invalidateCount = 0;
-    let successMessage = '';
-    let errorMessage = '';
-    const cliClient = new CliClient(() => workspace.cliPath);
-
-    const command = createAddNoteCommand({
-      getWorkspaceRoot: () => workspace.root,
-      service: new AddNoteService(cliClient),
-      invalidateViews: async () => {
-        invalidateCount += 1;
+    let opened = false;
+    const inlineEditor = {
+      openCreateHere: async () => {
+        opened = true;
       },
-      promptNoteContent: async () => 'added from command test',
-      showInformationMessage: async (message) => {
-        successMessage = message;
-        return undefined;
-      },
-      showErrorMessage: async (message) => {
-        errorMessage = message;
-        return undefined;
-      },
-    });
-
-    await command();
-
-    const addLog = JSON.parse(fs.readFileSync(workspace.addLogFile, 'utf8')) as {
-      file: string;
-      line: number;
-      column: number;
-      content: string;
     };
 
-    assert.deepStrictEqual(addLog, {
-      file: path.join('src', 'sample.ts'),
-      line: 2,
-      column: 5,
-      content: 'added from command test',
-    });
-    assert.strictEqual(invalidateCount, 1);
-    assert.match(successMessage, /FrilVault note added at 2:5\./);
-    assert.strictEqual(errorMessage, '');
+    await createAddNoteCommand(inlineEditor as never)();
+
+    assert.strictEqual(opened, true);
   });
 
   test('FrilVault Notes provider shows an actionable empty state for the active file', async () => {
@@ -268,6 +237,27 @@ suite('Extension Test Suite', () => {
     assert.strictEqual(children.length, 2);
     assert.strictEqual(children[0]?.label, path.join('src', 'sample.ts'));
     assert.strictEqual(children[1]?.label, 'No FrilVault notes are attached to this file.');
+  });
+
+  test('Gitignore prompt reports inspection failures without throwing', async () => {
+    const workspace = createTestWorkspace();
+    let warningMessage = '';
+
+    await maybePromptForGitignore({
+      getWorkspaceRoot: () => workspace.root,
+      cliClient: {
+        checkGitignore: async () => {
+          throw new Error('cli unavailable');
+        },
+      } as unknown as CliClient,
+      workspaceState: createMockWorkspaceState(),
+      showWarningMessage: async (message, _options) => {
+        warningMessage = message;
+        return undefined;
+      },
+    });
+
+    assert.match(warningMessage, /could not inspect \.gitignore/i);
   });
 
   test('Gitignore prompt appends entry when user accepts', async () => {
