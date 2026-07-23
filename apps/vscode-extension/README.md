@@ -2,6 +2,26 @@
 
 VS Code integration for FrilVault.
 
+## Knowledge Layer Foundation
+
+Epic #123 introduces shared current-file note state for the VS Code extension.
+The sidebar, gutter decorations, and hover preview all read from one
+`CurrentFileNotesStore` cache instead of issuing separate CLI queries.
+
+Note mutations call a single invalidation path so every affected view refreshes
+together after add, sync, or repair operations.
+
+## Multi-root Workspaces
+
+FrilVault currently targets one workspace root at a time:
+
+- By default it uses the first folder in a multi-root workspace.
+- Set `frilvault.workspaceRoot` to pin FrilVault to a specific folder when
+  several roots are open.
+- Files outside the selected root are ignored safely and do not trigger vault
+  creation.
+- Each workspace root keeps its own enable/disable preference.
+
 ## Current Scope
 
 - `FrilVault: Add Note`
@@ -33,7 +53,10 @@ Native bridge scaffolding still exists in the repo, but the current shipped comm
 ```text
 src/features
 ├── add-note
+├── current-file
 ├── decorations
+├── enablement
+├── hover
 └── notes-panel
 ```
 

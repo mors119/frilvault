@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 
 import type { CliClient } from '../../core/cliClient';
+import { tryGetWorkspaceRoot } from '../../utils/file';
 
 const SYNC_DEBOUNCE_MS = 300;
 
@@ -38,11 +39,15 @@ export function isTrackedSourcePath(workspaceRoot: string, uri: vscode.Uri): boo
 export function registerWorkspaceWatcher(
   context: vscode.ExtensionContext,
   cliClient: CliClient,
-  getWorkspaceRoot: () => string,
   isEnabled: () => boolean,
-  refreshNotesPanel: () => void,
-  refreshDecorations: () => Promise<void>,
+  invalidateViews: () => Promise<void>,
 ): void {
+  const workspaceRoot = tryGetWorkspaceRoot();
+
+  if (!workspaceRoot) {
+    return;
+  }
+
   let debounceTimer: NodeJS.Timeout | undefined;
 
   const scheduleSync = () => {
@@ -55,12 +60,15 @@ export function registerWorkspaceWatcher(
     }
 
     debounceTimer = setTimeout(async () => {
-      const workspaceRoot = getWorkspaceRoot();
+      const root = tryGetWorkspaceRoot();
+
+      if (!root) {
+        return;
+      }
 
       try {
-        await cliClient.sync(workspaceRoot);
-        refreshNotesPanel();
-        await refreshDecorations();
+        await cliClient.sync(root);
+        await invalidateViews();
       } catch (error) {
         const message =
           error instanceof Error ? error.message : 'Failed to sync workspace changes.';
@@ -71,7 +79,7 @@ export function registerWorkspaceWatcher(
   };
 
   const notesWatcher = vscode.workspace.createFileSystemWatcher(
-    new vscode.RelativePattern(getWorkspaceRoot(), '.vault/notes/**'),
+    new vscode.RelativePattern(workspaceRoot, '.vault/notes/**'),
   );
 
   notesWatcher.onDidCreate(scheduleSync);
@@ -79,7 +87,7 @@ export function registerWorkspaceWatcher(
   notesWatcher.onDidDelete(scheduleSync);
 
   const imagesWatcher = vscode.workspace.createFileSystemWatcher(
-    new vscode.RelativePattern(getWorkspaceRoot(), '.vault/images/**'),
+    new vscode.RelativePattern(workspaceRoot, '.vault/images/**'),
   );
 
   imagesWatcher.onDidCreate(scheduleSync);
@@ -87,20 +95,20 @@ export function registerWorkspaceWatcher(
   imagesWatcher.onDidDelete(scheduleSync);
 
   const sourceWatcher = vscode.workspace.createFileSystemWatcher(
-    new vscode.RelativePattern(getWorkspaceRoot(), '**/*'),
+    new vscode.RelativePattern(workspaceRoot, '**/*'),
     false,
     true,
     false,
   );
 
   sourceWatcher.onDidCreate((uri) => {
-    if (isTrackedSourcePath(getWorkspaceRoot(), uri)) {
+    if (isTrackedSourcePath(workspaceRoot, uri)) {
       scheduleSync();
     }
   });
 
   sourceWatcher.onDidDelete((uri) => {
-    if (isTrackedSourcePath(getWorkspaceRoot(), uri)) {
+    if (isTrackedSourcePath(workspaceRoot, uri)) {
       scheduleSync();
     }
   });

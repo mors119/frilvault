@@ -7,6 +7,7 @@ import { suite, test, teardown } from 'mocha';
 import * as vscode from 'vscode';
 
 import { CliClient } from '../core/cliClient';
+import { CurrentFileNotesStore } from '../features/current-file/store';
 import { createAddNoteCommand } from '../features/add-note/command';
 import { AddNoteService } from '../features/add-note/service';
 import {
@@ -85,11 +86,8 @@ suite('Extension Test Suite', () => {
     await openFile(workspace.sourceFile);
 
     const cliClient = new CliClient(() => workspace.cliPath);
-    const provider = new FrilVaultNotesProvider(
-      new NotesPanelService(cliClient),
-      () => workspace.root,
-      () => false,
-    );
+    const store = new CurrentFileNotesStore(cliClient, () => false, () => workspace.root);
+    const provider = new FrilVaultNotesProvider(store, () => workspace.root, () => false);
     const children = await provider.getChildren();
 
     assert.strictEqual(children.length, 0);
@@ -125,7 +123,9 @@ suite('Extension Test Suite', () => {
     await openFile(workspace.sourceFile);
 
     const cliClient = new CliClient(() => workspace.cliPath);
-    const provider = new FrilVaultNotesProvider(new NotesPanelService(cliClient), () => workspace.root);
+    const store = new CurrentFileNotesStore(cliClient, () => true, () => workspace.root);
+    await store.syncActiveEditor(vscode.window.activeTextEditor);
+    const provider = new FrilVaultNotesProvider(store, () => workspace.root);
     const firstChildren = await provider.getChildren();
 
     assert.strictEqual(firstChildren.length, 1);
@@ -136,6 +136,7 @@ suite('Extension Test Suite', () => {
     assert.strictEqual(firstNotes[0]?.description, 'L7');
 
     await openFile(workspace.secondSourceFile);
+    await store.syncActiveEditor(vscode.window.activeTextEditor);
 
     const secondChildren = await provider.getChildren();
 
@@ -157,7 +158,9 @@ suite('Extension Test Suite', () => {
     await openFile(workspace.sourceFile);
 
     const cliClient = new CliClient(() => workspace.cliPath);
-    const provider = new FrilVaultNotesProvider(new NotesPanelService(cliClient), () => workspace.root);
+    const store = new CurrentFileNotesStore(cliClient, () => true, () => workspace.root);
+    await store.syncActiveEditor(vscode.window.activeTextEditor);
+    const provider = new FrilVaultNotesProvider(store, () => workspace.root);
     const groups = await provider.getChildren();
 
     assert.strictEqual(groups.length, 2);
@@ -202,8 +205,7 @@ suite('Extension Test Suite', () => {
     const editor = await openFile(workspace.sourceFile);
     editor.selection = new vscode.Selection(new vscode.Position(1, 4), new vscode.Position(1, 4));
 
-    let treeRefreshCount = 0;
-    let decorationRefreshCount = 0;
+    let invalidateCount = 0;
     let successMessage = '';
     let errorMessage = '';
     const cliClient = new CliClient(() => workspace.cliPath);
@@ -211,11 +213,8 @@ suite('Extension Test Suite', () => {
     const command = createAddNoteCommand({
       getWorkspaceRoot: () => workspace.root,
       service: new AddNoteService(cliClient),
-      refreshNotesPanel: () => {
-          treeRefreshCount += 1;
-      },
-      refreshDecorations: async () => {
-          decorationRefreshCount += 1;
+      invalidateViews: async () => {
+        invalidateCount += 1;
       },
       promptNoteContent: async () => 'added from command test',
       showInformationMessage: async (message) => {
@@ -243,8 +242,7 @@ suite('Extension Test Suite', () => {
       column: 5,
       content: 'added from command test',
     });
-    assert.strictEqual(treeRefreshCount, 1);
-    assert.strictEqual(decorationRefreshCount, 1);
+    assert.strictEqual(invalidateCount, 1);
     assert.match(successMessage, /FrilVault note added at 2:5\./);
     assert.strictEqual(errorMessage, '');
   });

@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 
-import type { NoteView } from '../../types';
-import { getRelativeFilePath } from '../../utils/file';
-import { NotesPanelService } from './service';
+import {
+  CurrentFileNotesStore,
+  partitionNotesByAnchor,
+} from '../current-file/store';
 import { NotesAnchorGroupItem, NotesPanelItem } from './view';
 
 type TreeNode = NotesAnchorGroupItem | NotesPanelItem;
@@ -13,7 +14,7 @@ export class FrilVaultNotesProvider implements vscode.TreeDataProvider<TreeNode>
   public readonly onDidChangeTreeData = this.onDidChangeTreeDataEmitter.event;
 
   public constructor(
-    private readonly service: NotesPanelService,
+    private readonly store: CurrentFileNotesStore,
     private readonly getWorkspaceRoot: () => string,
     private readonly isEnabled: () => boolean = () => true,
   ) {}
@@ -35,42 +36,17 @@ export class FrilVaultNotesProvider implements vscode.TreeDataProvider<TreeNode>
       return element.notes.map((note) => new NotesPanelItem(note, this.getWorkspaceRoot()));
     }
 
-    const editor = vscode.window.activeTextEditor;
+    const { lineNotes, symbolNotes } = partitionNotesByAnchor(this.store.getSnapshot().notes);
+    const groups: NotesAnchorGroupItem[] = [];
 
-    if (!editor || editor.document.uri.scheme !== 'file') {
-      return [];
+    if (lineNotes.length > 0) {
+      groups.push(new NotesAnchorGroupItem('Line', lineNotes));
     }
 
-    const workspaceRoot = this.getWorkspaceRoot();
-    const sourceFile = getRelativeFilePath(workspaceRoot, editor.document.uri.fsPath);
-    const notes = await this.service.listNotes(workspaceRoot, sourceFile);
+    if (symbolNotes.length > 0) {
+      groups.push(new NotesAnchorGroupItem('Symbol', symbolNotes));
+    }
 
-    return partitionNotesByAnchor(notes);
+    return groups;
   }
-}
-
-function partitionNotesByAnchor(notes: NoteView[]): NotesAnchorGroupItem[] {
-  const lineNotes = notes
-    .filter((note) => note.note.anchor.type === 'Line')
-    .sort(
-      (left, right) =>
-        (left.note.anchor.line ?? 0) - (right.note.anchor.line ?? 0),
-    );
-  const symbolNotes = notes
-    .filter((note) => note.note.anchor.type === 'Symbol')
-    .sort((left, right) =>
-      (left.note.anchor.name ?? '').localeCompare(right.note.anchor.name ?? ''),
-    );
-
-  const groups: NotesAnchorGroupItem[] = [];
-
-  if (lineNotes.length > 0) {
-    groups.push(new NotesAnchorGroupItem('Line', lineNotes));
-  }
-
-  if (symbolNotes.length > 0) {
-    groups.push(new NotesAnchorGroupItem('Symbol', symbolNotes));
-  }
-
-  return groups;
 }

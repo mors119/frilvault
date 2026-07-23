@@ -42,13 +42,11 @@ export function createShowHealthCommand(
 export function createApplyRepairsCommand(
   cliClient: CliClient,
   getWorkspaceRoot: () => string,
-  refreshNotesPanel: () => void,
-  refreshDecorations: () => Promise<void>,
+  invalidateViews: () => Promise<void>,
 ): () => Promise<void> {
   return async () => {
     const repaired = await cliClient.applyRepairs(getWorkspaceRoot());
-    refreshNotesPanel();
-    await refreshDecorations();
+    await invalidateViews();
     await vscode.window.showInformationMessage(`FrilVault repaired ${repaired} file(s).`);
   };
 }
