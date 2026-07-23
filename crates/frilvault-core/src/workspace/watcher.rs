@@ -1,5 +1,6 @@
 use crate::{
     FrilVaultResult,
+    runtime::VaultContext,
     workspace::{
         repair_engine::RepairEngine,
         repository::workspace_index_repository::WorkspaceIndexRepository,
@@ -10,7 +11,7 @@ use crate::{
 pub struct WorkspaceWatcher {
     index_repository: WorkspaceIndexRepository,
     snapshot: SnapshotManager,
-    repair_engine: RepairEngine,
+    vault_context: VaultContext,
 }
 
 impl WorkspaceWatcher {
@@ -21,7 +22,7 @@ impl WorkspaceWatcher {
         if let Some(old) = old {
             let moves = self.index_repository.detect_moves(&old, &new);
 
-            self.repair_engine.apply_moves(moves)?;
+            RepairEngine::apply_moves(&mut self.vault_context, moves)?;
         }
 
         self.snapshot.update(new);
