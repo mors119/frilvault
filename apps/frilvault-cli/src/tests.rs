@@ -87,6 +87,20 @@ fn parses_explorer_json_format() {
 }
 
 #[test]
+fn parses_sync_json_format() {
+    let cli = Cli::parse_from(["flvt", "sync", "--format", "json"]);
+
+    match cli.command {
+        Commands::Sync(command) => {
+            assert!(matches!(command.format, Some(FormatArg::Json)));
+            assert!(!command.notes_only);
+            assert!(!command.sources_only);
+        }
+        _ => panic!("expected sync command"),
+    }
+}
+
+#[test]
 fn rejects_legacy_json_flag() {
     match Cli::try_parse_from(["flvt", "doctor", "--json"]) {
         Err(error) => assert!(error.to_string().contains("--json")),

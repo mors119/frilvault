@@ -13,8 +13,8 @@ pub use error::{FrilVaultError, FrilVaultResult};
 pub use note::{AddNoteRequest, LineAnchor, Note, NoteAnchor, NoteView, SymbolAnchor, SymbolKind};
 pub use symbol::{ResolvedSymbol, SymbolResolver, symbol_marker};
 pub use workspace::{
-    ExplorerGroup, ExplorerNode, FileMove, RepairSuggestion, WorkspaceExplorer, WorkspaceHealth,
-    WorkspaceService, WorkspaceStats,
+    ExplorerGroup, ExplorerNode, FileMove, RepairSuggestion, SyncResult, WorkspaceExplorer,
+    WorkspaceHealth, WorkspaceService, WorkspaceStats,
 };
 
 #[cfg(test)]

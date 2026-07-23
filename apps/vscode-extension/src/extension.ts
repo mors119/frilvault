@@ -12,6 +12,7 @@ import { NotesPanelService } from './features/notes-panel/service';
 import { createSearchCommand } from './features/search/command';
 import { createApplyRepairsCommand, createShowHealthCommand } from './features/workspace/health';
 import { registerSourceRenameHandler } from './features/workspace/rename';
+import { registerWorkspaceWatcher } from './features/workspace/watcher';
 import { createShowStatsCommand } from './features/workspace/stats';
 import type { NoteView } from './types';
 import { getWorkspaceRoot, revealNote } from './utils/file';
@@ -91,6 +92,14 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   registerSourceRenameHandler(
+    context,
+    cliClient,
+    getWorkspaceRoot,
+    () => notesProvider.refresh(),
+    async () => decorator.refresh(),
+  );
+
+  registerWorkspaceWatcher(
     context,
     cliClient,
     getWorkspaceRoot,

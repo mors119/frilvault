@@ -14,6 +14,10 @@ import {
   maybePromptForGitignore,
 } from '../features/gitignore/prompt';
 import { isTrackedSourceRename } from '../features/workspace/rename';
+import {
+  isTrackedSourcePath,
+  isTrackedVaultPath,
+} from '../features/workspace/watcher';
 import { createShowNotesForCurrentFileCommand } from '../features/notes-panel/command';
 import { FrilVaultNotesProvider } from '../features/notes-panel/provider';
 import { NotesPanelService } from '../features/notes-panel/service';
@@ -302,6 +306,34 @@ suite('Extension Test Suite', () => {
         workspace.root,
         vscode.Uri.file('/tmp/outside.ts'),
         vscode.Uri.file('/tmp/outside_renamed.ts'),
+      ),
+      false,
+    );
+  });
+
+  test('Workspace watcher helpers distinguish vault notes and source paths', () => {
+    const workspace = createTestWorkspace();
+
+    assert.strictEqual(
+      isTrackedVaultPath(
+        workspace.root,
+        vscode.Uri.file(path.join(workspace.root, '.vault/notes/src/sample.ts.json')),
+      ),
+      true,
+    );
+
+    assert.strictEqual(
+      isTrackedSourcePath(
+        workspace.root,
+        vscode.Uri.file(path.join(workspace.root, 'src/sample.ts')),
+      ),
+      true,
+    );
+
+    assert.strictEqual(
+      isTrackedSourcePath(
+        workspace.root,
+        vscode.Uri.file(path.join(workspace.root, '.vault/notes/src/sample.ts.json')),
       ),
       false,
     );

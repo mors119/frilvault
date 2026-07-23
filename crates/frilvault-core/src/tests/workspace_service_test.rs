@@ -392,3 +392,59 @@ fn explorer_builds_directory_file_and_note_groups() {
         _ => panic!("expected symbol notes group"),
     }
 }
+
+#[test]
+fn sync_external_changes_refreshes_cache_and_index() {
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    fs::create_dir_all(workspace_root.join("src")).unwrap();
+    fs::write(workspace_root.join("src/main.rs"), "").unwrap();
+
+    let mut note_service = create_test_note_service(workspace_root);
+    note_service
+        .add_note(AddNoteRequest {
+            source_file: "src/main.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "cached note".to_string(),
+            tags: None,
+        })
+        .unwrap();
+
+    let mut workspace_service = create_test_workspace_service(workspace_root);
+    workspace_service.warm_up().unwrap();
+
+    let source_file = Path::new("src/main.rs");
+    workspace_service
+        .vault_context
+        .load_notes(source_file)
+        .unwrap();
+    assert!(
+        workspace_service
+            .vault_context
+            .contains_cached_notes(source_file)
+    );
+
+    note_service
+        .add_note(AddNoteRequest {
+            source_file: "src/other.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "external note".to_string(),
+            tags: None,
+        })
+        .unwrap();
+
+    let result = workspace_service
+        .sync_external_changes(true, false)
+        .unwrap();
+
+    assert!(result.notes_synced);
+    assert_eq!(result.repairs_applied, 0);
+    assert!(
+        !workspace_service
+            .vault_context
+            .contains_cached_notes(source_file)
+    );
+
+    let index = workspace_service.index_repository.load().unwrap();
+    assert_eq!(index.files.len(), 2);
+}

@@ -7,4 +7,5 @@ pub mod list;
 pub mod repair;
 pub mod search;
 pub mod stats;
+pub mod sync;
 pub mod update;

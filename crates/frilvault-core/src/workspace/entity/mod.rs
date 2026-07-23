@@ -6,6 +6,7 @@ mod workspace_health;
 mod workspace_index;
 mod workspace_metadata;
 mod workspace_stats;
+mod workspace_sync;
 
 pub use file_move::*;
 pub use indexed_file::*;
@@ -15,3 +16,4 @@ pub use workspace_health::*;
 pub use workspace_index::*;
 pub use workspace_metadata::*;
 pub use workspace_stats::*;
+pub use workspace_sync::*;

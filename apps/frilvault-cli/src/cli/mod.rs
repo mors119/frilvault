@@ -10,6 +10,7 @@ pub mod list;
 pub mod repair;
 pub mod search;
 pub mod stats;
+pub mod sync;
 pub mod update;
 
 use add::AddCommand;
@@ -21,6 +22,7 @@ use list::ListCommand;
 use repair::RepairCommand;
 use search::SearchCommand;
 use stats::StatsCommand;
+use sync::SyncCommand;
 use update::UpdateCommand;
 
 #[derive(Parser)]
@@ -42,5 +44,6 @@ pub enum Commands {
     Health(HealthCommand),
     Stats(StatsCommand),
     Explorer(ExplorerCommand),
+    Sync(SyncCommand),
     Gitignore(GitignoreCommand),
 }

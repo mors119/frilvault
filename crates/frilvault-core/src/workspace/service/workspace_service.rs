@@ -4,7 +4,7 @@
 //! health checks, and repair workflows.
 
 use crate::{
-    FrilVaultResult, NoteAnchor, RepairSuggestion, WorkspaceExplorer, WorkspaceHealth,
+    FrilVaultResult, NoteAnchor, RepairSuggestion, SyncResult, WorkspaceExplorer, WorkspaceHealth,
     WorkspaceStats,
     runtime::VaultContext,
     workspace::{
@@ -69,6 +69,30 @@ impl WorkspaceService {
         }
 
         Ok(repaired)
+    }
+
+    pub fn sync_external_changes(
+        &mut self,
+        sync_notes: bool,
+        sync_sources: bool,
+    ) -> FrilVaultResult<SyncResult> {
+        let mut notes_synced = false;
+
+        if sync_notes {
+            self.sync_notes_directory_changes()?;
+            notes_synced = true;
+        }
+
+        let repairs_applied = if sync_sources {
+            self.sync_source_file_changes()?
+        } else {
+            0
+        };
+
+        Ok(SyncResult {
+            notes_synced,
+            repairs_applied,
+        })
     }
 
     pub fn is_vault_gitignored(&self) -> FrilVaultResult<bool> {
