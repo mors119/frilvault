@@ -13,6 +13,7 @@ import {
   GITIGNORE_PROMPT_DISABLED_KEY,
   maybePromptForGitignore,
 } from '../features/gitignore/prompt';
+import { isTrackedSourceRename } from '../features/workspace/rename';
 import { createShowNotesForCurrentFileCommand } from '../features/notes-panel/command';
 import { FrilVaultNotesProvider } from '../features/notes-panel/provider';
 import { NotesPanelService } from '../features/notes-panel/service';
@@ -273,6 +274,37 @@ suite('Extension Test Suite', () => {
     });
 
     assert.strictEqual(checkCount, 0);
+  });
+
+  test('Source rename handler ignores vault paths and outside workspace renames', () => {
+    const workspace = createTestWorkspace();
+
+    assert.strictEqual(
+      isTrackedSourceRename(
+        workspace.root,
+        vscode.Uri.file(path.join(workspace.root, 'src/sample.ts')),
+        vscode.Uri.file(path.join(workspace.root, 'src/sample_renamed.ts')),
+      ),
+      true,
+    );
+
+    assert.strictEqual(
+      isTrackedSourceRename(
+        workspace.root,
+        vscode.Uri.file(path.join(workspace.root, '.vault/notes/src/sample.ts.json')),
+        vscode.Uri.file(path.join(workspace.root, '.vault/notes/src/sample_renamed.ts.json')),
+      ),
+      false,
+    );
+
+    assert.strictEqual(
+      isTrackedSourceRename(
+        workspace.root,
+        vscode.Uri.file('/tmp/outside.ts'),
+        vscode.Uri.file('/tmp/outside_renamed.ts'),
+      ),
+      false,
+    );
   });
 });
 

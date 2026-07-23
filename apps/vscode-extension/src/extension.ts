@@ -11,6 +11,7 @@ import { FrilVaultNotesProvider } from './features/notes-panel/provider';
 import { NotesPanelService } from './features/notes-panel/service';
 import { createSearchCommand } from './features/search/command';
 import { createApplyRepairsCommand, createShowHealthCommand } from './features/workspace/health';
+import { registerSourceRenameHandler } from './features/workspace/rename';
 import { createShowStatsCommand } from './features/workspace/stats';
 import type { NoteView } from './types';
 import { getWorkspaceRoot, revealNote } from './utils/file';
@@ -87,6 +88,14 @@ export function activate(context: vscode.ExtensionContext): void {
       notesProvider.refresh();
       await decorator.refresh();
     }),
+  );
+
+  registerSourceRenameHandler(
+    context,
+    cliClient,
+    getWorkspaceRoot,
+    () => notesProvider.refresh(),
+    async () => decorator.refresh(),
   );
 
   void decorator.refresh();
