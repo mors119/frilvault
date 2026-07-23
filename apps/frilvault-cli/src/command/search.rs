@@ -2,8 +2,8 @@ use anyhow::Result;
 use frilvault_core::FrilVault;
 
 use crate::{
-    cli::search::{SearchCommand, SearchFormatArg},
-    output::{OutputFormat, print_notes},
+    cli::search::SearchCommand,
+    output::{print_notes, resolve_format},
 };
 
 pub fn execute(command: SearchCommand) -> Result<()> {
@@ -21,12 +21,7 @@ pub fn execute(command: SearchCommand) -> Result<()> {
         (None, None) => anyhow::bail!("search requires either a keyword or --file"),
     };
 
-    let format = match (command.format, command.json) {
-        (Some(SearchFormatArg::Json), _) | (None, true) => OutputFormat::Json,
-        _ => OutputFormat::Text,
-    };
-
-    print_notes(&results, format)?;
+    print_notes(&results, resolve_format(command.format))?;
 
     Ok(())
 }

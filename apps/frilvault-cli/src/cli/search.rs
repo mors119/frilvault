@@ -1,4 +1,6 @@
-use clap::{Args, ValueEnum};
+use clap::Args;
+
+use super::format::FormatArg;
 
 #[derive(Debug, Args)]
 pub struct SearchCommand {
@@ -8,14 +10,5 @@ pub struct SearchCommand {
     pub file: Option<String>,
 
     #[arg(long, value_enum)]
-    pub format: Option<SearchFormatArg>,
-
-    #[arg(long, hide = true)]
-    pub json: bool,
-}
-
-#[derive(Debug, Clone, ValueEnum)]
-pub enum SearchFormatArg {
-    Text,
-    Json,
+    pub format: Option<FormatArg>,
 }

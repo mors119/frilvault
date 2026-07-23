@@ -1,4 +1,6 @@
-use clap::{Args, ValueEnum};
+use clap::Args;
+
+use super::format::FormatArg;
 
 #[derive(Debug, Args)]
 pub struct RepairCommand {
@@ -6,14 +8,5 @@ pub struct RepairCommand {
     pub apply: bool,
 
     #[arg(long, value_enum)]
-    pub format: Option<RepairFormatArg>,
-
-    #[arg(long, hide = true)]
-    pub json: bool,
-}
-
-#[derive(Debug, Clone, ValueEnum)]
-pub enum RepairFormatArg {
-    Text,
-    Json,
+    pub format: Option<FormatArg>,
 }

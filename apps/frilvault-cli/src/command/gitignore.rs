@@ -2,10 +2,8 @@ use anyhow::Result;
 use frilvault_core::FrilVault;
 
 use crate::{
-    cli::gitignore::{
-        GitignoreAction, GitignoreCheckCommand, GitignoreCommand, GitignoreFormatArg,
-    },
-    output::{OutputFormat, print_json},
+    cli::gitignore::{GitignoreAction, GitignoreCheckCommand, GitignoreCommand},
+    output::{OutputFormat, print_json, resolve_format},
 };
 
 #[derive(serde::Serialize)]
@@ -25,12 +23,7 @@ fn execute_check(command: GitignoreCheckCommand) -> Result<()> {
     let service = vault.workspace()?;
     let ignored = service.is_vault_gitignored()?;
 
-    let format = match (command.format, command.json) {
-        (Some(GitignoreFormatArg::Json), _) | (None, true) => OutputFormat::Json,
-        _ => OutputFormat::Text,
-    };
-
-    if matches!(format, OutputFormat::Json) {
+    if matches!(resolve_format(command.format), OutputFormat::Json) {
         print_json(&GitignoreStatus { ignored })?;
         return Ok(());
     }

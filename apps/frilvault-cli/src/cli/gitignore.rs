@@ -1,4 +1,6 @@
-use clap::{Args, Subcommand, ValueEnum};
+use clap::{Args, Subcommand};
+
+use super::format::FormatArg;
 
 #[derive(Debug, Args)]
 pub struct GitignoreCommand {
@@ -15,14 +17,5 @@ pub enum GitignoreAction {
 #[derive(Debug, Args)]
 pub struct GitignoreCheckCommand {
     #[arg(long, value_enum)]
-    pub format: Option<GitignoreFormatArg>,
-
-    #[arg(long, hide = true)]
-    pub json: bool,
-}
-
-#[derive(Debug, Clone, ValueEnum)]
-pub enum GitignoreFormatArg {
-    Text,
-    Json,
+    pub format: Option<FormatArg>,
 }
