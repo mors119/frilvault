@@ -1,8 +1,6 @@
 import * as vscode from 'vscode';
 
 import { CliClient } from './core/cliClient';
-import { createAddNoteCommand } from './features/add-note/command';
-import { AddNoteService } from './features/add-note/service';
 import { CurrentFileNotesStore } from './features/current-file/store';
 import { createDisableCommand, createEnableCommand } from './features/enablement/command';
 import { isFrilVaultEnabled, syncEnabledContext } from './features/enablement/state';
@@ -12,6 +10,12 @@ import { GutterNoteActions } from './features/decorations/gutterActions';
 import { registerGutterCommands } from './features/decorations/gutterCommands';
 import { GutterNoteRegistry } from './features/decorations/registry';
 import { FrilVaultHoverProvider } from './features/hover/hoverProvider';
+import { registerInlineNoteCodeLensProvider } from './features/inline-editor/codelens';
+import {
+  createCreateNoteHereCommand,
+  createEditNoteCommand,
+} from './features/inline-editor/command';
+import { createInlineNoteEditor } from './features/inline-editor/editor';
 import { createShowNotesForCurrentFileCommand } from './features/notes-panel/command';
 import { FrilVaultNotesProvider } from './features/notes-panel/provider';
 import { NotesPanelService } from './features/notes-panel/service';
@@ -27,10 +31,10 @@ import { getWorkspaceRoot, revealNote, tryGetWorkspaceRoot } from './utils/file'
 let activeDecorator: FrilVaultDecorator | undefined;
 let activeStore: CurrentFileNotesStore | undefined;
 let activeRegistry: GutterNoteRegistry | undefined;
+const codeLensRefreshEmitter = new vscode.EventEmitter<void>();
 
 export function activate(context: vscode.ExtensionContext): void {
   const cliClient = new CliClient();
-  const addNoteService = new AddNoteService(cliClient);
   const notesPanelService = new NotesPanelService(cliClient);
 
   const isEnabled = () => {
@@ -64,16 +68,31 @@ export function activate(context: vscode.ExtensionContext): void {
     await store.syncActiveEditor(editor ?? vscode.window.activeTextEditor);
   };
 
+  const refreshUi = async (editor?: vscode.TextEditor) => {
+    await invalidateViews(editor);
+  };
+
+  const inlineNoteEditor = createInlineNoteEditor({
+    cliClient,
+    getWorkspaceRoot,
+    invalidateViews: async () => {
+      await refreshUi();
+      await maybePromptForGitignore({
+        getWorkspaceRoot,
+        cliClient,
+        workspaceState: context.workspaceState,
+      });
+    },
+  });
+  inlineNoteEditor.register(context);
+
   const gutterActions = new GutterNoteActions({
     cliClient,
     registry: gutterRegistry,
     getWorkspaceRoot,
     invalidateViews,
+    openInlineEditor: (noteView) => inlineNoteEditor.openEdit(noteView),
   });
-
-  const refreshUi = async (editor?: vscode.TextEditor) => {
-    await invalidateViews(editor);
-  };
 
   const clearUi = () => {
     store.clear();
@@ -87,6 +106,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const onStoreChanged = () => {
     notesProvider.refresh();
     void decorator.refresh();
+    codeLensRefreshEmitter.fire();
   };
 
   store.onDidChange(onStoreChanged, undefined, context.subscriptions);
@@ -138,20 +158,25 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand(
       'frilvault.addNote',
-      runWhenEnabled(
-        createAddNoteCommand({
-          getWorkspaceRoot,
-          service: addNoteService,
-          invalidateViews,
-          onNoteAdded: async () => {
-            await maybePromptForGitignore({
-              getWorkspaceRoot,
-              cliClient,
-              workspaceState: context.workspaceState,
-            });
-          },
-        }),
-      ),
+      runWhenEnabled(createCreateNoteHereCommand(inlineNoteEditor)),
+    ),
+    vscode.commands.registerCommand(
+      'frilvault.createNoteHere',
+      runWhenEnabled(createCreateNoteHereCommand(inlineNoteEditor)),
+    ),
+    vscode.commands.registerCommand(
+      'frilvault.editNote',
+      runWhenEnabled(createEditNoteCommand(inlineNoteEditor)),
+    ),
+    vscode.commands.registerCommand(
+      'frilvault.notesPanel.editNote',
+      runWhenEnabled((item: { noteView?: NoteView }) => {
+        if (!item?.noteView) {
+          return;
+        }
+
+        inlineNoteEditor.openEdit(item.noteView);
+      }),
     ),
     vscode.commands.registerCommand(
       'frilvault.searchNotes',
@@ -196,6 +221,13 @@ export function activate(context: vscode.ExtensionContext): void {
   registerSourceRenameHandler(context, cliClient, isEnabled, invalidateViews);
   registerWorkspaceWatcher(context, cliClient, isEnabled, invalidateViews);
   registerNoteUriHandler(context, { cliClient, isEnabled });
+  registerInlineNoteCodeLensProvider(
+    context,
+    store,
+    getWorkspaceRoot,
+    isEnabled,
+    codeLensRefreshEmitter.event,
+  );
 
   void syncEnabledContext(isEnabled()).then(async () => {
     try {

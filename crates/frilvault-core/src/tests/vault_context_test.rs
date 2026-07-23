@@ -1,7 +1,7 @@
 use std::{fs, path::Path};
 
 use crate::{
-    AddNoteRequest, LineAnchor, Note, NoteAnchor,
+    AddNoteRequest, LineAnchor, Note, NoteAnchor, UpdateNoteRequest,
     tests::helper::{create_test_note_service, create_test_vault_context, create_test_workspace},
     workspace::PathResolver,
 };
@@ -281,7 +281,15 @@ fn update_note_invalidates_cached_entry() {
     assert_eq!(cached_notes[0].note.content, "old content");
 
     service
-        .update_note(source_file, note.id, "new content".to_string())
+        .update_note(
+            source_file,
+            note.id,
+            UpdateNoteRequest {
+                content: "new content".to_string(),
+                tags: None,
+                expected_updated_at: None,
+            },
+        )
         .unwrap();
 
     let notes = service.list_notes(source_file).unwrap();
@@ -335,7 +343,15 @@ fn search_notes_reflects_updated_content_after_update() {
     assert_eq!(service.search_notes("old content").unwrap().len(), 1);
 
     service
-        .update_note(source_file, note.id, "search new content".to_string())
+        .update_note(
+            source_file,
+            note.id,
+            UpdateNoteRequest {
+                content: "search new content".to_string(),
+                tags: None,
+                expected_updated_at: None,
+            },
+        )
         .unwrap();
 
     let results = service.search_notes("new content").unwrap();

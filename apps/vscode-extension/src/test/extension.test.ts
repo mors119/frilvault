@@ -483,21 +483,68 @@ if (command === 'add') {
   const line = Number(valueOf('--line'));
   const column = Number(valueOf('--column'));
   const content = valueOf('--content');
+  const tags = [];
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] === '--tag') {
+      tags.push(args[index + 1]);
+    }
+  }
 
   fs.writeFileSync(addLogFile, JSON.stringify({ file, line, column, content }, null, 2));
 
-  state.notes.push({
+  const noteView = {
     source_file: file,
     note: {
       id: 'test-note-id',
       anchor: { type: 'Line', line, column },
       content,
+      tags,
       created_at: '2026-06-09T00:00:00Z',
       updated_at: '2026-06-09T00:00:00Z'
     }
-  });
+  };
 
+  state.notes.push(noteView);
   fs.writeFileSync(stateFile, JSON.stringify(state, null, 2));
+
+  if (valueOf('--format') === 'json') {
+    process.stdout.write(JSON.stringify(noteView));
+  }
+
+  process.exit(0);
+}
+
+if (command === 'update') {
+  const file = valueOf('--file');
+  const id = valueOf('--id');
+  const content = valueOf('--content');
+  const tags = [];
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] === '--tag') {
+      tags.push(args[index + 1]);
+    }
+  }
+
+  const noteView = state.notes.find((note) => note.source_file === file && note.note.id === id);
+  if (!noteView) {
+    process.stderr.write('note not found');
+    process.exit(1);
+  }
+
+  if (valueOf('--expected-updated-at') && valueOf('--expected-updated-at') !== noteView.note.updated_at) {
+    process.stderr.write('concurrent modification for note: ' + id);
+    process.exit(1);
+  }
+
+  noteView.note.content = content;
+  noteView.note.tags = tags;
+  noteView.note.updated_at = '2026-06-10T00:00:00Z';
+  fs.writeFileSync(stateFile, JSON.stringify(state, null, 2));
+
+  if (valueOf('--format') === 'json') {
+    process.stdout.write(JSON.stringify(noteView));
+  }
+
   process.exit(0);
 }
 

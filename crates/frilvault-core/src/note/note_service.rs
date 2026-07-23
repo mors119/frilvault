@@ -14,7 +14,7 @@ use uuid::Uuid;
 
 use crate::{
     AddNoteRequest, AttachmentRepository, FrilVaultError, FrilVaultResult, NoteAnchor,
-    NoteAttachment, NoteQuery, NoteView, SymbolKind,
+    NoteAttachment, NoteQuery, NoteView, SymbolKind, UpdateNoteRequest,
     note::Note,
     runtime::VaultContext,
     symbol::SymbolResolver,
@@ -166,8 +166,8 @@ impl NoteService {
         &mut self,
         source_file: impl AsRef<Path>,
         note_id: Uuid,
-        content: String,
-    ) -> FrilVaultResult<()> {
+        request: UpdateNoteRequest,
+    ) -> FrilVaultResult<Note> {
         let source_file = source_file.as_ref();
 
         let mut notes = self.load_notes(source_file)?;
@@ -177,14 +177,26 @@ impl NoteService {
             .find(|note| note.id == note_id)
             .ok_or(FrilVaultError::NoteNotFound(note_id))?;
 
-        note.content = content;
+        if let Some(expected) = request.expected_updated_at
+            && note.updated_at != expected
+        {
+            return Err(FrilVaultError::ConcurrentModification(note_id));
+        }
+
+        note.content = request.content;
+
+        if let Some(tags) = request.tags {
+            note.tags = tags;
+        }
+
         note.updated_at = Utc::now();
 
+        let updated = note.clone();
         self.save_notes(source_file, notes)?;
 
         self.vault_context.sync_index_for_source_file(source_file)?;
 
-        Ok(())
+        Ok(updated)
     }
 
     pub fn attach_image(

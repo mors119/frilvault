@@ -19,6 +19,9 @@
     "onCommand:frilvault.enable",
     "onCommand:frilvault.disable",
     "onCommand:frilvault.addNote",
+    "onCommand:frilvault.createNoteHere",
+    "onCommand:frilvault.editNote",
+    "onCommand:frilvault.notesPanel.editNote",
     "onCommand:frilvault.notesPanel.openNote",
     "onCommand:frilvault.searchNotes",
     "onCommand:frilvault.showNotesForCurrentFile",
@@ -43,6 +46,18 @@
       {
         "command": "frilvault.addNote",
         "title": "FrilVault: Add Note"
+      },
+      {
+        "command": "frilvault.createNoteHere",
+        "title": "FrilVault: Create Note Here"
+      },
+      {
+        "command": "frilvault.editNote",
+        "title": "FrilVault: Edit Note"
+      },
+      {
+        "command": "frilvault.notesPanel.editNote",
+        "title": "FrilVault: Edit Note"
       },
       {
         "command": "frilvault.searchNotes",
@@ -124,6 +139,11 @@
       ],
       "editor/context": [
         {
+          "command": "frilvault.createNoteHere",
+          "when": "(editorHasSelection || editorTextFocus) && frilvault.enabled",
+          "group": "navigation"
+        },
+        {
           "command": "frilvault.addNote",
           "when": "(editorHasSelection || editorTextFocus) && frilvault.enabled",
           "group": "navigation"
@@ -134,6 +154,18 @@
           "group": "navigation"
         }
       ],
+      "view/item/context": [
+        {
+          "command": "frilvault.notesPanel.editNote",
+          "when": "view == frilvault.notes && viewItem == frilvault.note && frilvault.enabled",
+          "group": "inline"
+        },
+        {
+          "command": "frilvault.notesPanel.openNote",
+          "when": "view == frilvault.notes && viewItem == frilvault.note && frilvault.enabled",
+          "group": "inline@1"
+        }
+      ],
       "commandPalette": [
         {
           "command": "frilvault.enable",
@@ -141,6 +173,14 @@
         },
         {
           "command": "frilvault.disable",
+          "when": "frilvault.enabled"
+        },
+        {
+          "command": "frilvault.createNoteHere",
+          "when": "frilvault.enabled"
+        },
+        {
+          "command": "frilvault.editNote",
           "when": "frilvault.enabled"
         },
         {

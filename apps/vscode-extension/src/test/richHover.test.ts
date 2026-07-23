@@ -74,7 +74,8 @@ suite('Rich hover preview', () => {
     );
 
     assert.match(markdown.value, /Kind:/);
-    assert.match(markdown.value, /Tags: bug/);
+    assert.match(markdown.value, /\*\*Tags:\*\* bug/);
+    assert.match(markdown.value, /\[Edit\]/);
     assert.match(markdown.value, /```ts/);
     assert.strictEqual(markdown.supportHtml, false);
     assert.ok(typeof markdown.isTrusted === 'object' && markdown.isTrusted !== null);

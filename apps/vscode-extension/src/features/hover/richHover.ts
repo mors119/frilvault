@@ -5,6 +5,7 @@ import type { NoteView } from '../../types';
 
 export const RICH_HOVER_COMMANDS = [
   'frilvault.gutter.viewNote',
+  'frilvault.gutter.editNote',
   'frilvault.notesPanel.openNote',
 ] as const;
 
@@ -45,7 +46,14 @@ export function formatRichNoteHover(
 
   if (truncated) {
     markdown.appendMarkdown(
-      `[Open Note](${commandUri('frilvault.gutter.viewNote', [note.note.id, sourceFile])})\n\n`,
+      `[Open Note](${commandUri('frilvault.gutter.viewNote', [note.note.id, sourceFile])}) | `,
+    );
+    markdown.appendMarkdown(
+      `[Edit](${commandUri('frilvault.gutter.editNote', [note.note.id, sourceFile])})\n\n`,
+    );
+  } else {
+    markdown.appendMarkdown(
+      `[Edit](${commandUri('frilvault.gutter.editNote', [note.note.id, sourceFile])})\n\n`,
     );
   }
 

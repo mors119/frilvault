@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import type { NoteView } from '../../types';
+import { findSymbolAtPosition } from '../../utils/symbols';
 
 export function sortNotesForHover(notes: NoteView[]): NoteView[] {
   return [...notes].sort((left, right) => {
@@ -91,37 +92,6 @@ function lineNotesAtPosition(
   );
 
   return sortNotesForHover(lineNotes);
-}
-
-async function findSymbolAtPosition(
-  document: vscode.TextDocument,
-  position: vscode.Position,
-): Promise<vscode.DocumentSymbol | undefined> {
-  const symbols = await vscode.commands.executeCommand<
-    vscode.DocumentSymbol[] | undefined
-  >('vscode.executeDocumentSymbolProvider', document.uri);
-
-  if (!symbols || symbols.length === 0) {
-    return undefined;
-  }
-
-  return findInnermostSymbol(symbols, position);
-}
-
-function findInnermostSymbol(
-  symbols: readonly vscode.DocumentSymbol[],
-  position: vscode.Position,
-): vscode.DocumentSymbol | undefined {
-  for (const symbol of symbols) {
-    if (!symbol.range.contains(position)) {
-      continue;
-    }
-
-    const nested = findInnermostSymbol(symbol.children, position);
-    return nested ?? symbol;
-  }
-
-  return undefined;
 }
 
 function anchorKindOrder(note: NoteView): number {
