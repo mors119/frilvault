@@ -5,17 +5,22 @@
 FrilVault is organized around a shared Rust core and thin integration surfaces.
 
 ```text
-apps/
-├── frilvault-cli
-└── vscode-extension
-
-crates/
-└── frilvault-core
+.
+├── AGENTS.md
+├── apps/
+│   ├── frilvault-cli
+│   └── vscode-extension
+├── crates/
+│   └── frilvault-core
+└── docs/
 ```
 
 - `crates/frilvault-core`: note model, repositories, services, runtime helpers
 - `apps/frilvault-cli`: `flvt` command-line interface
 - `apps/vscode-extension`: current editor integration
+- `docs/`: architecture, workflow, testing, and release guidance
+
+The current repository does not contain a desktop application source tree yet. Release and workflow documents may still refer to future desktop release work, but the active code surfaces in this checkout are the Rust core, CLI, and VS Code extension.
 
 ## Core Principles
 
@@ -56,8 +61,13 @@ Its job is to centralize cache-aware note loading, index rebuild helpers, and wo
 The core crate owns:
 
 - note CRUD
+- note attachments
 - note search
+- note query and explorer DTOs
+- note URI parsing and resolution
+- symbol resolution helpers
 - workspace stats and health
+- workspace sync and gitignore helpers
 - repair suggestions and repair application
 - `.vault` persistence
 
@@ -72,38 +82,50 @@ The CLI is the primary executable surface today.
 
 ### `apps/vscode-extension`
 
-The VS Code extension is still an MVP integration.
+The VS Code extension is the current editor-facing integration.
 
 Current feature scope:
 
 - add note
+- create note here
 - notes panel
 - gutter decorations
+- gutter actions
 - note edit and delete
+- inline note editor
+- CodeLens note counts
 - search
+- note URI handling
 - workspace stats
 - workspace health
 - repair apply
+- workspace rename and watcher hooks
+- workspace enable/disable state
+- gitignore prompt on first persisted note flow
 
 Its active backend is currently CLI-backed:
 
 - add note
 - notes panel
 - gutter decorations
+- inline editor mutations
 - search
 - stats
 - health
 - repair
+- URI resolution
+- workspace sync and rename-related flows
 
 There is still native bridge scaffolding in the extension repo, but it is not the active runtime path.
 
 ## Known Architectural Reality
 
-The runtime boundary exists, but the project is not fully centralized around it yet.
+The runtime boundary exists, but the project is still consolidating around shared core behavior.
 
 - `NoteService` uses `VaultContext` for cache-aware file note loading
 - note mutations still write through repositories stored inside the context
 - note search still scans persisted note files directly
 - `WorkspaceService` still keeps its own `WorkspaceIndexRepository` field
+- the extension now centralizes current-file note state through a shared store, but its active behavior still shells out through the CLI boundary
 
 That is acceptable for the current MVP, but it means the runtime layer is only partially unified.
