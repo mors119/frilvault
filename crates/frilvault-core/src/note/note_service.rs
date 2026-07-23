@@ -97,8 +97,6 @@ impl NoteService {
 
         self.save_notes(source_file, notes)?;
 
-        self.vault_context.invalidate_notes(source_file);
-
         Ok(())
     }
 
@@ -121,8 +119,6 @@ impl NoteService {
         note.updated_at = Utc::now();
 
         self.save_notes(source_file, notes)?;
-
-        self.vault_context.invalidate_notes(source_file);
 
         Ok(())
     }

@@ -142,3 +142,61 @@ fn add_note_invalidates_cached_entry() {
     let second_list = service.list_notes(source_file).unwrap();
     assert_eq!(second_list.len(), 2);
 }
+
+#[test]
+fn delete_note_invalidates_cached_entry() {
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut service = create_test_note_service(workspace_root);
+    let source_file = Path::new("src/main.rs");
+
+    let deleted_note = service
+        .add_note(AddNoteRequest {
+            source_file: source_file.to_path_buf(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "delete me".to_string(),
+        })
+        .unwrap();
+    service
+        .add_note(AddNoteRequest {
+            source_file: source_file.to_path_buf(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 2, column: 1 }),
+            content: "keep me".to_string(),
+        })
+        .unwrap();
+
+    assert_eq!(service.list_notes(source_file).unwrap().len(), 2);
+
+    service.delete_note(source_file, deleted_note.id).unwrap();
+
+    let notes = service.list_notes(source_file).unwrap();
+    assert_eq!(notes.len(), 1);
+    assert_eq!(notes[0].note.content, "keep me");
+}
+
+#[test]
+fn update_note_invalidates_cached_entry() {
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut service = create_test_note_service(workspace_root);
+    let source_file = Path::new("src/main.rs");
+
+    let note = service
+        .add_note(AddNoteRequest {
+            source_file: source_file.to_path_buf(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "old content".to_string(),
+        })
+        .unwrap();
+
+    let cached_notes = service.list_notes(source_file).unwrap();
+    assert_eq!(cached_notes[0].note.content, "old content");
+
+    service
+        .update_note(source_file, note.id, "new content".to_string())
+        .unwrap();
+
+    let notes = service.list_notes(source_file).unwrap();
+    assert_eq!(notes.len(), 1);
+    assert_eq!(notes[0].note.content, "new content");
+}
