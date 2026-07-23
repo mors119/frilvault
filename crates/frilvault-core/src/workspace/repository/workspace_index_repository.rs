@@ -76,11 +76,7 @@ impl WorkspaceIndexRepository {
             .map(|record| {
                 let source_file = record.source_file.to_string_lossy().to_string();
 
-                let exists = self
-                    .path_resolver
-                    .workspace_root()
-                    .join(&record.source_file)
-                    .exists();
+                let exists = self.source_file_exists(&source_file);
 
                 IndexedFile {
                     source_file,
@@ -95,6 +91,58 @@ impl WorkspaceIndexRepository {
         self.save(&index)?;
 
         Ok(index)
+    }
+
+    pub fn load_and_refresh_exists(&self) -> FrilVaultResult<WorkspaceIndex> {
+        let mut index = self.load_or_rebuild()?;
+        self.refresh_exists_flags(&mut index);
+
+        Ok(index)
+    }
+
+    pub fn refresh_exists_flags(&self, index: &mut WorkspaceIndex) {
+        for file in &mut index.files {
+            file.exists = self.source_file_exists(&file.source_file);
+        }
+    }
+
+    pub fn sync_source_file(&self, source_file: &str, note_count: usize) -> FrilVaultResult<()> {
+        let mut index = self.load_or_rebuild()?;
+
+        index.upsert_file(IndexedFile {
+            source_file: source_file.to_string(),
+            note_count,
+            exists: self.source_file_exists(source_file),
+        });
+
+        self.save(&index)
+    }
+
+    pub fn remove_source_file(&self, source_file: &str) -> FrilVaultResult<()> {
+        let mut index = self.load_or_rebuild()?;
+        index.remove_file(source_file);
+        self.save(&index)
+    }
+
+    pub fn move_source_file(&self, from: &str, to: &str) -> FrilVaultResult<()> {
+        let mut index = self.load_or_rebuild()?;
+
+        if !index.move_file(from, to) {
+            return Ok(());
+        }
+
+        if let Some(file) = index.files.iter_mut().find(|file| file.source_file == to) {
+            file.exists = self.source_file_exists(to);
+        }
+
+        self.save(&index)
+    }
+
+    fn source_file_exists(&self, source_file: &str) -> bool {
+        self.path_resolver
+            .workspace_root()
+            .join(source_file)
+            .exists()
     }
 
     pub fn detect_moves(

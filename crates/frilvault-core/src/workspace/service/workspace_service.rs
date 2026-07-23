@@ -58,11 +58,11 @@ impl WorkspaceService {
     /// Editor integrations should invoke this from a file rename/move callback when
     /// a tracked source file changes path outside FrilVault.
     pub fn sync_source_file_changes(&mut self) -> FrilVaultResult<usize> {
-        self.index_repository.rebuild()?;
+        let _ = self.index_repository.load_and_refresh_exists()?;
         let repaired = self.apply_repairs()?;
 
         if repaired > 0 {
-            let index = self.index_repository.rebuild()?;
+            let index = self.index_repository.load()?;
             self.notes_watcher.seed_snapshot(index);
         }
 
@@ -80,7 +80,7 @@ impl WorkspaceService {
     }
 
     pub fn stats(&mut self) -> FrilVaultResult<WorkspaceStats> {
-        let index = self.vault_context.rebuild_index()?;
+        let index = self.index_repository.load_and_refresh_exists()?;
 
         let records = self.vault_context.list_all_note_files()?;
 
@@ -112,7 +112,7 @@ impl WorkspaceService {
     }
 
     pub fn health_check(&mut self) -> FrilVaultResult<WorkspaceHealth> {
-        let index = self.index_repository.rebuild()?;
+        let index = self.index_repository.load_and_refresh_exists()?;
 
         let mut health = WorkspaceHealth::default();
 
@@ -201,17 +201,17 @@ impl WorkspaceService {
     }
 
     pub fn apply_repair_moves(&mut self, moves: Vec<FileMove>) -> FrilVaultResult<usize> {
-        let repaired = RepairEngine::apply_moves_with_min_confidence(
+        let applied = RepairEngine::apply_moves_with_min_confidence(
             &mut self.vault_context,
             moves,
             REPAIR_MIN_CONFIDENCE,
         )?;
 
-        if repaired > 0 {
-            self.index_repository.rebuild()?;
+        for mv in &applied {
+            self.index_repository.move_source_file(&mv.from, &mv.to)?;
         }
 
-        Ok(repaired)
+        Ok(applied.len())
     }
 
     pub fn apply_repairs(&mut self) -> FrilVaultResult<usize> {

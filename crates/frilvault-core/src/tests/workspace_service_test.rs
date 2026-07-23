@@ -92,8 +92,9 @@ fn warm_up_uses_persisted_index_without_rescanning() {
         .unwrap();
 
     let second = workspace_service.warm_up().unwrap();
-    assert_eq!(second.files.len(), 1);
+    assert_eq!(second.files.len(), 2);
     assert_eq!(second.files[0].source_file, "src/main.rs");
+    assert_eq!(second.files[1].source_file, "src/other.rs");
 }
 
 #[test]

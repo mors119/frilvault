@@ -9,15 +9,18 @@ impl RepairEngine {
         vault_context: &mut VaultContext,
         moves: Vec<FileMove>,
     ) -> FrilVaultResult<usize> {
-        Self::apply_moves_with_min_confidence(vault_context, moves, DEFAULT_MIN_CONFIDENCE)
+        Ok(
+            Self::apply_moves_with_min_confidence(vault_context, moves, DEFAULT_MIN_CONFIDENCE)?
+                .len(),
+        )
     }
 
     pub fn apply_moves_with_min_confidence(
         vault_context: &mut VaultContext,
         moves: Vec<FileMove>,
         min_confidence: f32,
-    ) -> FrilVaultResult<usize> {
-        let mut repaired = 0;
+    ) -> FrilVaultResult<Vec<FileMove>> {
+        let mut applied = Vec::new();
 
         for mv in moves {
             if mv.confidence < min_confidence {
@@ -28,22 +31,23 @@ impl RepairEngine {
 
             let new_path = vault_context.resolve_note_path(&mv.to);
 
-            if let Some(parent) = new_path.parent() {
-                std::fs::create_dir_all(parent)?;
-            }
-
-            if old_path.exists() {
-                std::fs::rename(&old_path, &new_path)?;
-            }
+            let to = mv.to.clone();
 
             vault_context.invalidate_notes(std::path::Path::new(&mv.from));
-            vault_context.invalidate_notes(std::path::Path::new(&mv.to));
+            vault_context.invalidate_notes(std::path::Path::new(&to));
 
-            let _ = vault_context.load_notes(std::path::Path::new(&mv.to));
+            if old_path.exists() {
+                if let Some(parent) = new_path.parent() {
+                    std::fs::create_dir_all(parent)?;
+                }
 
-            repaired += 1;
+                std::fs::rename(&old_path, &new_path)?;
+                applied.push(mv);
+            }
+
+            let _ = vault_context.load_notes(std::path::Path::new(&to));
         }
 
-        Ok(repaired)
+        Ok(applied)
     }
 }

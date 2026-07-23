@@ -2,6 +2,7 @@ use super::helper::{create_test_note_service, create_test_workspace};
 use crate::{
     AddNoteRequest, LineAnchor, NoteAnchor, SymbolAnchor, SymbolKind,
     constants::NOTE_FILE_EXTENSION,
+    workspace::{PathResolver, WorkspaceIndexRepository},
 };
 
 use std::fs;
@@ -391,4 +392,63 @@ fn find_symbol_note_returns_matching_symbol() {
     assert!(result.is_some());
 
     assert_eq!(result.unwrap().note.content, "parser note");
+}
+
+#[test]
+fn add_note_updates_persisted_index() {
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    fs::create_dir_all(workspace_root.join("src")).unwrap();
+    fs::write(workspace_root.join("src/main.rs"), "").unwrap();
+
+    let mut service = create_test_note_service(workspace_root);
+    service
+        .add_note(AddNoteRequest {
+            source_file: "src/main.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "indexed note".to_string(),
+        })
+        .unwrap();
+
+    let index = WorkspaceIndexRepository::new(PathResolver::new(workspace_root))
+        .load()
+        .unwrap();
+
+    assert_eq!(index.files.len(), 1);
+    assert_eq!(index.files[0].source_file, "src/main.rs");
+    assert_eq!(index.files[0].note_count, 1);
+    assert!(index.files[0].exists);
+}
+
+#[test]
+fn delete_note_updates_persisted_index_count() {
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    fs::create_dir_all(workspace_root.join("src")).unwrap();
+    fs::write(workspace_root.join("src/main.rs"), "").unwrap();
+
+    let mut service = create_test_note_service(workspace_root);
+    let first = service
+        .add_note(AddNoteRequest {
+            source_file: "src/main.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "first".to_string(),
+        })
+        .unwrap();
+    service
+        .add_note(AddNoteRequest {
+            source_file: "src/main.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 2, column: 1 }),
+            content: "second".to_string(),
+        })
+        .unwrap();
+
+    service.delete_note("src/main.rs", first.id).unwrap();
+
+    let index = WorkspaceIndexRepository::new(PathResolver::new(workspace_root))
+        .load()
+        .unwrap();
+
+    assert_eq!(index.files.len(), 1);
+    assert_eq!(index.files[0].note_count, 1);
 }

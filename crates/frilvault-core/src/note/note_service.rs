@@ -60,6 +60,9 @@ impl NoteService {
 
         self.vault_context.invalidate_notes(&source_file);
 
+        self.vault_context
+            .sync_index_for_source_file(&source_file)?;
+
         Ok(note)
     }
 
@@ -101,6 +104,8 @@ impl NoteService {
 
         self.save_notes(source_file, notes)?;
 
+        self.vault_context.sync_index_for_source_file(source_file)?;
+
         Ok(())
     }
 
@@ -123,6 +128,8 @@ impl NoteService {
         note.updated_at = Utc::now();
 
         self.save_notes(source_file, notes)?;
+
+        self.vault_context.sync_index_for_source_file(source_file)?;
 
         Ok(())
     }

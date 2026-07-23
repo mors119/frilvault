@@ -5,7 +5,7 @@ use super::helper::{
 };
 use crate::{
     AddNoteRequest, LineAnchor, NoteAnchor, SymbolAnchor, SymbolKind,
-    tests::helper::create_test_index_repository,
+    tests::helper::{create_test_index_repository, create_test_vault_context},
     workspace::{IndexDiff, IndexedFile, PathResolver, WorkspaceIndex, WorkspaceIndexRepository},
 };
 
@@ -68,13 +68,17 @@ fn load_or_rebuild_scans_when_index_file_is_missing() {
     fs::create_dir_all(workspace_root.join("src")).unwrap();
     fs::write(workspace_root.join("src/main.rs"), "").unwrap();
 
-    let mut note_service = create_test_note_service(workspace_root);
-    note_service
-        .add_note(AddNoteRequest {
-            source_file: "src/main.rs".into(),
-            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
-            content: "indexed note".to_string(),
-        })
+    let vault_context = create_test_vault_context(workspace_root);
+    vault_context
+        .note_repository
+        .append_note(
+            std::path::Path::new("src/main.rs"),
+            &crate::Note::new(AddNoteRequest {
+                source_file: "src/main.rs".into(),
+                anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+                content: "indexed note".to_string(),
+            }),
+        )
         .unwrap();
 
     let resolver = PathResolver::new(workspace_root);
@@ -118,8 +122,9 @@ fn load_or_rebuild_loads_existing_index_without_scanning() {
 
     let loaded = repository.load_or_rebuild().unwrap();
 
-    assert_eq!(loaded.files.len(), 1);
+    assert_eq!(loaded.files.len(), 2);
     assert_eq!(loaded.files[0].source_file, "src/main.rs");
+    assert_eq!(loaded.files[1].source_file, "src/other.rs");
 }
 
 #[test]
@@ -232,6 +237,32 @@ fn health_check_detects_missing_files_from_note_repository() {
     assert_eq!(health.missing_source_files.len(), 1,);
 
     assert_eq!(health.missing_source_files[0], "src/missing.rs",);
+}
+
+#[test]
+fn health_check_refreshes_exists_flags_from_loaded_index() {
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    fs::create_dir_all(workspace_root.join("src")).unwrap();
+    fs::write(workspace_root.join("src/main.rs"), "").unwrap();
+
+    let resolver = PathResolver::new(workspace_root);
+    let index_repository = WorkspaceIndexRepository::new(resolver.clone());
+    index_repository
+        .save(&WorkspaceIndex {
+            version: 1,
+            files: vec![IndexedFile {
+                source_file: "src/main.rs".to_string(),
+                note_count: 1,
+                exists: false,
+            }],
+        })
+        .unwrap();
+
+    let mut workspace_service = create_test_workspace_service(workspace_root);
+    let health = workspace_service.health_check().unwrap();
+
+    assert!(health.missing_source_files.is_empty());
 }
 
 #[test]
@@ -351,6 +382,11 @@ fn apply_repairs_moves_note_file() {
     assert!(new_note_path.exists());
 
     assert!(!old_note_path.exists());
+
+    let index = workspace_service.index_repository.load().unwrap();
+    assert_eq!(index.files.len(), 1);
+    assert_eq!(index.files[0].source_file, "src/core/lib.rs");
+    assert!(index.files[0].exists);
 }
 
 #[test]
