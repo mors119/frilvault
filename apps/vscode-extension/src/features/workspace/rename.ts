@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 
 import type { CliClient } from '../../core/cliClient';
+import { tryGetWorkspaceRoot } from '../../utils/file';
 
 export function isTrackedSourceRename(
   workspaceRoot: string,
@@ -29,10 +30,8 @@ export function isTrackedSourceRename(
 export function registerSourceRenameHandler(
   context: vscode.ExtensionContext,
   cliClient: CliClient,
-  getWorkspaceRoot: () => string,
   isEnabled: () => boolean,
-  refreshNotesPanel: () => void,
-  refreshDecorations: () => Promise<void>,
+  invalidateViews: () => Promise<void>,
 ): void {
   context.subscriptions.push(
     vscode.workspace.onDidRenameFiles(async (event) => {
@@ -40,7 +39,12 @@ export function registerSourceRenameHandler(
         return;
       }
 
-      const workspaceRoot = getWorkspaceRoot();
+      const workspaceRoot = tryGetWorkspaceRoot();
+
+      if (!workspaceRoot) {
+        return;
+      }
+
       const hasSourceRename = event.files.some(({ oldUri, newUri }) =>
         isTrackedSourceRename(workspaceRoot, oldUri, newUri),
       );
@@ -53,8 +57,7 @@ export function registerSourceRenameHandler(
         const result = await cliClient.sync(workspaceRoot);
 
         if (result.notes_synced || result.repairs_applied > 0) {
-          refreshNotesPanel();
-          await refreshDecorations();
+          await invalidateViews();
         }
       } catch (error) {
         const message =

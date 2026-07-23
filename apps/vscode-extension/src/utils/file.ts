@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 
 import type { NoteView } from '../types';
 
-export function getWorkspaceRoot(): string {
+export function tryGetWorkspaceRoot(): string | undefined {
   const configured = vscode.workspace
     .getConfiguration('frilvault')
     .get<string>('workspaceRoot', '')
@@ -14,12 +14,17 @@ export function getWorkspaceRoot(): string {
     return configured;
   }
 
-  const folder = vscode.workspace.workspaceFolders?.[0];
-  if (!folder) {
+  return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+}
+
+export function getWorkspaceRoot(): string {
+  const workspaceRoot = tryGetWorkspaceRoot();
+
+  if (!workspaceRoot) {
     throw new Error('FrilVault requires an open workspace folder.');
   }
 
-  return folder.uri.fsPath;
+  return workspaceRoot;
 }
 
 export function getActiveEditorOrThrow(): vscode.TextEditor {
@@ -36,10 +41,23 @@ export function getActiveEditorOrThrow(): vscode.TextEditor {
   return editor;
 }
 
-export function getRelativeFilePath(workspaceRoot: string, sourceFile: string): string {
+export function tryGetRelativeFilePath(
+  workspaceRoot: string,
+  sourceFile: string,
+): string | undefined {
   const relative = path.relative(workspaceRoot, sourceFile);
 
   if (relative.length === 0 || relative.startsWith('..') || path.isAbsolute(relative)) {
+    return undefined;
+  }
+
+  return relative;
+}
+
+export function getRelativeFilePath(workspaceRoot: string, sourceFile: string): string {
+  const relative = tryGetRelativeFilePath(workspaceRoot, sourceFile);
+
+  if (!relative) {
     throw new Error('The active file must be inside the current workspace.');
   }
 

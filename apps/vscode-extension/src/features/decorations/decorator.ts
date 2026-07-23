@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 
-import type { CliClient } from '../../core/cliClient';
-import { getRelativeFilePath } from '../../utils/file';
+import type { CurrentFileNotesStore } from '../current-file/store';
 import { formatNoteHover } from '../../utils/noteMarkdown';
 import { createLineNoteDecorationType, createSymbolNoteDecorationType } from './gutter';
 
@@ -12,9 +11,11 @@ export class FrilVaultDecorator implements vscode.Disposable {
 
   private previousEditor: vscode.TextEditor | undefined;
 
+  private pendingEditorUri: string | undefined;
+
   public constructor(
     extensionPath: string,
-    private readonly cliClient: CliClient,
+    private readonly store: CurrentFileNotesStore,
     private readonly getWorkspaceRoot: () => string,
     private readonly isEnabled: () => boolean = () => true,
   ) {
@@ -26,6 +27,7 @@ export class FrilVaultDecorator implements vscode.Disposable {
     if (!this.isEnabled()) {
       this.clear(editor);
       this.previousEditor = editor;
+      this.pendingEditorUri = undefined;
       return;
     }
 
@@ -35,13 +37,36 @@ export class FrilVaultDecorator implements vscode.Disposable {
 
     if (!editor || editor.document.uri.scheme !== 'file') {
       this.previousEditor = editor;
+      this.pendingEditorUri = undefined;
       return;
     }
 
-    const notes = await this.cliClient.listNotes(
-      this.getWorkspaceRoot(),
-      getRelativeFilePath(this.getWorkspaceRoot(), editor.document.uri.fsPath),
-    );
+    const editorUri = editor.document.uri.toString();
+    this.pendingEditorUri = editorUri;
+
+    const snapshot = this.store.getSnapshot();
+    if (snapshot.loading || snapshot.editorDocumentUri !== editorUri) {
+      this.clear(editor);
+      return;
+    }
+
+    this.renderNotes(editor, snapshot.notes);
+  }
+
+  public clear(editor = vscode.window.activeTextEditor): void {
+    editor?.setDecorations(this.lineDecorationType, []);
+    editor?.setDecorations(this.symbolDecorationType, []);
+  }
+
+  public dispose(): void {
+    this.lineDecorationType.dispose();
+    this.symbolDecorationType.dispose();
+  }
+
+  private renderNotes(editor: vscode.TextEditor, notes: ReturnType<CurrentFileNotesStore['getSnapshot']>['notes']): void {
+    if (this.pendingEditorUri !== editor.document.uri.toString()) {
+      return;
+    }
 
     const lineDecorations: vscode.DecorationOptions[] = [];
     const symbolDecorations: vscode.DecorationOptions[] = [];
@@ -71,15 +96,6 @@ export class FrilVaultDecorator implements vscode.Disposable {
     editor.setDecorations(this.lineDecorationType, lineDecorations);
     editor.setDecorations(this.symbolDecorationType, symbolDecorations);
     this.previousEditor = editor;
-  }
-
-  public clear(editor = vscode.window.activeTextEditor): void {
-    editor?.setDecorations(this.lineDecorationType, []);
-    editor?.setDecorations(this.symbolDecorationType, []);
-  }
-
-  public dispose(): void {
-    this.lineDecorationType.dispose();
-    this.symbolDecorationType.dispose();
+    this.pendingEditorUri = undefined;
   }
 }

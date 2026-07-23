@@ -6,8 +6,7 @@ import { AddNoteService } from './service';
 export interface AddNoteCommandDependencies {
   getWorkspaceRoot: () => string;
   service: AddNoteService;
-  refreshNotesPanel: () => void;
-  refreshDecorations: (editor?: vscode.TextEditor) => Promise<void>;
+  invalidateViews: () => Promise<void>;
   onNoteAdded?: () => Promise<void>;
   promptNoteContent?: () => Promise<string | undefined>;
   showInformationMessage?: (message: string) => Thenable<string | undefined>;
@@ -54,8 +53,7 @@ export function createAddNoteCommand(
         content,
       });
 
-      dependencies.refreshNotesPanel();
-      await dependencies.refreshDecorations(editor);
+      dependencies.invalidateViews();
       await showInformationMessage(`FrilVault note added at ${line}:${column}.`);
 
       if (dependencies.onNoteAdded) {

@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { CliClient } from './core/cliClient';
 import { createAddNoteCommand } from './features/add-note/command';
 import { AddNoteService } from './features/add-note/service';
+import { CurrentFileNotesStore } from './features/current-file/store';
 import { createDisableCommand, createEnableCommand } from './features/enablement/command';
 import { isFrilVaultEnabled, syncEnabledContext } from './features/enablement/state';
 import { maybePromptForGitignore } from './features/gitignore/prompt';
@@ -17,37 +18,59 @@ import { registerSourceRenameHandler } from './features/workspace/rename';
 import { registerWorkspaceWatcher } from './features/workspace/watcher';
 import { createShowStatsCommand } from './features/workspace/stats';
 import type { NoteView } from './types';
-import { getWorkspaceRoot, revealNote } from './utils/file';
+import { getWorkspaceRoot, revealNote, tryGetWorkspaceRoot } from './utils/file';
+
+let activeDecorator: FrilVaultDecorator | undefined;
+let activeStore: CurrentFileNotesStore | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
   const cliClient = new CliClient();
   const addNoteService = new AddNoteService(cliClient);
   const notesPanelService = new NotesPanelService(cliClient);
 
-  const isEnabled = () => isFrilVaultEnabled(context.workspaceState, getWorkspaceRoot());
+  const isEnabled = () => {
+    const workspaceRoot = tryGetWorkspaceRoot();
 
-  const notesProvider = new FrilVaultNotesProvider(
-    notesPanelService,
-    getWorkspaceRoot,
-    isEnabled,
-  );
+    if (!workspaceRoot) {
+      return false;
+    }
+
+    return isFrilVaultEnabled(context.workspaceState, workspaceRoot);
+  };
+
+  const store = new CurrentFileNotesStore(cliClient, isEnabled);
+  activeStore = store;
+
+  const notesProvider = new FrilVaultNotesProvider(store, getWorkspaceRoot, isEnabled);
   const decorator = new FrilVaultDecorator(
     context.extensionPath,
-    cliClient,
+    store,
     getWorkspaceRoot,
     isEnabled,
   );
-  const hoverProvider = new FrilVaultHoverProvider(cliClient, getWorkspaceRoot, isEnabled);
+  activeDecorator = decorator;
+  const hoverProvider = new FrilVaultHoverProvider(store, getWorkspaceRoot, isEnabled);
+
+  const invalidateViews = async (editor?: vscode.TextEditor) => {
+    await store.syncActiveEditor(editor ?? vscode.window.activeTextEditor);
+  };
 
   const refreshUi = async (editor?: vscode.TextEditor) => {
-    notesProvider.refresh();
-    await decorator.refresh(editor);
+    await invalidateViews(editor);
   };
 
   const clearUi = () => {
+    store.clear();
     decorator.clear();
     notesProvider.refresh();
   };
+
+  const onStoreChanged = () => {
+    notesProvider.refresh();
+    void decorator.refresh();
+  };
+
+  store.onDidChange(onStoreChanged, undefined, context.subscriptions);
 
   const runWhenEnabled = <T extends unknown[]>(
     handler: (...args: T) => void | Promise<void>,
@@ -65,6 +88,7 @@ export function activate(context: vscode.ExtensionContext): void {
   };
 
   context.subscriptions.push(
+    store,
     decorator,
     vscode.window.registerTreeDataProvider('frilvault.notes', notesProvider),
     vscode.languages.registerHoverProvider({ scheme: 'file' }, hoverProvider),
@@ -99,8 +123,7 @@ export function activate(context: vscode.ExtensionContext): void {
         createAddNoteCommand({
           getWorkspaceRoot,
           service: addNoteService,
-          refreshNotesPanel: () => notesProvider.refresh(),
-          refreshDecorations: async (editor) => decorator.refresh(editor),
+          invalidateViews,
           onNoteAdded: async () => {
             await maybePromptForGitignore({
               getWorkspaceRoot,
@@ -135,14 +158,7 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand(
       'frilvault.applyRepairs',
-      runWhenEnabled(
-        createApplyRepairsCommand(
-          cliClient,
-          getWorkspaceRoot,
-          () => notesProvider.refresh(),
-          async () => decorator.refresh(),
-        ),
-      ),
+      runWhenEnabled(createApplyRepairsCommand(cliClient, getWorkspaceRoot, invalidateViews)),
     ),
     vscode.commands.registerCommand(
       'frilvault.refresh',
@@ -158,32 +174,26 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
-  registerSourceRenameHandler(
-    context,
-    cliClient,
-    getWorkspaceRoot,
-    isEnabled,
-    () => notesProvider.refresh(),
-    async () => decorator.refresh(),
-  );
+  registerSourceRenameHandler(context, cliClient, isEnabled, invalidateViews);
+  registerWorkspaceWatcher(context, cliClient, isEnabled, invalidateViews);
 
-  registerWorkspaceWatcher(
-    context,
-    cliClient,
-    getWorkspaceRoot,
-    isEnabled,
-    () => notesProvider.refresh(),
-    async () => decorator.refresh(),
-  );
+  void syncEnabledContext(isEnabled()).then(async () => {
+    try {
+      if (isEnabled()) {
+        await refreshUi();
+        return;
+      }
 
-  void syncEnabledContext(isEnabled()).then(() => {
-    if (isEnabled()) {
-      void refreshUi();
-      return;
+      clearUi();
+    } catch {
+      clearUi();
     }
-
-    clearUi();
   });
 }
 
-export function deactivate(): void {}
+export function deactivate(): void {
+  activeDecorator?.clear();
+  activeStore?.clear();
+  activeDecorator = undefined;
+  activeStore = undefined;
+}
