@@ -39,6 +39,8 @@ fn main() -> Result<()> {
 
         Commands::Stats(cmd) => command::stats::execute(cmd)?,
 
+        Commands::Explorer(cmd) => command::explorer::execute(cmd)?,
+
         Commands::Repair(cmd) => {
             command::repair::execute(cmd)?;
         }

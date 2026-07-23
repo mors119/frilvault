@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 
 pub mod add;
 pub mod delete;
+pub mod explorer;
 pub mod format;
 pub mod gitignore;
 pub mod health;
@@ -13,6 +14,7 @@ pub mod update;
 
 use add::AddCommand;
 use delete::DeleteCommand;
+use explorer::ExplorerCommand;
 use gitignore::GitignoreCommand;
 use health::HealthCommand;
 use list::ListCommand;
@@ -39,5 +41,6 @@ pub enum Commands {
     Doctor(HealthCommand),
     Health(HealthCommand),
     Stats(StatsCommand),
+    Explorer(ExplorerCommand),
     Gitignore(GitignoreCommand),
 }
