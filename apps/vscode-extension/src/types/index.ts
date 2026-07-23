@@ -8,6 +8,11 @@ export type NoteAnchor = {
   line_hint?: number;
 };
 
+export type ResolvedSymbol = {
+  line: number;
+  column: number;
+};
+
 export type NoteView = {
   source_file: string;
   note: {
@@ -17,6 +22,7 @@ export type NoteView = {
     created_at?: string;
     updated_at?: string;
   };
+  resolved?: ResolvedSymbol;
 };
 
 export interface WorkspaceStats {

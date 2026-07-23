@@ -3,15 +3,22 @@ import * as vscode from 'vscode';
 
 import type { NoteView } from '../../types';
 
-export class NotesFileGroupItem extends vscode.TreeItem {
+export type AnchorGroupKind = 'Line' | 'Symbol';
+
+export class NotesAnchorGroupItem extends vscode.TreeItem {
   public constructor(
-    public readonly sourceFile: string,
+    public readonly kind: AnchorGroupKind,
     public readonly notes: NoteView[],
   ) {
-    super(sourceFile, vscode.TreeItemCollapsibleState.Expanded);
-    this.description = `${notes.length} note${notes.length === 1 ? '' : 's'}`;
-    this.iconPath = new vscode.ThemeIcon('file');
-    this.contextValue = 'frilvault.notesFileGroup';
+    const label = kind === 'Line' ? 'Line Notes' : 'Symbol Notes';
+
+    super(label, vscode.TreeItemCollapsibleState.Expanded);
+    this.description = `${notes.length}`;
+    this.iconPath = new vscode.ThemeIcon(
+      kind === 'Line' ? 'list-unordered' : 'symbol-method',
+    );
+    this.contextValue =
+      kind === 'Line' ? 'frilvault.notesLineGroup' : 'frilvault.notesSymbolGroup';
   }
 }
 
@@ -47,9 +54,9 @@ function createDescription(noteView: NoteView): string {
     return `L${noteView.note.anchor.line ?? 1}`;
   }
 
+  const resolvedLine = noteView.resolved?.line ?? noteView.note.anchor.line_hint;
   const lineHint =
-    typeof noteView.note.anchor.line_hint === 'number'
-      ? `L${noteView.note.anchor.line_hint}`
-      : 'Symbol';
+    typeof resolvedLine === 'number' ? `L${resolvedLine}` : 'Symbol';
+
   return `${lineHint} ${noteView.note.anchor.name ?? ''}`.trim();
 }
