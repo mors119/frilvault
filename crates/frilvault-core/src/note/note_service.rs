@@ -13,8 +13,8 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use crate::{
-    AddNoteRequest, FrilVaultError, FrilVaultResult, NoteAnchor, NoteView, note::Note,
-    runtime::VaultContext,
+    AddNoteRequest, FrilVaultError, FrilVaultResult, NoteAnchor, NoteView, SymbolKind, note::Note,
+    runtime::VaultContext, symbol::SymbolResolver, workspace::read_source_file_content,
 };
 
 /// Application service responsible for note operations.
@@ -74,10 +74,7 @@ impl NoteService {
         Ok(notes
             .notes
             .into_iter()
-            .map(|note| NoteView {
-                source_file: source_file.to_path_buf(),
-                note,
-            })
+            .map(|note| self.build_note_view(source_file, note))
             .collect())
     }
 
@@ -145,21 +142,65 @@ impl NoteService {
         Ok(())
     }
 
-    fn all_note_views(&self) -> FrilVaultResult<Vec<NoteView>> {
+    fn all_note_views(&mut self) -> FrilVaultResult<Vec<NoteView>> {
         let records = self.vault_context.note_repository.list_all_note_files()?;
 
         let mut results = Vec::new();
 
         for record in records {
             for note in record.note_file.notes {
-                results.push(NoteView {
-                    source_file: record.source_file.clone(),
-                    note,
-                });
+                results.push(self.build_note_view(&record.source_file, note));
             }
         }
 
         Ok(results)
+    }
+
+    fn build_note_view(&self, source_file: &Path, note: Note) -> NoteView {
+        let resolved = match &note.anchor {
+            NoteAnchor::Symbol(anchor) => self.resolve_symbol_anchor(source_file, anchor),
+            _ => None,
+        };
+
+        NoteView {
+            source_file: source_file.to_path_buf(),
+            note,
+            resolved,
+        }
+    }
+
+    fn resolve_symbol_anchor(
+        &self,
+        source_file: &Path,
+        anchor: &crate::SymbolAnchor,
+    ) -> Option<crate::ResolvedSymbol> {
+        let workspace_root = self
+            .vault_context
+            .workspace_index_repository
+            .workspace_root();
+        let relative_path = source_file.to_string_lossy();
+
+        read_source_file_content(workspace_root, relative_path.as_ref())
+            .and_then(|content| SymbolResolver::resolve(anchor, &content))
+    }
+
+    pub fn find_symbol_in_source(
+        &self,
+        source_file: impl AsRef<Path>,
+        symbol: &str,
+        kind: SymbolKind,
+    ) -> FrilVaultResult<Option<crate::ResolvedSymbol>> {
+        let source_file = source_file.as_ref();
+        let workspace_root = self
+            .vault_context
+            .workspace_index_repository
+            .workspace_root();
+        let relative_path = source_file.to_string_lossy();
+
+        Ok(
+            read_source_file_content(workspace_root, relative_path.as_ref())
+                .and_then(|content| SymbolResolver::find_by_name(symbol, kind, &content)),
+        )
     }
 
     pub fn search_notes(&mut self, keyword: &str) -> FrilVaultResult<Vec<NoteView>> {

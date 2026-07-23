@@ -22,7 +22,7 @@ pub struct SymbolAnchor {
     pub line_hint: Option<u32>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum SymbolKind {
     Function,
     Struct,

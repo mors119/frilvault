@@ -11,6 +11,7 @@ mod repository;
 mod service;
 
 pub use content_match::ContentMatcher;
+pub use content_match::read_source_file_content;
 pub use diff::*;
 pub use entity::*;
 pub use path::*;
