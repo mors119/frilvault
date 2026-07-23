@@ -91,6 +91,22 @@ Current integration tests cover:
 - CLI JSON parsing
 - active-editor notes panel behavior
 - add note command execution and refresh behavior
+- notes view registration idempotency and disposal
+
+## Extension Development Host
+
+When debugging this extension, disable or uninstall the marketplace FrilVault
+extension first. VS Code cannot register the same contributed view id
+(`frilvault.notes`) twice, so running the development extension alongside an
+installed copy produces repeated errors such as:
+
+```text
+Cannot register multiple views with same id `frilvault.notes`
+```
+
+After changing extension code, reload the Extension Development Host window so
+activation and disposables run cleanly. Shared view and command identifiers
+live in `src/constants/ids.ts` and must stay aligned with `package.json`.
 
 ## Notes
 

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 
+import { COMMAND_IDS, VIEW_ITEM_CONTEXT } from '../../constants/ids';
 import type { NoteView } from '../../types';
 import { formatNoteHover } from '../../utils/noteMarkdown';
 
@@ -18,7 +19,7 @@ export class NotesAnchorGroupItem extends vscode.TreeItem {
       kind === 'Line' ? 'list-unordered' : 'symbol-method',
     );
     this.contextValue =
-      kind === 'Line' ? 'frilvault.notesLineGroup' : 'frilvault.notesSymbolGroup';
+      kind === 'Line' ? VIEW_ITEM_CONTEXT.notesLineGroup : VIEW_ITEM_CONTEXT.notesSymbolGroup;
   }
 }
 
@@ -31,10 +32,10 @@ export class NotesPanelItem extends vscode.TreeItem {
 
     this.description = createDescription(noteView);
     this.tooltip = formatNoteHover(noteView, workspaceRoot);
-    this.contextValue = 'frilvault.note';
+    this.contextValue = VIEW_ITEM_CONTEXT.note;
     this.iconPath = new vscode.ThemeIcon('note');
     this.command = {
-      command: 'frilvault.notesPanel.openNote',
+      command: COMMAND_IDS.notesPanelOpenNote,
       title: 'Open FrilVault Note',
       arguments: [noteView],
     };

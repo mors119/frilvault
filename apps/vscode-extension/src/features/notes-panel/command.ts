@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 
+import { notesViewFocusCommand } from '../../constants/ids';
 import { getActiveEditorOrThrow, getRelativeFilePath } from '../../utils/file';
 import { NotesPanelService } from './service';
 
@@ -28,7 +29,7 @@ export function createShowNotesForCurrentFileCommand(
       const notes = await dependencies.service.listNotes(workspaceRoot, sourceFile);
 
       dependencies.refreshNotesPanel();
-      await executeCommand('frilvault.notes.focus');
+      await executeCommand(notesViewFocusCommand());
 
       if (notes.length === 0) {
         await showInformationMessage(`No notes for ${sourceFile}.`);
