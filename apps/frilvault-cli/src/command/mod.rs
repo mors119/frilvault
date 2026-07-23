@@ -1,6 +1,7 @@
 pub mod add;
 pub mod delete;
 pub mod doctor;
+pub mod gitignore;
 pub mod list;
 pub mod repair;
 pub mod search;

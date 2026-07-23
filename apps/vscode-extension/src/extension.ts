@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { CliClient } from './core/cliClient';
 import { createAddNoteCommand } from './features/add-note/command';
 import { AddNoteService } from './features/add-note/service';
+import { maybePromptForGitignore } from './features/gitignore/prompt';
 import { FrilVaultDecorator } from './features/decorations/decorator';
 import { FrilVaultHoverProvider } from './features/hover/hoverProvider';
 import { createShowNotesForCurrentFileCommand } from './features/notes-panel/command';
@@ -36,6 +37,13 @@ export function activate(context: vscode.ExtensionContext): void {
         service: addNoteService,
         refreshNotesPanel: () => notesProvider.refresh(),
         refreshDecorations: async (editor) => decorator.refresh(editor),
+        onNoteAdded: async () => {
+          await maybePromptForGitignore({
+            getWorkspaceRoot,
+            cliClient,
+            workspaceState: context.workspaceState,
+          });
+        },
       }),
     ),
     vscode.commands.registerCommand(

@@ -8,6 +8,7 @@ export interface AddNoteCommandDependencies {
   service: AddNoteService;
   refreshNotesPanel: () => void;
   refreshDecorations: (editor?: vscode.TextEditor) => Promise<void>;
+  onNoteAdded?: () => Promise<void>;
   promptNoteContent?: () => Promise<string | undefined>;
   showInformationMessage?: (message: string) => Thenable<string | undefined>;
   showErrorMessage?: (message: string) => Thenable<string | undefined>;
@@ -56,6 +57,10 @@ export function createAddNoteCommand(
       dependencies.refreshNotesPanel();
       await dependencies.refreshDecorations(editor);
       await showInformationMessage(`FrilVault note added at ${line}:${column}.`);
+
+      if (dependencies.onNoteAdded) {
+        await dependencies.onNoteAdded();
+      }
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Failed to add FrilVault note.';

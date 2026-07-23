@@ -144,6 +144,21 @@ export class CliClient {
     return parseJson<number>(stdout);
   }
 
+  public async checkGitignore(workspaceRoot: string): Promise<{ ignored: boolean }> {
+    const stdout = await this.execInWorkspace(workspaceRoot, [
+      'gitignore',
+      'check',
+      '--format',
+      'json',
+    ]);
+
+    return parseJson<{ ignored: boolean }>(stdout);
+  }
+
+  public async addGitignoreEntry(workspaceRoot: string): Promise<void> {
+    await this.execInWorkspace(workspaceRoot, ['gitignore', 'add']);
+  }
+
   private async execInWorkspace(workspaceRoot: string, args: string[]): Promise<string> {
     try {
       const { stdout } = await execFileAsync(this.getCliPath(), args, {

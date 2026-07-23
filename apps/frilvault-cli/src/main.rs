@@ -42,6 +42,10 @@ fn main() -> Result<()> {
         Commands::Repair(cmd) => {
             command::repair::execute(cmd)?;
         }
+
+        Commands::Gitignore(cmd) => {
+            command::gitignore::execute(cmd)?;
+        }
     }
 
     Ok(())

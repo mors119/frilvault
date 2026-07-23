@@ -37,4 +37,7 @@ mod note_cache_test;
 mod frilvault_app_test;
 
 #[cfg(test)]
+mod gitignore_test;
+
+#[cfg(test)]
 mod repair_engin_test;

@@ -9,6 +9,10 @@ import * as vscode from 'vscode';
 import { CliClient } from '../core/cliClient';
 import { createAddNoteCommand } from '../features/add-note/command';
 import { AddNoteService } from '../features/add-note/service';
+import {
+  GITIGNORE_PROMPT_DISABLED_KEY,
+  maybePromptForGitignore,
+} from '../features/gitignore/prompt';
 import { createShowNotesForCurrentFileCommand } from '../features/notes-panel/command';
 import { FrilVaultNotesProvider } from '../features/notes-panel/provider';
 import { NotesPanelService } from '../features/notes-panel/service';
@@ -216,6 +220,60 @@ suite('Extension Test Suite', () => {
     assert.strictEqual(focusedCommand, 'frilvault.notes.focus');
     assert.strictEqual(infoMessage, '');
   });
+
+  test('Gitignore prompt appends entry when user accepts', async () => {
+    const workspace = createTestWorkspace();
+    let addCalled = false;
+    let infoMessage = '';
+
+    const workspaceState = createMockWorkspaceState();
+
+    await maybePromptForGitignore({
+      getWorkspaceRoot: () => workspace.root,
+      cliClient: {
+        checkGitignore: async () => ({ ignored: false }),
+        addGitignoreEntry: async () => {
+          addCalled = true;
+        },
+      } as unknown as CliClient,
+      workspaceState,
+      showWarningMessage: async (_message, _options, ...items) => items[0],
+      showInformationMessage: async (message) => {
+        infoMessage = message;
+        return undefined;
+      },
+    });
+
+    assert.strictEqual(addCalled, true);
+    assert.strictEqual(infoMessage, 'Added `.vault/` to `.gitignore`.');
+  });
+
+  test('Gitignore prompt respects never ask again preference', async () => {
+    const workspace = createTestWorkspace();
+    let checkCount = 0;
+
+    const workspaceState = createMockWorkspaceState();
+    await workspaceState.update(GITIGNORE_PROMPT_DISABLED_KEY, {
+      [workspace.root]: true,
+    });
+
+    await maybePromptForGitignore({
+      getWorkspaceRoot: () => workspace.root,
+      cliClient: {
+        checkGitignore: async () => {
+          checkCount += 1;
+          return { ignored: false };
+        },
+        addGitignoreEntry: async () => {
+          throw new Error('should not append when prompt is disabled');
+        },
+      } as unknown as CliClient,
+      workspaceState,
+      showWarningMessage: async () => 'Add to .gitignore',
+    });
+
+    assert.strictEqual(checkCount, 0);
+  });
 });
 
 function createTestWorkspace(): TestWorkspace {
@@ -337,4 +395,16 @@ async function configureExtension(workspace: TestWorkspace): Promise<void> {
 async function openFile(filePath: string): Promise<vscode.TextEditor> {
   const document = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath));
   return vscode.window.showTextDocument(document);
+}
+
+function createMockWorkspaceState(): vscode.Memento {
+  const storage = new Map<string, unknown>();
+
+  return {
+    keys: () => [...storage.keys()],
+    get: <T>(key: string) => storage.get(key) as T | undefined,
+    update: async (key: string, value: unknown) => {
+      storage.set(key, value);
+    },
+  };
 }
