@@ -6,6 +6,9 @@ use crate::{
     output::{OutputFormat, print_json, resolve_format},
 };
 
+/// Executes `flvt resolve-uri` and prints the resolved note view.
+///
+/// `flvt resolve-uri`를 실행하고 해석된 note view를 출력합니다.
 pub fn execute(command: ResolveUriCommand) -> Result<()> {
     let vault = FrilVault::open(std::env::current_dir()?)?;
     let mut service = vault.notes()?;

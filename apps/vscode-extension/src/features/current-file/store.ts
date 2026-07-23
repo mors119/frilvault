@@ -22,6 +22,17 @@ const EMPTY_SNAPSHOT: CurrentFileNotesSnapshot = {
   loading: false,
 };
 
+/**
+ * Cached note list for the active editor file.
+ *
+ * The store prevents stale async list responses from overwriting newer editor
+ * state by tracking a monotonically increasing load generation.
+ *
+ * 활성 편집기 파일의 note list cache입니다.
+ *
+ * load generation을 증가시키며 stale async list 응답이 더 새로운 editor
+ * state를 덮어쓰지 않도록 막습니다.
+ */
 export class CurrentFileNotesStore implements vscode.Disposable {
   private snapshot: CurrentFileNotesSnapshot = { ...EMPTY_SNAPSHOT };
 
@@ -97,6 +108,8 @@ export class CurrentFileNotesStore implements vscode.Disposable {
     try {
       const notes = await this.cliClient.listNotes(workspaceRoot, sourceFile);
 
+      // Ignore late responses from a previous editor or disabled state.
+      // 이전 editor 또는 disabled state에서 온 늦은 응답은 무시합니다.
       if (generation !== this.loadGeneration) {
         return;
       }

@@ -1,3 +1,14 @@
+/**
+ * JSON shapes returned by the FrilVault CLI.
+ *
+ * These mirror `frilvault-core` read models. The extension treats them as the
+ * boundary between CLI output and UI state.
+ *
+ * FrilVault CLI가 반환하는 JSON shape입니다.
+ *
+ * `frilvault-core` read model과 대응하며, extension은 CLI output과 UI state
+ * 사이의 경계로 사용합니다.
+ */
 export type NoteAnchor = {
   type: 'Line' | 'Symbol';
   line?: number;
@@ -15,11 +26,17 @@ export type NoteAttachment = {
   extension: string;
 };
 
+/** Current resolved coordinates for a symbol note anchor. */
 export type ResolvedSymbol = {
   line: number;
   column: number;
 };
 
+/**
+ * Note plus source-file context returned by list/search/update/add commands.
+ *
+ * list/search/update/add command가 반환하는 source file context 포함 note입니다.
+ */
 export type NoteView = {
   source_file: string;
   note: {

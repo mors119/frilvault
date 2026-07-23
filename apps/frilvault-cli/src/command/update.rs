@@ -8,6 +8,13 @@ use crate::{
     output::{OutputFormat, print_json, resolve_format},
 };
 
+/// Executes `flvt update` by delegating persistence to `frilvault-core`.
+///
+/// JSON output returns the updated `NoteView` consumed by editor integrations.
+///
+/// `frilvault-core`에 저장을 위임하는 `flvt update` 실행 함수입니다.
+///
+/// JSON 출력은 editor integration이 사용하는 갱신된 `NoteView`를 반환합니다.
 pub fn execute(command: UpdateCommand) -> Result<()> {
     let vault = FrilVault::open(std::env::current_dir()?)?;
     let mut service = vault.notes()?;

@@ -261,6 +261,8 @@ fn delete_note_invalidates_cached_entry() {
     assert_eq!(notes[0].note.content, "keep me");
 }
 
+// Regression: note updates must invalidate cached note JSON before the next read.
+// 회귀 검증: note 수정 후 다음 read 전에 캐시된 note JSON이 무효화되어야 합니다.
 #[test]
 fn update_note_invalidates_cached_entry() {
     let workspace = create_test_workspace();

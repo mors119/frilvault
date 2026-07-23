@@ -2,6 +2,13 @@ use crate::{ResolvedSymbol, SymbolAnchor, SymbolKind};
 
 use super::marker::{symbol_marker, symbol_marker_for_name};
 
+/// Resolves symbol anchors to current line/column positions in source text.
+///
+/// Resolution is text-based and uses stored signatures or symbol names as markers.
+///
+/// symbol anchor를 source text의 현재 line/column 위치로 해석합니다.
+///
+/// 해석은 텍스트 기반이며 저장된 signature 또는 symbol name을 marker로 사용합니다.
 pub struct SymbolResolver;
 
 impl SymbolResolver {
@@ -10,6 +17,8 @@ impl SymbolResolver {
         let mut candidates = find_marker_positions(content, &marker);
 
         if candidates.is_empty() {
+            // Fall back to a looser name-based marker when signature matching fails.
+            // signature 매칭 실패 시 더 느슨한 name 기반 marker로 fallback합니다.
             let fallback = symbol_marker_for_name(&anchor.name, anchor.kind);
             if fallback != marker {
                 candidates = find_marker_positions(content, &fallback);

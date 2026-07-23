@@ -1,3 +1,7 @@
+//! Human-readable and JSON output helpers for CLI commands.
+//!
+//! CLI command용 사람이 읽기 쉬운 출력과 JSON 출력 helper입니다.
+
 use anyhow::Result;
 use frilvault_core::{NoteAnchor, NoteView};
 use serde::Serialize;

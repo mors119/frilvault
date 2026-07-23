@@ -1,3 +1,12 @@
+//! Stable note URI parsing and resolution.
+//!
+//! URIs identify notes by id and workspace root. They do not encode source paths,
+//! so links remain valid across file renames when the note id still exists.
+//!
+//! stable note URI 파싱과 해석을 제공합니다.
+//!
+//! URI는 id와 workspace root로 note를 식별하며 source path를 담지 않아,
+//! note id가 유효하면 파일 rename 이후에도 링크가 유지됩니다.
 mod note_uri;
 
 pub use note_uri::{NOTE_URI_SCHEME, NOTE_URI_VERSION, ParsedNoteUri};
@@ -11,6 +20,9 @@ use crate::{
     workspace::WorkspaceIndex,
 };
 
+/// Serializes, parses, and resolves stable FrilVault note URIs.
+///
+/// stable FrilVault note URI를 직렬화, 파싱, 해석합니다.
 pub struct NoteUriResolver;
 
 impl NoteUriResolver {
@@ -22,6 +34,14 @@ impl NoteUriResolver {
         ParsedNoteUri::parse(uri)
     }
 
+    /// Resolves a URI into a current note view for the open workspace service.
+    ///
+    /// # Errors
+    ///
+    /// Returns workspace mismatch, stale-note, or unresolved-anchor errors when the
+    /// note cannot be opened safely.
+    ///
+    /// URI를 열린 workspace service 기준 현재 note view로 해석합니다.
     pub fn resolve(service: &mut NoteService, uri: &str) -> FrilVaultResult<NoteView> {
         let parsed = ParsedNoteUri::parse(uri)?;
         let current_workspace = service.workspace_root();
@@ -60,6 +80,8 @@ fn ensure_source_file_is_current(
 }
 
 fn ensure_anchor_is_resolvable(view: &NoteView, note_id: Uuid) -> FrilVaultResult<()> {
+    // Symbol notes must resolve in current source text before navigation succeeds.
+    // symbol note는 이동 전에 현재 source text에서 해석되어야 합니다.
     if matches!(view.note.anchor, NoteAnchor::Symbol(_)) && view.resolved.is_none() {
         return Err(FrilVaultError::UnresolvedAnchor(note_id));
     }

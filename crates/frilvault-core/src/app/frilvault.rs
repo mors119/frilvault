@@ -7,11 +7,29 @@ use crate::{
     workspace::{PathResolver, WorkspaceIndexRepository, WorkspaceRepository, WorkspaceService},
 };
 
+/// Top-level entry point for opening a FrilVault workspace.
+///
+/// `FrilVault` does not hold long-lived runtime state. Each accessor builds the
+/// repositories and `VaultContext` needed for a single service call chain.
+///
+/// FrilVault 워크스페이스를 여는 최상위 진입점입니다.
+///
+/// `FrilVault`는 장기 실행 상태를 보관하지 않으며, 각 접근자는 단일 서비스 호출
+/// 체인에 필요한 저장소와 `VaultContext`를 구성합니다.
 pub struct FrilVault {
     workspace_root: PathBuf,
 }
 
 impl FrilVault {
+    /// Opens a workspace rooted at `workspace_root`.
+    ///
+    /// This only records the root path. Vault directories are created lazily when
+    /// services first touch repositories.
+    ///
+    /// `workspace_root`를 루트로 하는 워크스페이스를 엽니다.
+    ///
+    /// 루트 경로만 기록하며, vault 디렉터리는 서비스가 저장소에 처음 접근할 때
+    /// 지연 생성됩니다.
     pub fn open(workspace_root: impl AsRef<Path>) -> FrilVaultResult<Self> {
         Ok(Self {
             workspace_root: workspace_root.as_ref().to_path_buf(),
@@ -34,11 +52,25 @@ impl FrilVault {
         Ok((vault_context, index_repository))
     }
 
+    /// Returns a note service scoped to this workspace.
+    ///
+    /// Callers use this for CRUD, search, attachment, and URI resolution workflows.
+    ///
+    /// 이 워크스페이스에 범위가 지정된 노트 서비스를 반환합니다.
+    ///
+    /// 호출자는 CRUD, 검색, 첨부, URI 해석 워크플로에 이 서비스를 사용합니다.
     pub fn notes(&self) -> FrilVaultResult<NoteService> {
         let (context, _) = self.build_context()?;
         Ok(NoteService::new(context))
     }
 
+    /// Returns a workspace service scoped to this workspace.
+    ///
+    /// Callers use this for stats, health checks, sync, and repair workflows.
+    ///
+    /// 이 워크스페이스에 범위가 지정된 워크스페이스 서비스를 반환합니다.
+    ///
+    /// 호출자는 통계, 상태 점검, 동기화, 복구 워크플로에 이 서비스를 사용합니다.
     pub fn workspace(&self) -> FrilVaultResult<WorkspaceService> {
         let (context, index_repository) = self.build_context()?;
         Ok(WorkspaceService::new(context, index_repository))

@@ -1,11 +1,14 @@
 //! Application services for note operations.
 //!
-//! This module contains high-level note workflows
-//! such as CRUD operations and searching.
+//! This module contains high-level note workflows such as CRUD operations,
+//! searching, attachments, and URI resolution.
 //!
-//! Services should access storage through
-//! VaultContext rather than directly interacting
-//! with repositories.
+//! Services access storage through `VaultContext` rather than repositories directly.
+//!
+//! CRUD, 검색, 첨부, URI 해석 같은 고수준 note 워크플로를 제공하는
+//! 애플리케이션 서비스 모듈입니다.
+//!
+//! 서비스는 저장소를 직접 사용하지 않고 `VaultContext`를 통해 접근합니다.
 
 use std::path::{Path, PathBuf};
 
@@ -23,8 +26,11 @@ use crate::{
 
 /// Application service responsible for note operations.
 ///
-/// Coordinates repositories, caching,
-/// and future runtime behaviors.
+/// Coordinates repositories, caching, symbol resolution, and workspace index updates.
+///
+/// 노트 연산을 담당하는 애플리케이션 서비스입니다.
+///
+/// 저장소, 캐시, symbol 해석, workspace index 갱신을 조율합니다.
 pub struct NoteService {
     vault_context: VaultContext,
 }
@@ -54,6 +60,17 @@ impl NoteService {
         Ok(())
     }
 
+    /// Creates and persists a new note for the requested source file.
+    ///
+    /// Updates the workspace index note count for that file.
+    ///
+    /// # Errors
+    ///
+    /// Returns repository or index errors when vault JSON cannot be written.
+    ///
+    /// 요청한 source file에 새 note를 생성하고 저장합니다.
+    ///
+    /// 해당 파일의 workspace index note count를 갱신합니다.
     pub fn add_note(&mut self, input: AddNoteRequest) -> FrilVaultResult<Note> {
         let source_file = input.source_file.clone();
         let note = Note::new(input);
@@ -70,6 +87,9 @@ impl NoteService {
         Ok(note)
     }
 
+    /// Returns note views for one source file, including resolved symbol locations.
+    ///
+    /// 하나의 source file에 대한 note view를 반환하며, symbol 위치 해석 결과를 포함합니다.
     pub fn list_notes(&mut self, source_file: impl AsRef<Path>) -> FrilVaultResult<Vec<NoteView>> {
         self.query_notes(&NoteQuery {
             source_file: Some(source_file.as_ref().to_path_buf()),
@@ -89,6 +109,9 @@ impl NoteService {
         })
     }
 
+    /// Applies optional file, keyword, and tag filters to note views.
+    ///
+    /// 선택적 file, keyword, tag 필터를 note view에 적용합니다.
     pub fn query_notes(&mut self, query: &NoteQuery) -> FrilVaultResult<Vec<NoteView>> {
         let mut results = if let Some(source_file) = &query.source_file {
             self.note_views_for_source_file(source_file)?
@@ -136,6 +159,13 @@ impl NoteService {
         self.vault_context.preload_notes(source_file.as_ref())
     }
 
+    /// Deletes a note and removes any stored attachments for its id.
+    ///
+    /// # Errors
+    ///
+    /// Returns `NoteNotFound` when the id is absent from the source note file.
+    ///
+    /// note를 삭제하고 해당 id의 저장된 첨부를 함께 제거합니다.
     pub fn delete_note(
         &mut self,
         source_file: impl AsRef<Path>,
@@ -162,6 +192,18 @@ impl NoteService {
         Ok(())
     }
 
+    /// Updates note content and optionally tags.
+    ///
+    /// When `expected_updated_at` is provided, the update is rejected if another
+    /// writer changed the note first.
+    ///
+    /// # Errors
+    ///
+    /// Returns `NoteNotFound` or `ConcurrentModification` when applicable.
+    ///
+    /// note content와 선택적으로 tags를 수정합니다.
+    ///
+    /// `expected_updated_at`가 주어지면 다른 writer가 먼저 수정한 경우 거부됩니다.
     pub fn update_note(
         &mut self,
         source_file: impl AsRef<Path>,
@@ -385,6 +427,9 @@ impl NoteService {
             }))
     }
 
+    /// Returns the absolute workspace root associated with this service.
+    ///
+    /// 이 서비스와 연결된 절대 workspace root를 반환합니다.
     pub fn workspace_root(&self) -> PathBuf {
         self.vault_context
             .workspace_index_repository
@@ -392,10 +437,20 @@ impl NoteService {
             .to_path_buf()
     }
 
+    /// Loads the workspace index and refreshes source-file existence flags.
+    ///
+    /// workspace index를 불러오고 source file 존재 여부 플래그를 갱신합니다.
     pub fn load_workspace_index(&self) -> FrilVaultResult<crate::workspace::WorkspaceIndex> {
         self.vault_context.load_index()
     }
 
+    /// Finds a note by stable id across all indexed source files.
+    ///
+    /// # Errors
+    ///
+    /// Returns `NoteNotFound` when no note with the id exists in the workspace.
+    ///
+    /// 인덱스된 모든 source file에서 stable id로 note를 찾습니다.
     pub fn find_note_by_id(&mut self, note_id: Uuid) -> FrilVaultResult<NoteView> {
         self.all_note_views()?
             .into_iter()
@@ -403,10 +458,20 @@ impl NoteService {
             .ok_or(FrilVaultError::NoteNotFound(note_id))
     }
 
+    /// Resolves a stable note URI into a current `NoteView`.
+    ///
+    /// # Errors
+    ///
+    /// Returns URI, workspace, stale-note, or unresolved-anchor errors when validation fails.
+    ///
+    /// stable note URI를 현재 `NoteView`로 해석합니다.
     pub fn resolve_note_uri(&mut self, uri: &str) -> FrilVaultResult<NoteView> {
         crate::uri::NoteUriResolver::resolve(self, uri)
     }
 
+    /// Serializes a versioned note URI for the current workspace root.
+    ///
+    /// 현재 workspace root 기준 versioned note URI를 직렬화합니다.
     pub fn note_uri(&self, note_id: Uuid) -> FrilVaultResult<String> {
         crate::uri::NoteUriResolver::serialize(note_id, &self.workspace_root())
     }

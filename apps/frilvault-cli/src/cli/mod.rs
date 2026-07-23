@@ -1,3 +1,7 @@
+//! CLI argument definitions and command routing.
+//!
+//! CLI 인자 정의와 command routing입니다.
+
 use clap::{Parser, Subcommand};
 
 pub mod add;

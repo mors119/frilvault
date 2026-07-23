@@ -1,7 +1,12 @@
 //! JSON-backed note repository.
 //!
-//! Notes are persisted as JSON files
-//! inside the `.vault/notes` directory.
+//! Notes are persisted as JSON files inside `.vault/notes`.
+//! This module does not modify source files themselves.
+//!
+//! JSON 기반 note 저장소입니다.
+//!
+//! note는 `.vault/notes` 아래 JSON 파일로 저장되며, 이 모듈은 source file
+//! 본문을 수정하지 않습니다.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -11,6 +16,9 @@ use crate::parser::JsonParser;
 use crate::workspace::PathResolver;
 use crate::{FrilVaultResult, Note};
 
+/// Persists note JSON files under `.vault/notes`.
+///
+/// `.vault/notes` 아래 note JSON 파일을 저장합니다.
 #[derive(Debug, Clone)]
 pub struct NoteRepository {
     path_resolver: PathResolver,

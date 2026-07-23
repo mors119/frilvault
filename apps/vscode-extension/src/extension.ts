@@ -1,3 +1,16 @@
+/**
+ * VS Code extension entry point for FrilVault.
+ *
+ * Activation wires CLI-backed commands, providers, decorators, and workspace
+ * listeners. All note persistence goes through `CliClient`; the extension never
+ * writes `.vault` JSON directly.
+ *
+ * FrilVault VS Code extension 진입점입니다.
+ *
+ * activation 시 CLI 기반 command, provider, decorator, workspace listener를
+ * 등록합니다. 모든 note 저장은 `CliClient`를 거치며 extension은 `.vault`
+ * JSON을 직접 쓰지 않습니다.
+ */
 import * as vscode from 'vscode';
 
 import { CliClient } from './core/cliClient';
@@ -33,6 +46,15 @@ let activeStore: CurrentFileNotesStore | undefined;
 let activeRegistry: GutterNoteRegistry | undefined;
 const codeLensRefreshEmitter = new vscode.EventEmitter<void>();
 
+/**
+ * Registers FrilVault commands, providers, and workspace listeners.
+ *
+ * Refresh happens when the active editor changes, a document is saved, note data
+ * mutates, or the user explicitly refreshes. Disabled workspaces clear UI state
+ * but keep enablement commands available.
+ *
+ * FrilVault command, provider, workspace listener를 등록합니다.
+ */
 export function activate(context: vscode.ExtensionContext): void {
   const cliClient = new CliClient();
   const notesPanelService = new NotesPanelService(cliClient);
@@ -243,6 +265,11 @@ export function activate(context: vscode.ExtensionContext): void {
   });
 }
 
+/**
+ * Clears in-memory UI state when the extension deactivates.
+ *
+ * extension 비활성화 시 in-memory UI state를 정리합니다.
+ */
 export function deactivate(): void {
   activeDecorator?.clear();
   activeStore?.clear();

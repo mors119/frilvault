@@ -94,6 +94,8 @@ fn resolve_note_uri_returns_matching_note() {
     assert_eq!(resolved.note.content, "linked note");
 }
 
+// Scenario: stable note URIs must keep working after source rename once workspace sync runs.
+// 시나리오: workspace sync 이후 source rename이 있어도 stable note URI가 계속 동작해야 합니다.
 #[test]
 fn resolve_note_uri_survives_source_file_rename_after_sync() {
     let workspace = create_test_workspace();

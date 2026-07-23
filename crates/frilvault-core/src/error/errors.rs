@@ -1,6 +1,9 @@
 use thiserror::Error;
 use uuid::Uuid;
 
+/// Core error type returned by FrilVault domain operations.
+///
+/// FrilVault 코어 도메인 연산이 반환하는 공통 오류 타입입니다.
 #[derive(Debug, Error)]
 pub enum FrilVaultError {
     #[error("io error: {0}")]
@@ -9,9 +12,15 @@ pub enum FrilVaultError {
     #[error("json error: {0}")]
     JSON(#[from] serde_json::Error),
 
+    /// Returned when a caller passes an absolute source path outside the workspace root.
+    ///
+    /// 호출자가 워크스페이스 루트 밖의 절대 source path를 전달했을 때 반환됩니다.
     #[error("source path is outside workspace")]
     SourcePathOutsideWorkspace,
 
+    /// Returned when a note id is not present in the requested source note file.
+    ///
+    /// 요청한 source note 파일에 note id가 없을 때 반환됩니다.
     #[error("note not found: {0}")]
     NoteNotFound(Uuid),
 
@@ -27,18 +36,33 @@ pub enum FrilVaultError {
     #[error("image exceeds maximum size of {max_bytes} bytes")]
     ImageTooLarge { max_bytes: usize },
 
+    /// Returned when a note URI string fails structural or security validation.
+    ///
+    /// note URI 문자열이 구조 또는 보안 검증에 실패했을 때 반환됩니다.
     #[error("malformed note uri: {0}")]
     MalformedNoteUri(String),
 
+    /// Returned when a URI targets a different workspace root than the open service.
+    ///
+    /// URI가 열린 서비스와 다른 workspace root를 가리킬 때 반환됩니다.
     #[error("unknown workspace: {0}")]
     UnknownWorkspace(String),
 
+    /// Returned when the indexed source file no longer exists on disk.
+    ///
+    /// 인덱스에 등록된 source file이 디스크에 더 이상 없을 때 반환됩니다.
     #[error("stale note: {0}")]
     StaleNote(Uuid),
 
+    /// Returned when a symbol note cannot be resolved in current source text.
+    ///
+    /// symbol note를 현재 source text에서 해석할 수 없을 때 반환됩니다.
     #[error("unresolved anchor for note: {0}")]
     UnresolvedAnchor(Uuid),
 
+    /// Returned when `expected_updated_at` does not match the stored note revision.
+    ///
+    /// `expected_updated_at`이 저장된 note revision과 일치하지 않을 때 반환됩니다.
     #[error("concurrent modification for note: {0}")]
     ConcurrentModification(Uuid),
 }

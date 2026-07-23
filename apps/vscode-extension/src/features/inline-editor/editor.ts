@@ -35,6 +35,17 @@ export interface InlineNoteEditorDependencies {
   ) => Thenable<string | undefined>;
 }
 
+/**
+ * Webview-based inline note editor orchestrator.
+ *
+ * Handles create/edit drafts, validation, optimistic concurrency recovery,
+ * undo, and post-save UI refresh through the CLI boundary.
+ *
+ * webview 기반 inline note editor orchestrator입니다.
+ *
+ * create/edit draft, validation, optimistic concurrency 복구, undo,
+ * 저장 후 CLI 경계를 통한 UI refresh를 처리합니다.
+ */
 export class InlineNoteEditor {
   private readonly panel = new InlineNotePanel();
   private readonly service: InlineNoteEditorService;

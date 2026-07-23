@@ -50,6 +50,17 @@ export interface SearchNotesInput {
   sourceFile?: string;
 }
 
+/**
+ * Executes FrilVault CLI commands on behalf of the extension.
+ *
+ * Each method runs `flvt` in the workspace root and parses JSON responses into
+ * typed DTOs. Failures from the child process are surfaced as thrown errors.
+ *
+ * extension을 대신해 FrilVault CLI command를 실행합니다.
+ *
+ * 각 메서드는 workspace root에서 `flvt`를 실행하고 JSON 응답을 typed DTO로
+ * 파싱합니다. child process 실패는 throw된 error로 전달됩니다.
+ */
 export class CliClient {
   public constructor(private readonly getCliPath = getConfiguredCliPath) {}
 
@@ -246,6 +257,8 @@ export class CliClient {
   }
 
   private async execInWorkspace(workspaceRoot: string, args: string[]): Promise<string> {
+    // Run the CLI in the workspace root so relative `--file` paths resolve correctly.
+    // workspace root에서 CLI를 실행해 상대 `--file` 경로가 올바르게 해석되게 합니다.
     try {
       const { stdout } = await execFileAsync(this.getCliPath(), args, {
         cwd: workspaceRoot,

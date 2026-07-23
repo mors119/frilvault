@@ -4,10 +4,20 @@ use uuid::Uuid;
 
 use crate::{FrilVaultError, FrilVaultResult};
 
+/// Custom URI scheme used by FrilVault note links.
+///
+/// FrilVault note link에 사용하는 커스텀 URI scheme입니다.
 pub const NOTE_URI_SCHEME: &str = "frilvault";
+
+/// Current URI format version embedded in serialized links.
+///
+/// 직렬화된 link에 포함되는 현재 URI format version입니다.
 pub const NOTE_URI_VERSION: &str = "v1";
 const NOTE_URI_PREFIX: &str = "frilvault://note/";
 
+/// Parsed components of a FrilVault note URI.
+///
+/// FrilVault note URI의 파싱 결과 구성 요소입니다.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParsedNoteUri {
     pub note_id: Uuid,
@@ -99,6 +109,8 @@ pub fn validate_workspace_path(workspace: &Path) -> FrilVaultResult<PathBuf> {
         ));
     }
 
+    // Reject parent-dir segments to block path traversal through URI input.
+    // URI 입력 경로 탐색을 막기 위해 parent-dir segment를 거부합니다.
     for component in workspace.components() {
         if matches!(component, Component::ParentDir) {
             return Err(FrilVaultError::MalformedNoteUri(

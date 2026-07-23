@@ -1,3 +1,5 @@
+use std::path::{Path, PathBuf};
+
 use crate::{
     FrilVaultError, FrilVaultResult,
     constants::{
@@ -5,8 +7,15 @@ use crate::{
         WORKSPACE_FILE_NAME,
     },
 };
-use std::path::{Path, PathBuf};
 
+/// Converts between workspace source paths and `.vault` storage paths.
+///
+/// All vault-relative layout rules live here so repositories stay path-agnostic.
+///
+/// workspace source path와 `.vault` storage path를 변환합니다.
+///
+/// 저장소가 경로 규칙을 몰라도 되도록 vault 상대 레이아웃 규칙을 이 타입에
+/// 모읍니다.
 #[derive(Debug, Clone)]
 pub struct PathResolver {
     workspace_root: PathBuf,
@@ -63,7 +72,8 @@ impl PathResolver {
             .join("workspace.json")
     }
 
-    // Convert the relative path of the source file to the path '.vault/notes/{source_file}.json'
+    // Map `src/main.rs` -> `.vault/notes/src/main.rs.json`.
+    // `src/main.rs` -> `.vault/notes/src/main.rs.json`으로 매핑합니다.
     pub fn resolve_note_path(&self, source_file: impl AsRef<Path>) -> PathBuf {
         self.notes_root().join(Self::note_file_name(source_file))
     }

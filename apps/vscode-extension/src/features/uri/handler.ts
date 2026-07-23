@@ -10,6 +10,17 @@ export interface NoteUriHandlerDependencies {
   isEnabled: () => boolean;
 }
 
+/**
+ * Registers the `frilvault://` URI handler used by copied note links.
+ *
+ * The handler resolves the note through the CLI and reveals it in the editor.
+ * It never reads or writes vault JSON directly from TypeScript.
+ *
+ * 복사된 note link가 사용하는 `frilvault://` URI handler를 등록합니다.
+ *
+ * handler는 CLI로 note를 해석한 뒤 editor에서 표시하며, TypeScript에서 vault
+ * JSON을 직접 읽거나 쓰지 않습니다.
+ */
 export function registerNoteUriHandler(
   context: vscode.ExtensionContext,
   dependencies: NoteUriHandlerDependencies,
