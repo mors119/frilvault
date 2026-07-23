@@ -5,6 +5,7 @@ mod note;
 mod parser;
 mod runtime;
 mod symbol;
+mod uri;
 mod workspace;
 
 pub use app::FrilVault;
@@ -15,6 +16,7 @@ pub use note::{
     NoteView, SymbolAnchor, SymbolKind,
 };
 pub use symbol::{ResolvedSymbol, SymbolResolver, symbol_marker};
+pub use uri::{NOTE_URI_SCHEME, NOTE_URI_VERSION, NoteUriResolver, ParsedNoteUri};
 pub use workspace::{
     ExplorerGroup, ExplorerNode, FileMove, RepairSuggestion, SyncResult, WorkspaceExplorer,
     WorkspaceHealth, WorkspaceService, WorkspaceStats,

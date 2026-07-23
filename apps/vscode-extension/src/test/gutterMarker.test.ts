@@ -73,7 +73,7 @@ suite('Gutter marker helpers', () => {
 
     assert.strictEqual(
       uri,
-      'frilvault://note/note-id?workspace=%2Ftmp%2Fworkspace',
+      'frilvault://note/v1/note-id?workspace=%2Ftmp%2Fworkspace',
     );
   });
 });

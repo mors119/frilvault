@@ -6,6 +6,7 @@ pub mod explorer;
 pub mod gitignore;
 pub mod list;
 pub mod repair;
+pub mod resolve_uri;
 pub mod search;
 pub mod stats;
 pub mod sync;

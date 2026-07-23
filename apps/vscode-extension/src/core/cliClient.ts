@@ -164,6 +164,18 @@ export class CliClient {
     await this.execInWorkspace(workspaceRoot, ['gitignore', 'add']);
   }
 
+  public async resolveNoteUri(workspaceRoot: string, uri: string): Promise<NoteView> {
+    const stdout = await this.execInWorkspace(workspaceRoot, [
+      'resolve-uri',
+      '--uri',
+      uri,
+      '--format',
+      'json',
+    ]);
+
+    return parseJson<NoteView>(stdout);
+  }
+
   private async execInWorkspace(workspaceRoot: string, args: string[]): Promise<string> {
     try {
       const { stdout } = await execFileAsync(this.getCliPath(), args, {

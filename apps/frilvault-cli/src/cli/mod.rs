@@ -9,6 +9,7 @@ pub mod gitignore;
 pub mod health;
 pub mod list;
 pub mod repair;
+pub mod resolve_uri;
 pub mod search;
 pub mod stats;
 pub mod sync;
@@ -22,6 +23,7 @@ use gitignore::GitignoreCommand;
 use health::HealthCommand;
 use list::ListCommand;
 use repair::RepairCommand;
+use resolve_uri::ResolveUriCommand;
 use search::SearchCommand;
 use stats::StatsCommand;
 use sync::SyncCommand;
@@ -43,6 +45,7 @@ pub enum Commands {
     Delete(DeleteCommand),
     Search(SearchCommand),
     Repair(RepairCommand),
+    ResolveUri(ResolveUriCommand),
     Doctor(HealthCommand),
     Health(HealthCommand),
     Stats(StatsCommand),

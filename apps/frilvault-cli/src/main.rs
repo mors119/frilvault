@@ -51,6 +51,10 @@ fn main() -> Result<()> {
             command::repair::execute(cmd)?;
         }
 
+        Commands::ResolveUri(cmd) => {
+            command::resolve_uri::execute(cmd)?;
+        }
+
         Commands::Gitignore(cmd) => {
             command::gitignore::execute(cmd)?;
         }

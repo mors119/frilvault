@@ -7,7 +7,7 @@
 //! VaultContext rather than directly interacting
 //! with repositories.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use chrono::Utc;
 use uuid::Uuid;
@@ -371,6 +371,32 @@ impl NoteService {
                 NoteAnchor::Symbol(anchor) => anchor.name.to_lowercase() == symbol,
                 _ => false,
             }))
+    }
+
+    pub fn workspace_root(&self) -> PathBuf {
+        self.vault_context
+            .workspace_index_repository
+            .workspace_root()
+            .to_path_buf()
+    }
+
+    pub fn load_workspace_index(&self) -> FrilVaultResult<crate::workspace::WorkspaceIndex> {
+        self.vault_context.load_index()
+    }
+
+    pub fn find_note_by_id(&mut self, note_id: Uuid) -> FrilVaultResult<NoteView> {
+        self.all_note_views()?
+            .into_iter()
+            .find(|view| view.note.id == note_id)
+            .ok_or(FrilVaultError::NoteNotFound(note_id))
+    }
+
+    pub fn resolve_note_uri(&mut self, uri: &str) -> FrilVaultResult<NoteView> {
+        crate::uri::NoteUriResolver::resolve(self, uri)
+    }
+
+    pub fn note_uri(&self, note_id: Uuid) -> FrilVaultResult<String> {
+        crate::uri::NoteUriResolver::serialize(note_id, &self.workspace_root())
     }
 }
 
