@@ -9,7 +9,7 @@ export function isFrilVaultEnabled(
   const enabled =
     workspaceState.get<Record<string, boolean>>(FRILVAULT_ENABLED_KEY) ?? {};
 
-  return enabled[workspaceRoot] !== false;
+  return enabled[workspaceRoot] === true;
 }
 
 export async function setFrilVaultEnabled(
