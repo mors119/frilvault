@@ -241,7 +241,7 @@ export class GutterNoteActions {
 
 export function buildNoteUri(noteId: string, workspaceRoot: string): string {
   const encodedRoot = encodeURIComponent(workspaceRoot);
-  return `frilvault://note/${noteId}?workspace=${encodedRoot}`;
+  return `frilvault://note/v1/${noteId}?workspace=${encodedRoot}`;
 }
 
 function noteKindLabel(note: NoteView): string {

@@ -18,6 +18,7 @@ import { NotesPanelService } from './features/notes-panel/service';
 import { createSearchCommand } from './features/search/command';
 import { createApplyRepairsCommand, createShowHealthCommand } from './features/workspace/health';
 import { registerSourceRenameHandler } from './features/workspace/rename';
+import { registerNoteUriHandler } from './features/uri/handler';
 import { registerWorkspaceWatcher } from './features/workspace/watcher';
 import { createShowStatsCommand } from './features/workspace/stats';
 import type { NoteView } from './types';
@@ -194,6 +195,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   registerSourceRenameHandler(context, cliClient, isEnabled, invalidateViews);
   registerWorkspaceWatcher(context, cliClient, isEnabled, invalidateViews);
+  registerNoteUriHandler(context, { cliClient, isEnabled });
 
   void syncEnabledContext(isEnabled()).then(async () => {
     try {

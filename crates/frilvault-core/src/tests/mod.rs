@@ -4,6 +4,9 @@ mod helper;
 mod attachment_test;
 
 #[cfg(test)]
+mod note_uri_test;
+
+#[cfg(test)]
 mod note_entity_test;
 
 #[cfg(test)]

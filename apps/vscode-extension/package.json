@@ -26,7 +26,8 @@
     "onCommand:frilvault.showHealth",
     "onCommand:frilvault.applyRepairs",
     "onCommand:frilvault.refresh",
-    "onCommand:frilvault.gutter.showActions"
+    "onCommand:frilvault.gutter.showActions",
+    "onUri:frilvault"
   ],
   "main": "./dist/extension.js",
   "contributes": {

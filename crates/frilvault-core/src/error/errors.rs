@@ -26,6 +26,18 @@ pub enum FrilVaultError {
 
     #[error("image exceeds maximum size of {max_bytes} bytes")]
     ImageTooLarge { max_bytes: usize },
+
+    #[error("malformed note uri: {0}")]
+    MalformedNoteUri(String),
+
+    #[error("unknown workspace: {0}")]
+    UnknownWorkspace(String),
+
+    #[error("stale note: {0}")]
+    StaleNote(Uuid),
+
+    #[error("unresolved anchor for note: {0}")]
+    UnresolvedAnchor(Uuid),
 }
 
 pub type FrilVaultResult<T> = Result<T, FrilVaultError>;
