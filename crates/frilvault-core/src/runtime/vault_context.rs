@@ -107,6 +107,17 @@ impl VaultContext {
         self.note_repository.resolve_note_path(source_file)
     }
 
+    pub fn normalize_source_file(&self, source_file: &Path) -> FrilVaultResult<PathBuf> {
+        if source_file.is_absolute() {
+            return source_file
+                .strip_prefix(self.workspace_index_repository.workspace_root())
+                .map(|path| path.to_path_buf())
+                .map_err(|_| crate::FrilVaultError::SourcePathOutsideWorkspace);
+        }
+
+        Ok(source_file.to_path_buf())
+    }
+
     fn collect_workspace_files(
         &self,
         directory: &Path,

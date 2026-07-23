@@ -81,6 +81,17 @@ impl NoteService {
             .collect())
     }
 
+    pub fn search_notes_by_file(
+        &mut self,
+        source_file: impl AsRef<Path>,
+    ) -> FrilVaultResult<Vec<NoteView>> {
+        let source_file = self
+            .vault_context
+            .normalize_source_file(source_file.as_ref())?;
+
+        self.list_notes(source_file)
+    }
+
     pub fn preload_notes(&mut self, source_file: impl AsRef<Path>) -> FrilVaultResult<()> {
         self.vault_context.preload_notes(source_file.as_ref())
     }

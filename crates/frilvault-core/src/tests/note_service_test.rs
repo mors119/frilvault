@@ -5,7 +5,7 @@ use crate::{
     workspace::{PathResolver, WorkspaceIndexRepository},
 };
 
-use std::fs;
+use std::{fs, path::PathBuf};
 
 #[test]
 fn add_line_type_note_creates_json_file() {
@@ -451,4 +451,57 @@ fn delete_note_updates_persisted_index_count() {
 
     assert_eq!(index.files.len(), 1);
     assert_eq!(index.files[0].note_count, 1);
+}
+
+#[test]
+fn search_notes_by_file_returns_notes_for_source_file() {
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+
+    let mut service = create_test_note_service(workspace_root);
+
+    service
+        .add_note(AddNoteRequest {
+            source_file: "src/main.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "main note".to_string(),
+        })
+        .unwrap();
+
+    service
+        .add_note(AddNoteRequest {
+            source_file: "src/parser/lib.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 3, column: 2 }),
+            content: "parser note".to_string(),
+        })
+        .unwrap();
+
+    let results = service.search_notes_by_file("src/parser/lib.rs").unwrap();
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].source_file, PathBuf::from("src/parser/lib.rs"));
+    assert_eq!(results[0].note.content, "parser note");
+}
+
+#[test]
+fn search_notes_by_file_accepts_absolute_workspace_paths() {
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+
+    let mut service = create_test_note_service(workspace_root);
+
+    service
+        .add_note(AddNoteRequest {
+            source_file: "src/main.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "absolute path note".to_string(),
+        })
+        .unwrap();
+
+    let results = service
+        .search_notes_by_file(workspace_root.join("src/main.rs"))
+        .unwrap();
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].source_file, PathBuf::from("src/main.rs"));
 }
