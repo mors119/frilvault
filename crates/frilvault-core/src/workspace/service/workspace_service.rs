@@ -30,7 +30,7 @@ impl WorkspaceService {
     }
 
     pub fn warm_up(&mut self) -> FrilVaultResult<WorkspaceIndex> {
-        self.index_repository.rebuild()
+        self.index_repository.load_or_rebuild()
     }
 
     pub fn stats(&mut self) -> FrilVaultResult<WorkspaceStats> {

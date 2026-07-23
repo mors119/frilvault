@@ -49,15 +49,21 @@ impl WorkspaceIndexRepository {
     }
 
     pub fn create_if_missing(&self) -> FrilVaultResult<()> {
+        if let Some(parent) = self.path_resolver.workspace_index_path().parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn load_or_rebuild(&self) -> FrilVaultResult<WorkspaceIndex> {
         let path = self.path_resolver.workspace_index_path();
 
         if path.exists() {
-            return Ok(());
+            return self.load();
         }
 
-        self.save(&WorkspaceIndex::default())?;
-
-        Ok(())
+        self.rebuild()
     }
 
     pub fn rebuild(&self) -> FrilVaultResult<WorkspaceIndex> {

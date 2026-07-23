@@ -48,7 +48,7 @@ fn save_and_load_index() {
 }
 
 #[test]
-fn create_if_missing_creates_index_file() {
+fn create_if_missing_creates_index_directory() {
     let workspace = create_test_workspace();
     let workspace_root = workspace.root();
     let resolver = PathResolver::new(workspace_root);
@@ -57,7 +57,69 @@ fn create_if_missing_creates_index_file() {
 
     repository.create_if_missing().unwrap();
 
+    assert!(resolver.workspace_index_path().parent().unwrap().exists());
+    assert!(!resolver.workspace_index_path().exists());
+}
+
+#[test]
+fn load_or_rebuild_scans_when_index_file_is_missing() {
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    fs::create_dir_all(workspace_root.join("src")).unwrap();
+    fs::write(workspace_root.join("src/main.rs"), "").unwrap();
+
+    let mut note_service = create_test_note_service(workspace_root);
+    note_service
+        .add_note(AddNoteRequest {
+            source_file: "src/main.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "indexed note".to_string(),
+        })
+        .unwrap();
+
+    let resolver = PathResolver::new(workspace_root);
+    let repository = WorkspaceIndexRepository::new(resolver.clone());
+
+    assert!(!resolver.workspace_index_path().exists());
+
+    let index = repository.load_or_rebuild().unwrap();
+
+    assert_eq!(index.files.len(), 1);
+    assert_eq!(index.files[0].source_file, "src/main.rs");
     assert!(resolver.workspace_index_path().exists());
+}
+
+#[test]
+fn load_or_rebuild_loads_existing_index_without_scanning() {
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let resolver = PathResolver::new(workspace_root);
+    let repository = WorkspaceIndexRepository::new(resolver.clone());
+
+    let mut index = WorkspaceIndex::default();
+    index.files.push(IndexedFile {
+        source_file: "src/main.rs".to_string(),
+        note_count: 1,
+        exists: true,
+    });
+    repository.save(&index).unwrap();
+
+    fs::create_dir_all(workspace_root.join("src")).unwrap();
+    fs::write(workspace_root.join("src/other.rs"), "").unwrap();
+
+    let mut note_service = create_test_note_service(workspace_root);
+    note_service
+        .add_note(AddNoteRequest {
+            source_file: "src/other.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "unindexed note".to_string(),
+        })
+        .unwrap();
+
+    let loaded = repository.load_or_rebuild().unwrap();
+
+    assert_eq!(loaded.files.len(), 1);
+    assert_eq!(loaded.files[0].source_file, "src/main.rs");
 }
 
 #[test]
