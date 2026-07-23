@@ -3,6 +3,7 @@ use std::{fs, path::Path};
 use crate::{
     AddNoteRequest, LineAnchor, Note, NoteAnchor,
     tests::helper::{create_test_note_service, create_test_vault_context, create_test_workspace},
+    workspace::PathResolver,
 };
 
 #[test]
@@ -286,4 +287,59 @@ fn update_note_invalidates_cached_entry() {
     let notes = service.list_notes(source_file).unwrap();
     assert_eq!(notes.len(), 1);
     assert_eq!(notes[0].note.content, "new content");
+}
+
+#[test]
+fn search_notes_uses_cache_for_indexed_files() {
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut service = create_test_note_service(workspace_root);
+
+    service
+        .add_note(AddNoteRequest {
+            source_file: "src/main.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "cache me for search".to_string(),
+            tags: None,
+        })
+        .unwrap();
+
+    let first_search = service.search_notes("cache").unwrap();
+    assert_eq!(first_search.len(), 1);
+
+    let note_path = PathResolver::new(workspace_root).note_path_for_source_file("src/main.rs");
+    fs::remove_file(note_path).unwrap();
+
+    let second_search = service.search_notes("cache").unwrap();
+    assert_eq!(second_search.len(), 1);
+    assert_eq!(second_search[0].note.content, "cache me for search");
+}
+
+#[test]
+fn search_notes_reflects_updated_content_after_update() {
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut service = create_test_note_service(workspace_root);
+    let source_file = Path::new("src/main.rs");
+
+    let note = service
+        .add_note(AddNoteRequest {
+            source_file: source_file.to_path_buf(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "search old content".to_string(),
+            tags: None,
+        })
+        .unwrap();
+
+    service.list_notes(source_file).unwrap();
+    assert_eq!(service.search_notes("old content").unwrap().len(), 1);
+
+    service
+        .update_note(source_file, note.id, "search new content".to_string())
+        .unwrap();
+
+    let results = service.search_notes("new content").unwrap();
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].note.content, "search new content");
+    assert!(service.search_notes("old content").unwrap().is_empty());
 }

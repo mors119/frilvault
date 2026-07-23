@@ -143,7 +143,7 @@ impl NoteService {
     }
 
     fn all_note_views(&mut self) -> FrilVaultResult<Vec<NoteView>> {
-        let records = self.vault_context.note_repository.list_all_note_files()?;
+        let records = self.vault_context.list_all_note_files()?;
 
         let mut results = Vec::new();
 
