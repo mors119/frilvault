@@ -21,6 +21,9 @@ import {
 import { createShowNotesForCurrentFileCommand } from '../features/notes-panel/command';
 import { FrilVaultNotesProvider } from '../features/notes-panel/provider';
 import { NotesPanelService } from '../features/notes-panel/service';
+import { NotesPanelItem } from '../features/notes-panel/view';
+import type { NoteView } from '../types';
+import { revealNote } from '../utils/file';
 
 interface TestWorkspace {
   root: string;
@@ -82,8 +85,8 @@ suite('Extension Test Suite', () => {
     const firstChildren = await provider.getChildren();
 
     assert.strictEqual(firstChildren.length, 1);
-    assert.strictEqual(firstChildren[0]?.label, path.join('src', 'sample.ts'));
-    assert.strictEqual(firstChildren[0]?.description, '1 note');
+    assert.strictEqual(firstChildren[0]?.label, 'Line Notes');
+    assert.strictEqual(firstChildren[0]?.description, '1');
     const firstNotes = await provider.getChildren(firstChildren[0]);
     assert.strictEqual(firstNotes[0]?.label, 'first file note');
     assert.strictEqual(firstNotes[0]?.description, 'L7');
@@ -93,10 +96,59 @@ suite('Extension Test Suite', () => {
     const secondChildren = await provider.getChildren();
 
     assert.strictEqual(secondChildren.length, 1);
-    assert.strictEqual(secondChildren[0]?.label, path.join('src', 'other.ts'));
+    assert.strictEqual(secondChildren[0]?.label, 'Line Notes');
     const secondNotes = await provider.getChildren(secondChildren[0]);
     assert.strictEqual(secondNotes[0]?.label, 'second file note');
     assert.strictEqual(secondNotes[0]?.description, 'L2');
+  });
+
+  test('FrilVault Notes provider groups line and symbol notes separately', async () => {
+    const workspace = createTestWorkspace();
+    writeNotesState(workspace, [
+      createSymbolNoteView('src/sample.ts', 'myFn', 12, 'symbol note'),
+      createLineNoteView('src/sample.ts', 3, 1, 'line note'),
+    ]);
+
+    await configureExtension(workspace);
+    await openFile(workspace.sourceFile);
+
+    const cliClient = new CliClient(() => workspace.cliPath);
+    const provider = new FrilVaultNotesProvider(new NotesPanelService(cliClient), () => workspace.root);
+    const groups = await provider.getChildren();
+
+    assert.strictEqual(groups.length, 2);
+    assert.strictEqual(groups[0]?.label, 'Line Notes');
+    assert.strictEqual(groups[1]?.label, 'Symbol Notes');
+
+    const lineNotes = await provider.getChildren(groups[0]);
+    assert.strictEqual(lineNotes.length, 1);
+    assert.strictEqual(lineNotes[0]?.label, 'line note');
+
+    const symbolNotes = await provider.getChildren(groups[1]);
+    assert.strictEqual(symbolNotes.length, 1);
+    assert.strictEqual(symbolNotes[0]?.label, 'symbol note');
+    assert.strictEqual(symbolNotes[0]?.description, 'L12 myFn');
+  });
+
+  test('Symbol note reveal prefers resolved coordinates', async () => {
+    const workspace = createTestWorkspace();
+    const noteView = createSymbolNoteView('src/sample.ts', 'myFn', 1, 'symbol note', {
+      line: 8,
+      column: 4,
+    });
+    const item = new NotesPanelItem(noteView, workspace.root);
+
+    assert.strictEqual(item.description, 'L8 myFn');
+
+    await configureExtension(workspace);
+    await openFile(workspace.sourceFile);
+
+    await revealNote(noteView, workspace.root);
+
+    const editor = vscode.window.activeTextEditor;
+    assert.ok(editor);
+    assert.strictEqual(editor.selection.active.line, 7);
+    assert.strictEqual(editor.selection.active.character, 3);
   });
 
   test('Add Note command executes flvt add with relative file path and refreshes', async () => {
@@ -423,7 +475,12 @@ process.exit(1);
   };
 }
 
-function createLineNoteView(sourceFile: string, line: number, column: number, content: string) {
+function createLineNoteView(
+  sourceFile: string,
+  line: number,
+  column: number,
+  content: string,
+): NoteView {
   return {
     source_file: sourceFile,
     note: {
@@ -440,10 +497,32 @@ function createLineNoteView(sourceFile: string, line: number, column: number, co
   };
 }
 
-function writeNotesState(
-  workspace: TestWorkspace,
-  notes: Array<ReturnType<typeof createLineNoteView>>,
-): void {
+function createSymbolNoteView(
+  sourceFile: string,
+  name: string,
+  lineHint: number,
+  content: string,
+  resolved?: { line: number; column: number },
+): NoteView {
+  return {
+    source_file: sourceFile,
+    note: {
+      id: `${sourceFile}-${name}`,
+      anchor: {
+        type: 'Symbol' as const,
+        name,
+        kind: 'Function',
+        line_hint: lineHint,
+      },
+      content,
+      created_at: '2026-06-09T00:00:00Z',
+      updated_at: '2026-06-09T00:00:00Z',
+    },
+    resolved,
+  };
+}
+
+function writeNotesState(workspace: TestWorkspace, notes: NoteView[]): void {
   fs.writeFileSync(workspace.stateFile, JSON.stringify({ notes }, null, 2));
 }
 

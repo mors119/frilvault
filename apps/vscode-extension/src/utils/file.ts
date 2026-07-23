@@ -51,12 +51,19 @@ export async function revealNote(note: NoteView, workspaceRoot: string): Promise
     vscode.Uri.file(path.join(workspaceRoot, note.source_file)),
   );
   const editor = await vscode.window.showTextDocument(document);
-  const line =
-    note.note.anchor.type === 'Line'
-      ? Math.max((note.note.anchor.line ?? 1) - 1, 0)
-      : Math.max((note.note.anchor.line_hint ?? 1) - 1, 0);
-  const column =
-    note.note.anchor.type === 'Line' ? Math.max((note.note.anchor.column ?? 1) - 1, 0) : 0;
+  let line: number;
+  let column: number;
+
+  if (note.note.anchor.type === 'Line') {
+    line = Math.max((note.note.anchor.line ?? 1) - 1, 0);
+    column = Math.max((note.note.anchor.column ?? 1) - 1, 0);
+  } else if (note.resolved) {
+    line = Math.max(note.resolved.line - 1, 0);
+    column = Math.max(note.resolved.column - 1, 0);
+  } else {
+    line = Math.max((note.note.anchor.line_hint ?? 1) - 1, 0);
+    column = 0;
+  }
   const position = new vscode.Position(line, column);
 
   editor.selection = new vscode.Selection(position, position);

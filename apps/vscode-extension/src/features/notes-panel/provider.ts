@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
 
+import type { NoteView } from '../../types';
 import { getRelativeFilePath } from '../../utils/file';
 import { NotesPanelService } from './service';
-import { NotesFileGroupItem, NotesPanelItem } from './view';
+import { NotesAnchorGroupItem, NotesPanelItem } from './view';
 
-type TreeNode = NotesFileGroupItem | NotesPanelItem;
+type TreeNode = NotesAnchorGroupItem | NotesPanelItem;
 
 export class FrilVaultNotesProvider implements vscode.TreeDataProvider<TreeNode> {
   private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void>();
@@ -25,7 +26,7 @@ export class FrilVaultNotesProvider implements vscode.TreeDataProvider<TreeNode>
   }
 
   public async getChildren(element?: TreeNode): Promise<TreeNode[]> {
-    if (element instanceof NotesFileGroupItem) {
+    if (element instanceof NotesAnchorGroupItem) {
       return element.notes.map((note) => new NotesPanelItem(note, this.getWorkspaceRoot()));
     }
 
@@ -39,10 +40,32 @@ export class FrilVaultNotesProvider implements vscode.TreeDataProvider<TreeNode>
     const sourceFile = getRelativeFilePath(workspaceRoot, editor.document.uri.fsPath);
     const notes = await this.service.listNotes(workspaceRoot, sourceFile);
 
-    if (notes.length === 0) {
-      return [];
-    }
-
-    return [new NotesFileGroupItem(sourceFile, notes)];
+    return partitionNotesByAnchor(notes);
   }
+}
+
+function partitionNotesByAnchor(notes: NoteView[]): NotesAnchorGroupItem[] {
+  const lineNotes = notes
+    .filter((note) => note.note.anchor.type === 'Line')
+    .sort(
+      (left, right) =>
+        (left.note.anchor.line ?? 0) - (right.note.anchor.line ?? 0),
+    );
+  const symbolNotes = notes
+    .filter((note) => note.note.anchor.type === 'Symbol')
+    .sort((left, right) =>
+      (left.note.anchor.name ?? '').localeCompare(right.note.anchor.name ?? ''),
+    );
+
+  const groups: NotesAnchorGroupItem[] = [];
+
+  if (lineNotes.length > 0) {
+    groups.push(new NotesAnchorGroupItem('Line', lineNotes));
+  }
+
+  if (symbolNotes.length > 0) {
+    groups.push(new NotesAnchorGroupItem('Symbol', symbolNotes));
+  }
+
+  return groups;
 }
