@@ -1,12 +1,15 @@
 import * as vscode from 'vscode';
 
 import type { InlineNoteDraft } from './draft';
+import type { AutoSaveStatus } from './autoSave';
 
-export interface InlineNotePanelMessage {
-  type: 'save' | 'cancel' | 'undo';
-  content?: string;
-  tagsText?: string;
-}
+export type InlineNotePanelMessage =
+  | { type: 'change'; content: string; tagsText: string }
+  | { type: 'close' }
+  | { type: 'delete' }
+  | { type: 'retry' }
+  | { type: 'keepLocal' }
+  | { type: 'loadExternal' };
 
 export class InlineNotePanel {
   private panel: vscode.WebviewPanel | undefined;
@@ -14,14 +17,17 @@ export class InlineNotePanel {
   private onMessage:
     | ((message: InlineNotePanelMessage) => void | Promise<void>)
     | undefined;
+  private onDispose: (() => void | Promise<void>) | undefined;
 
   public open(
     context: vscode.ExtensionContext,
     draft: InlineNoteDraft,
     onMessage: (message: InlineNotePanelMessage) => void | Promise<void>,
+    onDispose?: () => void | Promise<void>,
   ): void {
     this.draft = draft;
     this.onMessage = onMessage;
+    this.onDispose = onDispose;
 
     if (!this.panel) {
       this.panel = vscode.window.createWebviewPanel(
@@ -36,9 +42,11 @@ export class InlineNotePanel {
       );
 
       this.panel.onDidDispose(() => {
+        void this.onDispose?.();
         this.panel = undefined;
         this.draft = undefined;
         this.onMessage = undefined;
+        this.onDispose = undefined;
       });
 
       this.panel.webview.onDidReceiveMessage(async (message: InlineNotePanelMessage) => {
@@ -53,7 +61,10 @@ export class InlineNotePanel {
     this.panel.reveal(vscode.ViewColumn.Beside, true);
   }
 
-  public updateDraft(draft: InlineNoteDraft, options?: { errorMessage?: string }): void {
+  public updateDraft(
+    draft: InlineNoteDraft,
+    options?: { errorMessage?: string; status?: AutoSaveStatus; canDelete?: boolean },
+  ): void {
     this.draft = draft;
 
     if (!this.panel) {
@@ -64,6 +75,8 @@ export class InlineNotePanel {
       type: 'state',
       draft,
       errorMessage: options?.errorMessage,
+      status: options?.status ?? 'saved',
+      canDelete: options?.canDelete ?? draft.mode === 'edit',
     });
   }
 
@@ -72,6 +85,7 @@ export class InlineNotePanel {
     this.panel = undefined;
     this.draft = undefined;
     this.onMessage = undefined;
+    this.onDispose = undefined;
   }
 
   public isOpen(): boolean {
@@ -85,10 +99,9 @@ function renderPanelHtml(draft: InlineNoteDraft): string {
     content: draft.content,
     tagsText: draft.tagsText,
     mode: draft.mode,
-    kind: draft.kind,
     anchorSummary: draft.anchorSummary,
     sourceFile: draft.sourceFile,
-    canUndo: Boolean(draft.undoSnapshot && draft.mode === 'edit'),
+    canDelete: draft.mode === 'edit',
   });
 
   return `<!DOCTYPE html>
@@ -106,24 +119,10 @@ function renderPanelHtml(draft: InlineNoteDraft): string {
       color: var(--vscode-foreground);
       background: var(--vscode-editor-background);
     }
-    body {
-      margin: 0;
-      padding: 16px;
-    }
-    form {
-      display: grid;
-      gap: 12px;
-      max-width: 720px;
-    }
-    label {
-      display: grid;
-      gap: 6px;
-      font-weight: 600;
-    }
-    .meta {
-      color: var(--vscode-descriptionForeground);
-      font-weight: 400;
-    }
+    body { margin: 0; padding: 16px; }
+    form { display: grid; gap: 12px; max-width: 720px; }
+    label { display: grid; gap: 6px; font-weight: 600; }
+    .meta { color: var(--vscode-descriptionForeground); font-weight: 400; }
     textarea, input {
       width: 100%;
       box-sizing: border-box;
@@ -134,16 +133,8 @@ function renderPanelHtml(draft: InlineNoteDraft): string {
       border-radius: 4px;
       font: inherit;
     }
-    textarea {
-      min-height: 220px;
-      resize: vertical;
-      line-height: 1.4;
-    }
-    .actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
+    textarea { min-height: 220px; resize: vertical; line-height: 1.4; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     button {
       padding: 6px 12px;
       border: 1px solid var(--vscode-button-border, transparent);
@@ -157,14 +148,9 @@ function renderPanelHtml(draft: InlineNoteDraft): string {
       background: var(--vscode-button-secondaryBackground);
       color: var(--vscode-button-secondaryForeground);
     }
-    .error {
-      color: var(--vscode-errorForeground);
-      min-height: 1.2em;
-    }
-    .hint {
-      color: var(--vscode-descriptionForeground);
-      font-size: 0.92em;
-    }
+    .error { color: var(--vscode-errorForeground); min-height: 1.2em; }
+    .status { color: var(--vscode-descriptionForeground); min-height: 1.2em; }
+    .hint { color: var(--vscode-descriptionForeground); font-size: 0.92em; }
   </style>
 </head>
 <body>
@@ -185,60 +171,56 @@ function renderPanelHtml(draft: InlineNoteDraft): string {
       <input id="tags" name="tags" aria-label="Comma-separated tags" value="${escapeHtml(draft.tagsText)}" />
     </label>
 
-    <div class="hint">Save: Ctrl/Cmd+Enter. Cancel: Escape.</div>
+    <div id="status" class="status" aria-live="polite">Editing</div>
     <div id="error" class="error" role="alert" aria-live="assertive"></div>
+    <div class="hint">Changes save automatically. Use Cmd/Ctrl+Z to undo text edits.</div>
 
     <div class="actions">
-      <button type="submit" id="save-button" aria-label="Save note">Save</button>
-      <button type="button" class="secondary" id="cancel-button" aria-label="Cancel editing">Cancel</button>
-      <button type="button" class="secondary" id="undo-button" aria-label="Undo last save" ${draft.undoSnapshot && draft.mode === 'edit' ? '' : 'hidden'}>Undo</button>
+      <button type="button" class="secondary" id="close-button" aria-label="Close editor">Close</button>
+      <button type="button" class="secondary" id="delete-button" aria-label="Delete note" ${draft.mode === 'edit' ? '' : 'hidden'}>Delete</button>
+      <button type="button" class="secondary" id="retry-button" aria-label="Retry save" hidden>Retry</button>
+      <button type="button" class="secondary" id="keep-local-button" aria-label="Keep local version" hidden>Keep Local Version</button>
+      <button type="button" class="secondary" id="load-external-button" aria-label="Load external version" hidden>Load External Version</button>
     </div>
   </form>
 
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
-    const initial = ${payload};
-
-    const form = document.getElementById('note-form');
     const contentInput = document.getElementById('content');
     const tagsInput = document.getElementById('tags');
     const errorEl = document.getElementById('error');
-    const undoButton = document.getElementById('undo-button');
-    const cancelButton = document.getElementById('cancel-button');
+    const statusEl = document.getElementById('status');
+    const closeButton = document.getElementById('close-button');
+    const deleteButton = document.getElementById('delete-button');
+    const retryButton = document.getElementById('retry-button');
+    const keepLocalButton = document.getElementById('keep-local-button');
+    const loadExternalButton = document.getElementById('load-external-button');
+
+    let changeTimer;
 
     function currentPayload() {
-      return {
-        content: contentInput.value,
-        tagsText: tagsInput.value,
-      };
+      return { content: contentInput.value, tagsText: tagsInput.value };
     }
 
-    form.addEventListener('submit', (event) => {
-      event.preventDefault();
+    function postChange() {
       const payload = currentPayload();
-      vscode.postMessage({ type: 'save', ...payload });
-    });
+      vscode.postMessage({ type: 'change', ...payload });
+    }
 
-    cancelButton.addEventListener('click', () => {
-      vscode.postMessage({ type: 'cancel' });
-    });
+    function scheduleChange() {
+      clearTimeout(changeTimer);
+      statusEl.textContent = 'Editing';
+      changeTimer = setTimeout(postChange, 150);
+    }
 
-    undoButton.addEventListener('click', () => {
-      vscode.postMessage({ type: 'undo' });
-    });
+    contentInput.addEventListener('input', scheduleChange);
+    tagsInput.addEventListener('input', scheduleChange);
 
-    window.addEventListener('keydown', (event) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-        event.preventDefault();
-        const payload = currentPayload();
-        vscode.postMessage({ type: 'save', ...payload });
-      }
-
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        vscode.postMessage({ type: 'cancel' });
-      }
-    });
+    closeButton.addEventListener('click', () => vscode.postMessage({ type: 'close' }));
+    deleteButton.addEventListener('click', () => vscode.postMessage({ type: 'delete' }));
+    retryButton.addEventListener('click', () => vscode.postMessage({ type: 'retry' }));
+    keepLocalButton.addEventListener('click', () => vscode.postMessage({ type: 'keepLocal' }));
+    loadExternalButton.addEventListener('click', () => vscode.postMessage({ type: 'loadExternal' }));
 
     window.addEventListener('message', (event) => {
       const message = event.data;
@@ -250,9 +232,19 @@ function renderPanelHtml(draft: InlineNoteDraft): string {
       tagsInput.value = message.draft?.tagsText ?? tagsInput.value;
       errorEl.textContent = message.errorMessage ?? '';
 
-      if (message.draft?.canUndo) {
-        undoButton.hidden = false;
-      }
+      const statusLabels = {
+        editing: 'Editing',
+        saving: 'Saving…',
+        saved: 'Saved',
+        failed: 'Save failed',
+        conflict: 'External change detected',
+      };
+      statusEl.textContent = statusLabels[message.status] ?? 'Editing';
+
+      retryButton.hidden = message.status !== 'failed';
+      keepLocalButton.hidden = message.status !== 'conflict';
+      loadExternalButton.hidden = message.status !== 'conflict';
+      deleteButton.hidden = !message.canDelete;
     });
   </script>
 </body>

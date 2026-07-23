@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import type { CliClient } from '../../core/cliClient';
+import { getInlineNotesDebounceMs } from '../presentation/inlinePreviewSettings';
 import type { NoteView } from '../../types';
 import {
   getActiveEditorOrThrow,
@@ -12,6 +13,11 @@ import {
   mapDocumentSymbolKind,
   readSymbolSignature,
 } from '../../utils/symbols';
+import {
+  AutoSaveStatus,
+  DebouncedAutoSave,
+  draftFingerprint,
+} from './autoSave';
 import {
   applyFormInput,
   createEditDraft,
@@ -36,25 +42,28 @@ export interface InlineNoteEditorDependencies {
 }
 
 /**
- * Webview-based inline note editor orchestrator.
+ * Webview-based inline note editor with debounced auto-save.
  *
- * Handles create/edit drafts, validation, optimistic concurrency recovery,
- * undo, and post-save UI refresh through the CLI boundary.
- *
- * webview 기반 inline note editor orchestrator입니다.
- *
- * create/edit draft, validation, optimistic concurrency 복구, undo,
- * 저장 후 CLI 경계를 통한 UI refresh를 처리합니다.
+ * webview 기반 inline note editor이며 debounced auto-save를 사용합니다.
  */
 export class InlineNoteEditor {
   private readonly panel = new InlineNotePanel();
   private readonly service: InlineNoteEditorService;
+  private readonly autoSave: DebouncedAutoSave;
   private draft: InlineNoteDraft | undefined;
-  private lastSavedSnapshot: InlineNoteDraft['undoSnapshot'];
   private context: vscode.ExtensionContext | undefined;
+  private saveStatus: AutoSaveStatus = 'saved';
+  private conflictDraft: InlineNoteDraft | undefined;
 
   public constructor(private readonly dependencies: InlineNoteEditorDependencies) {
     this.service = new InlineNoteEditorService(dependencies.cliClient);
+    this.autoSave = new DebouncedAutoSave(
+      getInlineNotesDebounceMs(),
+      (status) => this.handleSaveStatus(status),
+      async (generation) => {
+        await this.persistDraft(generation);
+      },
+    );
   }
 
   public register(context: vscode.ExtensionContext): void {
@@ -89,8 +98,7 @@ export class InlineNoteEditor {
   }
 
   public openEdit(noteView: NoteView): void {
-    const draft = createEditDraft(noteView, this.workspaceRoot());
-    this.openDraft(draft);
+    this.openDraft(createEditDraft(noteView, this.workspaceRoot()));
   }
 
   public openEditById(noteId: string, sourceFile: string, noteView?: NoteView): void {
@@ -115,11 +123,20 @@ export class InlineNoteEditor {
     }
 
     this.draft = draft;
-    this.lastSavedSnapshot = draft.undoSnapshot;
+    this.conflictDraft = undefined;
+    this.autoSave.setPersistedFingerprint(draftFingerprint(draft.content, draft.tagsText));
+    this.handleSaveStatus('saved');
 
-    this.panel.open(this.context, draft, async (message) => {
-      await this.handlePanelMessage(message);
-    });
+    this.panel.open(
+      this.context,
+      draft,
+      async (message) => {
+        await this.handlePanelMessage(message);
+      },
+      async () => {
+        await this.handlePanelClose();
+      },
+    );
   }
 
   private async handlePanelMessage(message: InlineNotePanelMessage): Promise<void> {
@@ -127,144 +144,206 @@ export class InlineNoteEditor {
       return;
     }
 
-    if (message.type === 'cancel') {
+    switch (message.type) {
+      case 'change':
+        await this.handleChange(message.content, message.tagsText);
+        break;
+      case 'close':
+        await this.handlePanelClose(true);
+        break;
+      case 'delete':
+        await this.handleDelete();
+        break;
+      case 'retry':
+        await this.autoSave.flush();
+        break;
+      case 'keepLocal':
+        await this.handleKeepLocalVersion();
+        break;
+      case 'loadExternal':
+        await this.handleLoadExternalVersion();
+        break;
+    }
+  }
+
+  private async handleChange(content: string, tagsText: string): Promise<void> {
+    if (!this.draft || this.saveStatus === 'conflict') {
+      return;
+    }
+
+    this.draft = applyFormInput(this.draft, { content, tagsText });
+    this.autoSave.schedule(draftFingerprint(content, tagsText));
+  }
+
+  private async handlePanelClose(forceClose = false): Promise<void> {
+    if (!this.draft) {
+      this.panel.close();
+      return;
+    }
+
+    await this.autoSave.flush();
+
+    if (this.saveStatus === 'failed' && !forceClose) {
+      this.panel.updateDraft(this.draft, {
+        errorMessage: 'Save failed. Retry or keep editing before closing.',
+        status: this.saveStatus,
+      });
+      return;
+    }
+
+    this.autoSave.cancel();
+    this.panel.close();
+    this.draft = undefined;
+    this.conflictDraft = undefined;
+  }
+
+  private async handleDelete(): Promise<void> {
+    const noteId = this.draft?.noteId;
+
+    if (!this.draft || !noteId) {
+      return;
+    }
+
+    const draft = this.draft;
+
+    const showWarningMessage =
+      this.dependencies.showWarningMessage ?? vscode.window.showWarningMessage;
+    const confirmed = await showWarningMessage(
+      'Delete this FrilVault note?',
+      { modal: true },
+      'Delete',
+    );
+
+    if (confirmed !== 'Delete') {
+      return;
+    }
+
+    try {
+      await this.dependencies.cliClient.deleteNote(
+        draft.workspaceRoot,
+        draft.sourceFile,
+        noteId,
+      );
+      await this.dependencies.invalidateViews();
+      this.autoSave.cancel();
       this.panel.close();
       this.draft = undefined;
+    } catch (error) {
+      this.panel.updateDraft(draft, {
+        errorMessage: formatError(error, 'Failed to delete note.'),
+        status: this.saveStatus,
+      });
+    }
+  }
+
+  private async persistDraft(generation: number): Promise<void> {
+    if (!this.draft || !this.autoSave.isLatestGeneration(generation)) {
       return;
     }
-
-    if (message.type === 'undo') {
-      await this.undoLastSave();
-      return;
-    }
-
-    if (message.type !== 'save') {
-      return;
-    }
-
-    const nextDraft = applyFormInput(this.draft, {
-      content: message.content ?? this.draft.content,
-      tagsText: message.tagsText ?? this.draft.tagsText,
-    });
 
     const validationError = validateInlineNoteForm({
-      content: nextDraft.content,
-      tagsText: nextDraft.tagsText,
+      content: this.draft.content,
+      tagsText: this.draft.tagsText,
     });
 
     if (validationError) {
-      this.draft = nextDraft;
-      this.panel.updateDraft(nextDraft, { errorMessage: validationError });
-      return;
+      this.panel.updateDraft(this.draft, {
+        errorMessage: validationError,
+        status: 'failed',
+      });
+      throw new Error(validationError);
     }
 
     try {
       const undoSnapshot = this.draft.undoSnapshot ?? revisionFromDraft(this.draft);
-      const saved = await this.service.saveDraft(nextDraft);
-      const persisted = this.service.applySavedRevision(nextDraft, saved, undoSnapshot);
-      this.draft = persisted;
-      this.lastSavedSnapshot = undoSnapshot;
-      await this.dependencies.invalidateViews();
-      this.panel.updateDraft(persisted);
-      await this.showInfo('FrilVault note saved. Undo remains available in the editor.');
-    } catch (error) {
-      if (isConcurrentModificationError(error)) {
-        await this.handleConcurrentModification(nextDraft);
+      const saved = await this.service.saveDraft(this.draft);
+
+      if (!this.autoSave.isLatestGeneration(generation)) {
         return;
       }
 
-      this.draft = nextDraft;
-      this.panel.updateDraft(nextDraft, {
-        errorMessage: formatError(error, 'Failed to save note.'),
-      });
-    }
-  }
-
-  private async undoLastSave(): Promise<void> {
-    if (!this.draft?.noteId || !this.lastSavedSnapshot) {
-      return;
-    }
-
-    try {
-      const restored = await this.service.undoRevision(this.draft, this.lastSavedSnapshot);
-      const nextDraft = this.service.applySavedRevision(
-        this.draft,
-        restored,
-        revisionFromDraft(this.draft),
+      const persisted = this.service.applySavedRevision(this.draft, saved, undoSnapshot);
+      this.draft = persisted;
+      this.autoSave.setPersistedFingerprint(
+        draftFingerprint(persisted.content, persisted.tagsText),
       );
-      this.draft = {
-        ...nextDraft,
-        undoSnapshot: this.lastSavedSnapshot,
-      };
       await this.dependencies.invalidateViews();
-      this.panel.updateDraft(this.draft);
-      await this.showInfo('FrilVault note restored to the previous revision.');
+      this.panel.updateDraft(persisted, { status: 'saved', canDelete: true });
     } catch (error) {
-      if (isConcurrentModificationError(error)) {
-        await this.handleConcurrentModification(this.draft);
+      if (!this.autoSave.isLatestGeneration(generation)) {
         return;
+      }
+
+      if (isConcurrentModificationError(error)) {
+        this.conflictDraft = this.draft;
+        this.handleSaveStatus('conflict');
+        this.panel.updateDraft(this.draft, {
+          errorMessage: 'This note was changed elsewhere.',
+          status: 'conflict',
+        });
+        throw error;
       }
 
       this.panel.updateDraft(this.draft, {
-        errorMessage: formatError(error, 'Failed to undo the last save.'),
+        errorMessage: formatError(error, 'Failed to save note.'),
+        status: 'failed',
       });
+      throw error;
     }
   }
 
-  private async handleConcurrentModification(draft: InlineNoteDraft): Promise<void> {
-    const showWarningMessage =
-      this.dependencies.showWarningMessage ?? vscode.window.showWarningMessage;
-    const choice = await showWarningMessage(
-      'This note was changed elsewhere. Reload the latest version or keep editing your draft.',
-      { modal: true },
-      'Reload Latest',
-      'Keep Draft',
-    );
+  private async handleKeepLocalVersion(): Promise<void> {
+    if (!this.conflictDraft) {
+      return;
+    }
 
-    if (choice !== 'Reload Latest' || !draft.noteId) {
-      this.draft = draft;
-      this.panel.updateDraft(draft, {
-        errorMessage: 'Save blocked because a newer revision exists.',
-      });
+    this.draft = this.conflictDraft;
+    this.conflictDraft = undefined;
+    this.handleSaveStatus('editing');
+    await this.autoSave.flush();
+  }
+
+  private async handleLoadExternalVersion(): Promise<void> {
+    if (!this.draft?.noteId) {
       return;
     }
 
     try {
       const notes = await this.dependencies.cliClient.listNotes(
-        draft.workspaceRoot,
-        draft.sourceFile,
+        this.draft.workspaceRoot,
+        this.draft.sourceFile,
       );
-      const latest = notes.find((note) => note.note.id === draft.noteId);
+      const latest = notes.find((note) => note.note.id === this.draft?.noteId);
 
       if (!latest) {
         throw new Error('Note no longer exists.');
       }
 
-      const reloaded = createEditDraft(latest, draft.workspaceRoot);
-      this.draft = {
-        ...reloaded,
-        content: draft.content,
-        tagsText: draft.tagsText,
-      };
-      this.panel.updateDraft(this.draft, {
-        errorMessage: 'Loaded the latest saved revision. Review your draft before saving again.',
-      });
+      this.draft = createEditDraft(latest, this.draft.workspaceRoot);
+      this.conflictDraft = undefined;
+      this.autoSave.setPersistedFingerprint(
+        draftFingerprint(this.draft.content, this.draft.tagsText),
+      );
+      this.handleSaveStatus('saved');
+      this.panel.updateDraft(this.draft, { status: 'saved' });
     } catch (error) {
-      this.draft = draft;
-      this.panel.updateDraft(draft, {
-        errorMessage: formatError(error, 'Failed to reload the latest note revision.'),
+      this.panel.updateDraft(this.draft, {
+        errorMessage: formatError(error, 'Failed to load the external version.'),
+        status: 'conflict',
       });
+    }
+  }
+
+  private handleSaveStatus(status: AutoSaveStatus): void {
+    this.saveStatus = status;
+
+    if (this.draft) {
+      this.panel.updateDraft(this.draft, { status });
     }
   }
 
   private workspaceRoot(): string {
     return this.dependencies.getWorkspaceRoot?.() ?? getWorkspaceRoot();
-  }
-
-  private async showInfo(message: string): Promise<void> {
-    const showInformationMessage =
-      this.dependencies.showInformationMessage ?? vscode.window.showInformationMessage;
-    await showInformationMessage(message);
   }
 }
 

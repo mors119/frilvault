@@ -1,4 +1,5 @@
 import type { NoteView } from '../../types';
+import { createInlinePreview } from '../presentation/inlinePreview';
 
 export interface SymbolNoteGroup {
   name: string;
@@ -41,7 +42,7 @@ export function groupNotesByAnchor(notes: NoteView[]): NotesAnchorGroups {
 }
 
 export function truncateNoteContent(content: string, maxLength = 60): string {
-  return content.length > maxLength ? `${content.slice(0, maxLength - 3)}...` : content;
+  return createInlinePreview(content, maxLength);
 }
 
 export function formatNoteQuickPickDescription(noteView: NoteView): string {

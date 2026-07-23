@@ -242,16 +242,43 @@
           "minimum": 100,
           "description": "Maximum number of characters shown in rich note hover previews before offering Open Note."
         },
+        "frilvault.inlineNotes.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show compact inline note previews in the editor."
+        },
+        "frilvault.inlineNotes.showLineNotes": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inline previews for line-anchored notes."
+        },
+        "frilvault.inlineNotes.showSymbolNotes": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inline previews for resolved symbol-anchored notes."
+        },
+        "frilvault.inlineNotes.maxLength": {
+          "type": "number",
+          "default": 80,
+          "minimum": 20,
+          "description": "Maximum inline preview length before truncation with an ellipsis."
+        },
+        "frilvault.inlineEditor.autoSaveDebounceMs": {
+          "type": "number",
+          "default": 500,
+          "minimum": 100,
+          "description": "Delay in milliseconds before auto-saving inline note edits."
+        },
         "frilvault.inlineLineNotes.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Show line notes as inline after-text decorations in the editor."
+          "description": "Deprecated. Use frilvault.inlineNotes.enabled and frilvault.inlineNotes.showLineNotes instead."
         },
         "frilvault.inlineLineNotes.maxLength": {
           "type": "number",
           "default": 120,
           "minimum": 20,
-          "description": "Maximum inline preview length for line note decorations."
+          "description": "Deprecated. Use frilvault.inlineNotes.maxLength instead."
         }
       }
     }
