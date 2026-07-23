@@ -75,6 +75,18 @@ impl VaultContext {
         self.workspace_index_repository.rebuild()
     }
 
+    pub fn load_index(&self) -> FrilVaultResult<WorkspaceIndex> {
+        self.workspace_index_repository.load_and_refresh_exists()
+    }
+
+    pub fn sync_index_for_source_file(&self, source_file: &Path) -> FrilVaultResult<()> {
+        let note_file = self.note_repository.load_by_source_file(source_file)?;
+        let source_file = source_file.to_string_lossy();
+
+        self.workspace_index_repository
+            .sync_source_file(source_file.as_ref(), note_file.notes.len())
+    }
+
     pub fn contains_cached_notes(&self, source_file: &Path) -> bool {
         self.note_cache.contains(source_file)
     }
