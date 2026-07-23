@@ -244,3 +244,47 @@ fn sync_source_file_changes_relocates_notes_after_source_rename() {
     assert_eq!(index.files[0].source_file, "src/core/lib.rs");
     assert!(index.files[0].exists);
 }
+
+#[test]
+fn repair_suggests_content_match_when_source_file_is_renamed() {
+    use crate::{SymbolAnchor, SymbolKind};
+
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    fs::create_dir_all(workspace_root.join("src/parser")).unwrap();
+    fs::write(
+        workspace_root.join("src/parser/service.rs"),
+        "pub struct UserService;\n",
+    )
+    .unwrap();
+
+    let mut note_service = create_test_note_service(workspace_root);
+    note_service
+        .add_note(AddNoteRequest {
+            source_file: "src/parser/service.rs".into(),
+            anchor: NoteAnchor::Symbol(SymbolAnchor {
+                name: "UserService".to_string(),
+                kind: SymbolKind::Struct,
+                signature: Some("pub struct UserService".to_string()),
+                line_hint: None,
+            }),
+            content: "track service".to_string(),
+        })
+        .unwrap();
+
+    fs::create_dir_all(workspace_root.join("src/core")).unwrap();
+    fs::rename(
+        workspace_root.join("src/parser/service.rs"),
+        workspace_root.join("src/core/user_service.rs"),
+    )
+    .unwrap();
+
+    let mut workspace_service = create_test_workspace_service(workspace_root);
+    workspace_service.warm_up().unwrap();
+
+    let suggestions = workspace_service.repair_suggestions().unwrap();
+
+    assert_eq!(suggestions.len(), 1);
+    assert_eq!(suggestions[0].missing_file, "src/parser/service.rs");
+    assert_eq!(suggestions[0].candidates, vec!["src/core/user_service.rs"]);
+}

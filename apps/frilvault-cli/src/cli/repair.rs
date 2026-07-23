@@ -7,6 +7,9 @@ pub struct RepairCommand {
     #[arg(long)]
     pub apply: bool,
 
+    #[arg(long)]
+    pub interactive: bool,
+
     #[arg(long, value_enum)]
     pub format: Option<FormatArg>,
 }

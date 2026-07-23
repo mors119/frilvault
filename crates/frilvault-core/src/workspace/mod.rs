@@ -1,3 +1,4 @@
+mod content_match;
 mod diff;
 mod entity;
 mod path;
@@ -9,6 +10,7 @@ pub mod gitignore;
 mod repository;
 mod service;
 
+pub use content_match::ContentMatcher;
 pub use diff::*;
 pub use entity::*;
 pub use path::*;
