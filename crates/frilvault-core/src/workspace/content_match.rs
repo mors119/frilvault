@@ -1,6 +1,7 @@
 use std::path::Path;
 
-use crate::note::{NoteAnchor, NoteFile, SymbolAnchor, SymbolKind};
+use crate::note::{NoteAnchor, NoteFile};
+use crate::symbol::symbol_marker;
 
 pub struct ContentMatcher;
 
@@ -10,7 +11,7 @@ impl ContentMatcher {
             .notes
             .iter()
             .filter_map(|note| match &note.anchor {
-                NoteAnchor::Symbol(symbol) => Some(Self::symbol_marker(symbol)),
+                NoteAnchor::Symbol(symbol) => Some(symbol_marker(symbol)),
                 NoteAnchor::Line(_) => None,
             })
             .collect()
@@ -27,21 +28,6 @@ impl ContentMatcher {
             .count();
 
         matched as f32 / markers.len() as f32
-    }
-
-    fn symbol_marker(symbol: &SymbolAnchor) -> String {
-        if let Some(signature) = &symbol.signature {
-            return signature.clone();
-        }
-
-        match symbol.kind {
-            SymbolKind::Struct => format!("struct {}", symbol.name),
-            SymbolKind::Enum => format!("enum {}", symbol.name),
-            SymbolKind::Trait => format!("trait {}", symbol.name),
-            SymbolKind::Function | SymbolKind::Method => format!("fn {}", symbol.name),
-            SymbolKind::Impl => format!("impl {}", symbol.name),
-            SymbolKind::Unknown => symbol.name.clone(),
-        }
     }
 }
 

@@ -71,6 +71,10 @@ pub fn print_note_view(view: &NoteView) {
             if let Some(line_hint) = anchor.line_hint {
                 println!("Line hint: {}", line_hint);
             }
+
+            if let Some(resolved) = &view.resolved {
+                println!("Resolved: {}:{}", resolved.line, resolved.column);
+            }
         }
     }
 
