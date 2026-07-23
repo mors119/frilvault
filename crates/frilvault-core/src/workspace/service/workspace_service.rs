@@ -6,7 +6,9 @@
 use crate::{
     FrilVaultResult, NoteAnchor, RepairSuggestion, WorkspaceHealth, WorkspaceStats,
     runtime::VaultContext,
-    workspace::{FileMove, RepairEngine, WorkspaceIndex, WorkspaceIndexRepository},
+    workspace::{
+        FileMove, RepairEngine, WorkspaceIndex, WorkspaceIndexRepository, WorkspaceWatcher,
+    },
 };
 
 /// Application service responsible for
@@ -19,18 +21,33 @@ use crate::{
 pub struct WorkspaceService {
     pub vault_context: VaultContext,
     pub index_repository: WorkspaceIndexRepository,
+    notes_watcher: WorkspaceWatcher,
 }
 
 impl WorkspaceService {
     pub fn new(vault_context: VaultContext, index_repository: WorkspaceIndexRepository) -> Self {
+        let notes_watcher = WorkspaceWatcher::new(index_repository.clone());
+
         Self {
             vault_context,
             index_repository,
+            notes_watcher,
         }
     }
 
     pub fn warm_up(&mut self) -> FrilVaultResult<WorkspaceIndex> {
-        self.index_repository.load_or_rebuild()
+        let index = self.index_repository.load_or_rebuild()?;
+        self.notes_watcher.seed_snapshot(index.clone());
+
+        Ok(index)
+    }
+
+    /// Synchronize index and cache state after external note directory changes.
+    ///
+    /// Editor integrations should invoke this from a file watcher callback when
+    /// `.vault/notes` is created, modified, moved, or deleted outside FrilVault.
+    pub fn sync_notes_directory_changes(&mut self) -> FrilVaultResult<()> {
+        self.notes_watcher.sync(&mut self.vault_context)
     }
 
     pub fn stats(&mut self) -> FrilVaultResult<WorkspaceStats> {
