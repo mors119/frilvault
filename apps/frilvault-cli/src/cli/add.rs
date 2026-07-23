@@ -1,5 +1,7 @@
 use clap::{Args, ValueEnum};
 
+use super::format::FormatArg;
+
 #[derive(Debug, Args)]
 pub struct AddCommand {
     #[arg(long)]
@@ -28,6 +30,9 @@ pub struct AddCommand {
 
     #[arg(long = "tag")]
     pub tags: Vec<String>,
+
+    #[arg(long, value_enum)]
+    pub format: Option<FormatArg>,
 }
 
 #[derive(Debug, Clone, ValueEnum)]

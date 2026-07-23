@@ -21,6 +21,27 @@ export interface AddLineNoteInput {
   line: number;
   column: number;
   content: string;
+  tags?: string[];
+}
+
+export interface AddSymbolNoteInput {
+  workspaceRoot: string;
+  sourceFile: string;
+  symbol: string;
+  kind: string;
+  signature?: string;
+  lineHint?: number;
+  content: string;
+  tags?: string[];
+}
+
+export interface UpdateNoteInput {
+  workspaceRoot: string;
+  sourceFile: string;
+  noteId: string;
+  content: string;
+  tags?: string[];
+  expectedUpdatedAt?: string;
 }
 
 export interface SearchNotesInput {
@@ -32,8 +53,8 @@ export interface SearchNotesInput {
 export class CliClient {
   public constructor(private readonly getCliPath = getConfiguredCliPath) {}
 
-  public async addLineNote(input: AddLineNoteInput): Promise<void> {
-    await this.execInWorkspace(input.workspaceRoot, [
+  public async addLineNote(input: AddLineNoteInput): Promise<NoteView> {
+    const args = [
       'add',
       '--file',
       input.sourceFile,
@@ -43,7 +64,47 @@ export class CliClient {
       String(input.column),
       '--content',
       input.content,
-    ]);
+      '--format',
+      'json',
+    ];
+
+    for (const tag of input.tags ?? []) {
+      args.push('--tag', tag);
+    }
+
+    const stdout = await this.execInWorkspace(input.workspaceRoot, args);
+    return parseJson<NoteView>(stdout);
+  }
+
+  public async addSymbolNote(input: AddSymbolNoteInput): Promise<NoteView> {
+    const args = [
+      'add',
+      '--file',
+      input.sourceFile,
+      '--symbol',
+      input.symbol,
+      '--kind',
+      input.kind,
+      '--content',
+      input.content,
+      '--format',
+      'json',
+    ];
+
+    if (input.signature) {
+      args.push('--signature', input.signature);
+    }
+
+    if (input.lineHint) {
+      args.push('--line-hint', String(input.lineHint));
+    }
+
+    for (const tag of input.tags ?? []) {
+      args.push('--tag', tag);
+    }
+
+    const stdout = await this.execInWorkspace(input.workspaceRoot, args);
+    return parseJson<NoteView>(stdout);
   }
 
   public async listNotes(workspaceRoot: string, sourceFile: string): Promise<NoteView[]> {
@@ -76,21 +137,29 @@ export class CliClient {
     return parseJson<NoteView[]>(stdout);
   }
 
-  public async updateNote(
-    workspaceRoot: string,
-    sourceFile: string,
-    noteId: string,
-    content: string,
-  ): Promise<void> {
-    await this.execInWorkspace(workspaceRoot, [
+  public async updateNote(input: UpdateNoteInput): Promise<NoteView> {
+    const args = [
       'update',
       '--file',
-      sourceFile,
+      input.sourceFile,
       '--id',
-      noteId,
+      input.noteId,
       '--content',
-      content,
-    ]);
+      input.content,
+      '--format',
+      'json',
+    ];
+
+    for (const tag of input.tags ?? []) {
+      args.push('--tag', tag);
+    }
+
+    if (input.expectedUpdatedAt) {
+      args.push('--expected-updated-at', input.expectedUpdatedAt);
+    }
+
+    const stdout = await this.execInWorkspace(input.workspaceRoot, args);
+    return parseJson<NoteView>(stdout);
   }
 
   public async deleteNote(

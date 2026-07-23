@@ -38,6 +38,9 @@ pub enum FrilVaultError {
 
     #[error("unresolved anchor for note: {0}")]
     UnresolvedAnchor(Uuid),
+
+    #[error("concurrent modification for note: {0}")]
+    ConcurrentModification(Uuid),
 }
 
 pub type FrilVaultResult<T> = Result<T, FrilVaultError>;

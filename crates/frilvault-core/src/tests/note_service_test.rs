@@ -1,6 +1,7 @@
 use super::helper::{create_test_note_service, create_test_workspace};
 use crate::{
-    AddNoteRequest, LineAnchor, NoteAnchor, NoteQuery, SymbolAnchor, SymbolKind,
+    AddNoteRequest, FrilVaultError, LineAnchor, NoteAnchor, NoteQuery, SymbolAnchor, SymbolKind,
+    UpdateNoteRequest,
     constants::NOTE_FILE_EXTENSION,
     workspace::{PathResolver, WorkspaceIndexRepository},
 };
@@ -181,7 +182,15 @@ fn update_note_changes_content() {
         .unwrap();
 
     service
-        .update_note("src/main.rs", note.id, "new content".to_string())
+        .update_note(
+            "src/main.rs",
+            note.id,
+            UpdateNoteRequest {
+                content: "new content".to_string(),
+                tags: None,
+                expected_updated_at: None,
+            },
+        )
         .unwrap();
 
     let notes = service.list_notes("src/main.rs").unwrap();
@@ -189,6 +198,71 @@ fn update_note_changes_content() {
     assert_eq!(notes.len(), 1);
 
     assert_eq!(notes[0].note.content, "new content");
+}
+
+#[test]
+fn update_note_changes_tags() {
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut service = create_test_note_service(workspace_root);
+
+    let note = service
+        .add_note(AddNoteRequest {
+            source_file: "src/main.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "tagged".to_string(),
+            tags: Some(vec!["alpha".to_string()]),
+        })
+        .unwrap();
+
+    service
+        .update_note(
+            "src/main.rs",
+            note.id,
+            UpdateNoteRequest {
+                content: "tagged".to_string(),
+                tags: Some(vec!["beta".to_string(), "gamma".to_string()]),
+                expected_updated_at: None,
+            },
+        )
+        .unwrap();
+
+    let notes = service.list_notes("src/main.rs").unwrap();
+    assert_eq!(notes[0].note.tags, vec!["beta", "gamma"]);
+}
+
+#[test]
+fn update_note_rejects_stale_expected_updated_at() {
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+    let mut service = create_test_note_service(workspace_root);
+
+    let note = service
+        .add_note(AddNoteRequest {
+            source_file: "src/main.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "original".to_string(),
+            tags: None,
+        })
+        .unwrap();
+
+    let stale = note.updated_at - chrono::Duration::seconds(1);
+
+    assert!(matches!(
+        service.update_note(
+            "src/main.rs",
+            note.id,
+            UpdateNoteRequest {
+                content: "conflict".to_string(),
+                tags: None,
+                expected_updated_at: Some(stale),
+            },
+        ),
+        Err(FrilVaultError::ConcurrentModification(id)) if id == note.id
+    ));
+
+    let notes = service.list_notes("src/main.rs").unwrap();
+    assert_eq!(notes[0].note.content, "original");
 }
 
 #[test]

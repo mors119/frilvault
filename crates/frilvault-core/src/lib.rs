@@ -13,7 +13,7 @@ pub use app::FrilVault;
 pub use error::{FrilVaultError, FrilVaultResult};
 pub use note::{
     AddNoteRequest, AttachmentRepository, LineAnchor, Note, NoteAnchor, NoteAttachment, NoteQuery,
-    NoteView, SymbolAnchor, SymbolKind,
+    NoteView, SymbolAnchor, SymbolKind, UpdateNoteRequest,
 };
 pub use symbol::{ResolvedSymbol, SymbolResolver, symbol_marker};
 pub use uri::{NOTE_URI_SCHEME, NOTE_URI_VERSION, NoteUriResolver, ParsedNoteUri};

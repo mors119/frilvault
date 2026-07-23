@@ -1,20 +1,34 @@
 use anyhow::{Result, bail};
 use frilvault_core::{AddNoteRequest, FrilVault, LineAnchor, NoteAnchor, SymbolAnchor, SymbolKind};
 
-use crate::cli::add::{AddCommand, SymbolKindArg};
+use crate::{
+    cli::add::{AddCommand, SymbolKindArg},
+    output::{OutputFormat, print_json, resolve_format},
+};
 
 pub fn execute(command: AddCommand) -> Result<()> {
     let vault = FrilVault::open(std::env::current_dir()?)?;
     let mut service = vault.notes()?;
+    let source_file = command.file.clone();
 
     let anchor = create_anchor(&command)?;
 
-    service.add_note(AddNoteRequest {
+    let note = service.add_note(AddNoteRequest {
         source_file: command.file.into(),
         anchor,
         content: command.content,
         tags: (!command.tags.is_empty()).then_some(command.tags),
     })?;
+
+    if matches!(resolve_format(command.format), OutputFormat::Json) {
+        let views = service.list_notes(&source_file)?;
+        let view = views
+            .into_iter()
+            .find(|view| view.note.id == note.id)
+            .ok_or_else(|| anyhow::anyhow!("created note view not found"))?;
+        print_json(&view)?;
+        return Ok(());
+    }
 
     println!("Note added successfully");
 
@@ -70,6 +84,7 @@ mod tests {
             line_hint: None,
             content: "note".to_string(),
             tags: vec![],
+            format: None,
         };
 
         let anchor = create_anchor(&command).unwrap();
@@ -95,6 +110,7 @@ mod tests {
             line_hint: Some(1),
             content: "note".to_string(),
             tags: vec![],
+            format: None,
         };
 
         let anchor = create_anchor(&command).unwrap();

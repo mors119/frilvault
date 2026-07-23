@@ -53,7 +53,7 @@ export function createAddNoteCommand(
         content,
       });
 
-      dependencies.invalidateViews();
+      await dependencies.invalidateViews();
       await showInformationMessage(`FrilVault note added at ${line}:${column}.`);
 
       if (dependencies.onNoteAdded) {

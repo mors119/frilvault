@@ -11,6 +11,7 @@ export interface GutterActionsDependencies {
   registry: GutterNoteRegistry;
   getWorkspaceRoot: () => string;
   invalidateViews: () => Promise<void>;
+  openInlineEditor: (noteView: NoteView) => void;
   showErrorMessage?: (message: string) => Thenable<string | undefined>;
   showInformationMessage?: (message: string) => Thenable<string | undefined>;
   showInputBox?: (options: vscode.InputBoxOptions) => Thenable<string | undefined>;
@@ -68,32 +69,7 @@ export class GutterNoteActions {
       return;
     }
 
-    const showInputBox = this.dependencies.showInputBox ?? vscode.window.showInputBox;
-    const content = await showInputBox({
-      prompt: 'Edit FrilVault note',
-      value: note.note.content,
-      ignoreFocusOut: true,
-      validateInput(value) {
-        return value.trim().length === 0 ? 'Note content is required.' : undefined;
-      },
-    });
-
-    if (!content) {
-      return;
-    }
-
-    try {
-      await this.dependencies.cliClient.updateNote(
-        this.dependencies.getWorkspaceRoot(),
-        sourceFile,
-        noteId,
-        content.trim(),
-      );
-      await this.dependencies.invalidateViews();
-      await this.showInfo('FrilVault note updated.');
-    } catch (error) {
-      await this.showError(formatError(error, 'Failed to update note.'));
-    }
+    this.dependencies.openInlineEditor(note);
   }
 
   public async deleteNote(noteId: string, sourceFile: string): Promise<void> {
