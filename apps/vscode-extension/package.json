@@ -186,6 +186,12 @@
           "enum": ["dot", "count", "bar"],
           "default": "dot",
           "description": "Visual style for interactive gutter note markers."
+        },
+        "frilvault.hoverPreviewLength": {
+          "type": "number",
+          "default": 800,
+          "minimum": 100,
+          "description": "Maximum number of characters shown in rich note hover previews before offering Open Note."
         }
       }
     }
