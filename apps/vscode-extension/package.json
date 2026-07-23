@@ -25,7 +25,8 @@
     "onCommand:frilvault.showStats",
     "onCommand:frilvault.showHealth",
     "onCommand:frilvault.applyRepairs",
-    "onCommand:frilvault.refresh"
+    "onCommand:frilvault.refresh",
+    "onCommand:frilvault.gutter.showActions"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -75,6 +76,26 @@
         "command": "frilvault.disable",
         "title": "FrilVault: Turn Off",
         "icon": "$(debug-pause)"
+      },
+      {
+        "command": "frilvault.gutter.showActions",
+        "title": "FrilVault: Gutter Note Actions"
+      },
+      {
+        "command": "frilvault.gutter.viewNote",
+        "title": "FrilVault: View Gutter Note"
+      },
+      {
+        "command": "frilvault.gutter.editNote",
+        "title": "FrilVault: Edit Gutter Note"
+      },
+      {
+        "command": "frilvault.gutter.deleteNote",
+        "title": "FrilVault: Delete Gutter Note"
+      },
+      {
+        "command": "frilvault.gutter.copyLink",
+        "title": "FrilVault: Copy Gutter Note Link"
       }
     ],
     "menus": {
@@ -159,6 +180,12 @@
           "type": "string",
           "default": "flvt",
           "description": "Path to the FrilVault CLI executable used by the Add Note command."
+        },
+        "frilvault.gutterMarkerStyle": {
+          "type": "string",
+          "enum": ["dot", "count", "bar"],
+          "default": "dot",
+          "description": "Visual style for interactive gutter note markers."
         }
       }
     }

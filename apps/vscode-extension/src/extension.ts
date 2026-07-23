@@ -8,6 +8,9 @@ import { createDisableCommand, createEnableCommand } from './features/enablement
 import { isFrilVaultEnabled, syncEnabledContext } from './features/enablement/state';
 import { maybePromptForGitignore } from './features/gitignore/prompt';
 import { FrilVaultDecorator } from './features/decorations/decorator';
+import { GutterNoteActions } from './features/decorations/gutterActions';
+import { registerGutterCommands } from './features/decorations/gutterCommands';
+import { GutterNoteRegistry } from './features/decorations/registry';
 import { FrilVaultHoverProvider } from './features/hover/hoverProvider';
 import { createShowNotesForCurrentFileCommand } from './features/notes-panel/command';
 import { FrilVaultNotesProvider } from './features/notes-panel/provider';
@@ -22,6 +25,7 @@ import { getWorkspaceRoot, revealNote, tryGetWorkspaceRoot } from './utils/file'
 
 let activeDecorator: FrilVaultDecorator | undefined;
 let activeStore: CurrentFileNotesStore | undefined;
+let activeRegistry: GutterNoteRegistry | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
   const cliClient = new CliClient();
@@ -41,10 +45,14 @@ export function activate(context: vscode.ExtensionContext): void {
   const store = new CurrentFileNotesStore(cliClient, isEnabled);
   activeStore = store;
 
+  const gutterRegistry = new GutterNoteRegistry();
+  activeRegistry = gutterRegistry;
+
   const notesProvider = new FrilVaultNotesProvider(store, getWorkspaceRoot, isEnabled);
   const decorator = new FrilVaultDecorator(
     context.extensionPath,
     store,
+    gutterRegistry,
     getWorkspaceRoot,
     isEnabled,
   );
@@ -55,15 +63,25 @@ export function activate(context: vscode.ExtensionContext): void {
     await store.syncActiveEditor(editor ?? vscode.window.activeTextEditor);
   };
 
+  const gutterActions = new GutterNoteActions({
+    cliClient,
+    registry: gutterRegistry,
+    getWorkspaceRoot,
+    invalidateViews,
+  });
+
   const refreshUi = async (editor?: vscode.TextEditor) => {
     await invalidateViews(editor);
   };
 
   const clearUi = () => {
     store.clear();
+    gutterRegistry.clear();
     decorator.clear();
     notesProvider.refresh();
   };
+
+  registerGutterCommands(context, gutterActions);
 
   const onStoreChanged = () => {
     notesProvider.refresh();
@@ -194,6 +212,8 @@ export function activate(context: vscode.ExtensionContext): void {
 export function deactivate(): void {
   activeDecorator?.clear();
   activeStore?.clear();
+  activeRegistry?.clear();
   activeDecorator = undefined;
   activeStore = undefined;
+  activeRegistry = undefined;
 }
