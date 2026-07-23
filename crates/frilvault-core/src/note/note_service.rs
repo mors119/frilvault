@@ -13,8 +13,8 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use crate::{
-    AddNoteRequest, FrilVaultError, FrilVaultResult, NoteAnchor, NoteView, SymbolKind, note::Note,
-    runtime::VaultContext, symbol::SymbolResolver, workspace::read_source_file_content,
+    AddNoteRequest, FrilVaultError, FrilVaultResult, NoteAnchor, NoteQuery, NoteView, SymbolKind,
+    note::Note, runtime::VaultContext, symbol::SymbolResolver, workspace::read_source_file_content,
 };
 
 /// Application service responsible for note operations.
@@ -67,26 +67,65 @@ impl NoteService {
     }
 
     pub fn list_notes(&mut self, source_file: impl AsRef<Path>) -> FrilVaultResult<Vec<NoteView>> {
-        let source_file = source_file.as_ref();
-
-        let notes = self.vault_context.load_notes(source_file)?;
-
-        Ok(notes
-            .notes
-            .into_iter()
-            .map(|note| self.build_note_view(source_file, note))
-            .collect())
+        self.query_notes(&NoteQuery {
+            source_file: Some(source_file.as_ref().to_path_buf()),
+            keyword: None,
+            tag: None,
+        })
     }
 
     pub fn search_notes_by_file(
         &mut self,
         source_file: impl AsRef<Path>,
     ) -> FrilVaultResult<Vec<NoteView>> {
+        self.query_notes(&NoteQuery {
+            source_file: Some(source_file.as_ref().to_path_buf()),
+            keyword: None,
+            tag: None,
+        })
+    }
+
+    pub fn query_notes(&mut self, query: &NoteQuery) -> FrilVaultResult<Vec<NoteView>> {
+        let mut results = if let Some(source_file) = &query.source_file {
+            self.note_views_for_source_file(source_file)?
+        } else if query.keyword.is_some() || query.tag.is_some() {
+            self.all_note_views()?
+        } else {
+            Vec::new()
+        };
+
+        if let Some(tag) = &query.tag {
+            let tag = tag.to_lowercase();
+            results.retain(|view| {
+                view.note
+                    .tags
+                    .iter()
+                    .any(|note_tag| note_tag.to_lowercase() == tag)
+            });
+        }
+
+        if let Some(keyword) = &query.keyword {
+            let keyword = keyword.to_lowercase();
+            results.retain(|view| note_matches_keyword(view, &keyword));
+        }
+
+        Ok(results)
+    }
+
+    fn note_views_for_source_file(
+        &mut self,
+        source_file: impl AsRef<Path>,
+    ) -> FrilVaultResult<Vec<NoteView>> {
         let source_file = self
             .vault_context
             .normalize_source_file(source_file.as_ref())?;
+        let notes = self.vault_context.load_notes(&source_file)?;
 
-        self.list_notes(source_file)
+        Ok(notes
+            .notes
+            .into_iter()
+            .map(|note| self.build_note_view(&source_file, note))
+            .collect())
     }
 
     pub fn preload_notes(&mut self, source_file: impl AsRef<Path>) -> FrilVaultResult<()> {
@@ -204,22 +243,11 @@ impl NoteService {
     }
 
     pub fn search_notes(&mut self, keyword: &str) -> FrilVaultResult<Vec<NoteView>> {
-        let keyword = keyword.to_lowercase();
-
-        Ok(self
-            .all_note_views()?
-            .into_iter()
-            .filter(|view| {
-                let content_match = view.note.content.to_lowercase().contains(&keyword);
-
-                let symbol_match = match &view.note.anchor {
-                    NoteAnchor::Symbol(anchor) => anchor.name.to_lowercase().contains(&keyword),
-                    _ => false,
-                };
-
-                content_match || symbol_match
-            })
-            .collect())
+        self.query_notes(&NoteQuery {
+            source_file: None,
+            keyword: Some(keyword.to_string()),
+            tag: None,
+        })
     }
 
     pub fn search_by_symbol(&mut self, symbol: &str) -> FrilVaultResult<Vec<NoteView>> {
@@ -239,18 +267,11 @@ impl NoteService {
     }
 
     pub fn search_by_tag(&mut self, tag: &str) -> FrilVaultResult<Vec<NoteView>> {
-        let tag = tag.to_lowercase();
-
-        Ok(self
-            .all_note_views()?
-            .into_iter()
-            .filter(|view| {
-                view.note
-                    .tags
-                    .iter()
-                    .any(|note_tag| note_tag.to_lowercase() == tag)
-            })
-            .collect())
+        self.query_notes(&NoteQuery {
+            source_file: None,
+            keyword: None,
+            tag: Some(tag.to_string()),
+        })
     }
 
     pub fn list_symbol_notes(
@@ -279,4 +300,15 @@ impl NoteService {
                 _ => false,
             }))
     }
+}
+
+fn note_matches_keyword(view: &NoteView, keyword: &str) -> bool {
+    let content_match = view.note.content.to_lowercase().contains(keyword);
+
+    let symbol_match = matches!(
+        &view.note.anchor,
+        NoteAnchor::Symbol(anchor) if anchor.name.to_lowercase().contains(keyword)
+    );
+
+    content_match || symbol_match
 }

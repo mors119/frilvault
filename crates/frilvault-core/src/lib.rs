@@ -10,7 +10,9 @@ mod workspace;
 pub use app::FrilVault;
 
 pub use error::{FrilVaultError, FrilVaultResult};
-pub use note::{AddNoteRequest, LineAnchor, Note, NoteAnchor, NoteView, SymbolAnchor, SymbolKind};
+pub use note::{
+    AddNoteRequest, LineAnchor, Note, NoteAnchor, NoteQuery, NoteView, SymbolAnchor, SymbolKind,
+};
 pub use symbol::{ResolvedSymbol, SymbolResolver, symbol_marker};
 pub use workspace::{
     ExplorerGroup, ExplorerNode, FileMove, RepairSuggestion, SyncResult, WorkspaceExplorer,

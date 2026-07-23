@@ -1,6 +1,6 @@
 use super::helper::{create_test_note_service, create_test_workspace};
 use crate::{
-    AddNoteRequest, LineAnchor, NoteAnchor, SymbolAnchor, SymbolKind,
+    AddNoteRequest, LineAnchor, NoteAnchor, NoteQuery, SymbolAnchor, SymbolKind,
     constants::NOTE_FILE_EXTENSION,
     workspace::{PathResolver, WorkspaceIndexRepository},
 };
@@ -568,4 +568,78 @@ fn search_by_tag_returns_matching_notes() {
     let architecture_notes = service.search_by_tag("ARCHITECTURE").unwrap();
     assert_eq!(architecture_notes.len(), 1);
     assert_eq!(architecture_notes[0].note.content, "architecture note");
+}
+
+#[test]
+fn query_notes_combines_file_keyword_and_tag_filters() {
+    let workspace = create_test_workspace();
+    let workspace_root = workspace.root();
+
+    let mut service = create_test_note_service(workspace_root);
+
+    service
+        .add_note(AddNoteRequest {
+            source_file: "src/main.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "parser bug fix".to_string(),
+            tags: Some(vec!["bug".to_string()]),
+        })
+        .unwrap();
+
+    service
+        .add_note(AddNoteRequest {
+            source_file: "src/main.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 2, column: 1 }),
+            content: "architecture note".to_string(),
+            tags: Some(vec!["architecture".to_string()]),
+        })
+        .unwrap();
+
+    service
+        .add_note(AddNoteRequest {
+            source_file: "src/lib.rs".into(),
+            anchor: NoteAnchor::Line(LineAnchor { line: 1, column: 1 }),
+            content: "parser in lib".to_string(),
+            tags: Some(vec!["bug".to_string()]),
+        })
+        .unwrap();
+
+    let keyword_and_file = service
+        .query_notes(&NoteQuery {
+            source_file: Some("src/main.rs".into()),
+            keyword: Some("parser".to_string()),
+            tag: None,
+        })
+        .unwrap();
+    assert_eq!(keyword_and_file.len(), 1);
+    assert_eq!(keyword_and_file[0].note.content, "parser bug fix");
+
+    let tag_and_file = service
+        .query_notes(&NoteQuery {
+            source_file: Some("src/main.rs".into()),
+            keyword: None,
+            tag: Some("bug".to_string()),
+        })
+        .unwrap();
+    assert_eq!(tag_and_file.len(), 1);
+    assert_eq!(tag_and_file[0].note.content, "parser bug fix");
+
+    let all_filters = service
+        .query_notes(&NoteQuery {
+            source_file: Some("src/main.rs".into()),
+            keyword: Some("parser".to_string()),
+            tag: Some("bug".to_string()),
+        })
+        .unwrap();
+    assert_eq!(all_filters.len(), 1);
+    assert_eq!(all_filters[0].note.content, "parser bug fix");
+
+    let tag_and_keyword = service
+        .query_notes(&NoteQuery {
+            source_file: None,
+            keyword: Some("parser".to_string()),
+            tag: Some("bug".to_string()),
+        })
+        .unwrap();
+    assert_eq!(tag_and_keyword.len(), 2);
 }

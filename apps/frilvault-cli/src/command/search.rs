@@ -1,5 +1,5 @@
 use anyhow::{Result, bail};
-use frilvault_core::{FrilVault, NoteAnchor};
+use frilvault_core::{FrilVault, NoteQuery};
 
 use crate::{
     cli::search::SearchCommand,
@@ -14,48 +14,15 @@ pub fn execute(command: SearchCommand) -> Result<()> {
     let vault = FrilVault::open(std::env::current_dir()?)?;
     let mut service = vault.notes()?;
 
-    let mut results = if let Some(tag) = command.tag.as_deref() {
-        service.search_by_tag(tag)?
-    } else {
-        match (command.keyword.as_deref(), command.file.as_deref()) {
-            (Some(keyword), Some(file)) => {
-                let keyword = keyword.to_lowercase();
-
-                service
-                    .search_notes_by_file(file)?
-                    .into_iter()
-                    .filter(|note| note_matches_keyword(note, &keyword))
-                    .collect()
-            }
-            (Some(keyword), None) => service.search_notes(keyword)?,
-            (None, Some(file)) => service.search_notes_by_file(file)?,
-            (None, None) => Vec::new(),
-        }
+    let query = NoteQuery {
+        source_file: command.file.map(Into::into),
+        keyword: command.keyword,
+        tag: command.tag,
     };
 
-    if command.tag.is_some() {
-        if let Some(file) = command.file.as_deref() {
-            results.retain(|note| note.source_file.to_string_lossy() == file);
-        }
-
-        if let Some(keyword) = command.keyword.as_deref() {
-            let keyword = keyword.to_lowercase();
-            results.retain(|note| note_matches_keyword(note, &keyword));
-        }
-    }
+    let results = service.query_notes(&query)?;
 
     print_notes(&results, resolve_format(command.format))?;
 
     Ok(())
-}
-
-fn note_matches_keyword(note: &frilvault_core::NoteView, keyword: &str) -> bool {
-    let content_match = note.note.content.to_lowercase().contains(keyword);
-
-    let symbol_match = matches!(
-        &note.note.anchor,
-        NoteAnchor::Symbol(anchor) if anchor.name.to_lowercase().contains(keyword)
-    );
-
-    content_match || symbol_match
 }
