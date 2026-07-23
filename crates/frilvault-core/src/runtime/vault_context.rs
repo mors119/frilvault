@@ -56,6 +56,10 @@ impl VaultContext {
         self.note_cache.invalidate(source_file);
     }
 
+    pub fn clear_notes_cache(&mut self) {
+        self.note_cache.clear();
+    }
+
     pub fn rebuild_index(&self) -> FrilVaultResult<WorkspaceIndex> {
         self.workspace_index_repository.rebuild()
     }

@@ -5,7 +5,8 @@
 
 use crate::{
     FrilVaultResult, NoteAnchor, RepairSuggestion, WorkspaceHealth, WorkspaceStats,
-    runtime::VaultContext, workspace::WorkspaceIndexRepository,
+    runtime::VaultContext,
+    workspace::{FileMove, RepairEngine, WorkspaceIndexRepository},
 };
 
 /// Application service responsible for
@@ -112,32 +113,19 @@ impl WorkspaceService {
     pub fn apply_repairs(&mut self) -> FrilVaultResult<usize> {
         let suggestions = self.repair_suggestions()?;
 
-        let mut repaired = 0;
+        let moves = suggestions
+            .into_iter()
+            .filter_map(|suggestion| {
+                let from = suggestion.missing_file.clone();
+                let to = suggestion.best_candidate()?.clone();
+                Some(FileMove {
+                    from,
+                    to,
+                    confidence: 1.0,
+                })
+            })
+            .collect();
 
-        for suggestion in suggestions {
-            let Some(candidate) = suggestion.best_candidate() else {
-                continue;
-            };
-
-            self.move_note_file(&suggestion.missing_file, candidate)?;
-
-            repaired += 1;
-        }
-
-        Ok(repaired)
-    }
-
-    fn move_note_file(&self, source_file: &str, target_file: &str) -> FrilVaultResult<()> {
-        let source_note = self.vault_context.resolve_note_path(source_file);
-
-        let target_note = self.vault_context.resolve_note_path(target_file);
-
-        if let Some(parent) = target_note.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-
-        std::fs::rename(source_note, target_note)?;
-
-        Ok(())
+        RepairEngine::apply_moves(&mut self.vault_context, moves)
     }
 }
