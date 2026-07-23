@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 const DEFAULT_INLINE_MAX_LENGTH = 80;
-const DEFAULT_DEBOUNCE_MS = 500;
+const DEFAULT_DEBOUNCE_MS = 900;
 
 export function getInlineNotesDebounceMs(): number {
   const configured = vscode.workspace

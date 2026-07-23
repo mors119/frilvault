@@ -21,9 +21,9 @@ suite('Inline note auto-save', () => {
       },
     );
 
-    autoSave.setPersistedFingerprint('initial');
-    autoSave.schedule('changed-1');
-    autoSave.schedule('changed-2');
+    autoSave.reset('initial');
+    autoSave.schedule('changed-1', 1);
+    autoSave.schedule('changed-2', 2);
     await autoSave.flush();
 
     assert.strictEqual(saveCount, 1);
@@ -42,37 +42,62 @@ suite('Inline note auto-save', () => {
     );
 
     const fingerprint = draftFingerprint('same', 'tag');
-    autoSave.setPersistedFingerprint(fingerprint);
-    autoSave.schedule(fingerprint);
+    autoSave.reset(fingerprint);
+    autoSave.schedule(fingerprint, 1);
 
     assert.strictEqual(saveCount, 0);
   });
 
-  test('ignores stale save completions', async () => {
+  test('serializes persistence and queues the latest revision', async () => {
     const appliedGenerations: number[] = [];
-    let currentGeneration = 0;
+    let releaseFirstSave: (() => void) | undefined;
     const autoSave = new DebouncedAutoSave(
       10,
       () => undefined,
-      async (generation) => {
-        appliedGenerations.push(generation);
-        if (generation === 1) {
-          await new Promise((resolve) => setTimeout(resolve, 30));
+      async (revision) => {
+        appliedGenerations.push(revision);
+        if (revision === 1) {
+          await new Promise<void>((resolve) => {
+            releaseFirstSave = resolve;
+          });
         }
       },
     );
 
-    autoSave.setPersistedFingerprint('initial');
-    autoSave.schedule('first');
-    currentGeneration += 1;
+    autoSave.reset('initial');
+    autoSave.schedule('first', 1);
     const first = autoSave.flush();
-    autoSave.schedule('second');
-    currentGeneration += 1;
-    const second = autoSave.flush();
-    await Promise.all([first, second]);
+    autoSave.schedule('second', 2);
+
+    assert.deepStrictEqual(appliedGenerations, [1]);
+
+    releaseFirstSave?.();
+    await first;
 
     assert.ok(appliedGenerations.includes(1));
     assert.ok(appliedGenerations.includes(2));
-    assert.strictEqual(currentGeneration, 2);
+  });
+
+  test('defers persistence until IME composition completes', async () => {
+    let saveCount = 0;
+    const autoSave = new DebouncedAutoSave(
+      10,
+      () => undefined,
+      async () => {
+        saveCount += 1;
+      },
+    );
+
+    autoSave.reset('initial');
+    autoSave.startComposition();
+    autoSave.schedule('draft', 1);
+    await autoSave.flush();
+
+    assert.strictEqual(saveCount, 0);
+
+    autoSave.endComposition();
+    await autoSave.flush();
+
+    assert.strictEqual(saveCount, 1);
   });
 });

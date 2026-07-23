@@ -5,13 +5,35 @@ import type { AutoSaveStatus } from './autoSave';
 
 export type InlineNotePanelMessage =
   | { type: 'change'; content: string; tagsText: string }
+  | { type: 'compositionStart' }
+  | { type: 'compositionEnd'; content: string; tagsText: string }
   | { type: 'close' }
   | { type: 'delete' }
   | { type: 'retry' }
   | { type: 'keepLocal' }
   | { type: 'loadExternal' };
 
-export class InlineNotePanel {
+export interface InlineNotePanelLike {
+  open(
+    context: vscode.ExtensionContext,
+    draft: InlineNoteDraft,
+    onMessage: (message: InlineNotePanelMessage) => void | Promise<void>,
+    onDispose?: () => void | Promise<void>,
+  ): void;
+  updateDraft(
+    draft: InlineNoteDraft,
+    options?: {
+      errorMessage?: string;
+      status?: AutoSaveStatus;
+      canDelete?: boolean;
+      replaceInputs?: boolean;
+    },
+  ): void;
+  close(): void;
+  isOpen(): boolean;
+}
+
+export class InlineNotePanel implements InlineNotePanelLike {
   private panel: vscode.WebviewPanel | undefined;
   private draft: InlineNoteDraft | undefined;
   private onMessage:
@@ -63,7 +85,12 @@ export class InlineNotePanel {
 
   public updateDraft(
     draft: InlineNoteDraft,
-    options?: { errorMessage?: string; status?: AutoSaveStatus; canDelete?: boolean },
+    options?: {
+      errorMessage?: string;
+      status?: AutoSaveStatus;
+      canDelete?: boolean;
+      replaceInputs?: boolean;
+    },
   ): void {
     this.draft = draft;
 
@@ -71,13 +98,22 @@ export class InlineNotePanel {
       return;
     }
 
-    void this.panel.webview.postMessage({
+    const message: Record<string, unknown> = {
       type: 'state',
-      draft,
       errorMessage: options?.errorMessage,
       status: options?.status ?? 'saved',
       canDelete: options?.canDelete ?? draft.mode === 'edit',
-    });
+      replaceInputs: options?.replaceInputs ?? false,
+    };
+
+    if (options?.replaceInputs) {
+      message.draft = {
+        content: draft.content,
+        tagsText: draft.tagsText,
+      };
+    }
+
+    void this.panel.webview.postMessage(message);
   }
 
   public close(): void {
@@ -95,14 +131,6 @@ export class InlineNotePanel {
 
 function renderPanelHtml(draft: InlineNoteDraft): string {
   const nonce = String(Date.now());
-  const payload = JSON.stringify({
-    content: draft.content,
-    tagsText: draft.tagsText,
-    mode: draft.mode,
-    anchorSummary: draft.anchorSummary,
-    sourceFile: draft.sourceFile,
-    canDelete: draft.mode === 'edit',
-  });
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -197,6 +225,7 @@ function renderPanelHtml(draft: InlineNoteDraft): string {
     const loadExternalButton = document.getElementById('load-external-button');
 
     let changeTimer;
+    let isComposing = false;
 
     function currentPayload() {
       return { content: contentInput.value, tagsText: tagsInput.value };
@@ -210,15 +239,53 @@ function renderPanelHtml(draft: InlineNoteDraft): string {
     function scheduleChange() {
       clearTimeout(changeTimer);
       statusEl.textContent = 'Editing';
+
+      if (isComposing) {
+        return;
+      }
+
       changeTimer = setTimeout(postChange, 150);
+    }
+
+    function handleCompositionStart() {
+      isComposing = true;
+      clearTimeout(changeTimer);
+      vscode.postMessage({ type: 'compositionStart' });
+    }
+
+    function handleCompositionEnd() {
+      isComposing = false;
+      const payload = currentPayload();
+      vscode.postMessage({ type: 'compositionEnd', ...payload });
+    }
+
+    function flushCompositionIfNeeded() {
+      if (!isComposing) {
+        return;
+      }
+
+      handleCompositionEnd();
     }
 
     contentInput.addEventListener('input', scheduleChange);
     tagsInput.addEventListener('input', scheduleChange);
+    contentInput.addEventListener('compositionstart', handleCompositionStart);
+    tagsInput.addEventListener('compositionstart', handleCompositionStart);
+    contentInput.addEventListener('compositionend', handleCompositionEnd);
+    tagsInput.addEventListener('compositionend', handleCompositionEnd);
 
-    closeButton.addEventListener('click', () => vscode.postMessage({ type: 'close' }));
-    deleteButton.addEventListener('click', () => vscode.postMessage({ type: 'delete' }));
-    retryButton.addEventListener('click', () => vscode.postMessage({ type: 'retry' }));
+    closeButton.addEventListener('click', () => {
+      flushCompositionIfNeeded();
+      vscode.postMessage({ type: 'close' });
+    });
+    deleteButton.addEventListener('click', () => {
+      flushCompositionIfNeeded();
+      vscode.postMessage({ type: 'delete' });
+    });
+    retryButton.addEventListener('click', () => {
+      flushCompositionIfNeeded();
+      vscode.postMessage({ type: 'retry' });
+    });
     keepLocalButton.addEventListener('click', () => vscode.postMessage({ type: 'keepLocal' }));
     loadExternalButton.addEventListener('click', () => vscode.postMessage({ type: 'loadExternal' }));
 
@@ -228,8 +295,11 @@ function renderPanelHtml(draft: InlineNoteDraft): string {
         return;
       }
 
-      contentInput.value = message.draft?.content ?? contentInput.value;
-      tagsInput.value = message.draft?.tagsText ?? tagsInput.value;
+      if (message.replaceInputs && message.draft) {
+        contentInput.value = message.draft.content ?? contentInput.value;
+        tagsInput.value = message.draft.tagsText ?? tagsInput.value;
+      }
+
       errorEl.textContent = message.errorMessage ?? '';
 
       const statusLabels = {
