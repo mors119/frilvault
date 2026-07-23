@@ -37,6 +37,11 @@ export interface RepairSuggestion {
   candidates: string[];
 }
 
+export interface SyncResult {
+  notes_synced: boolean;
+  repairs_applied: number;
+}
+
 export interface MutationResult {
   note: NoteView['note'] | null;
 }

@@ -41,6 +41,8 @@ fn main() -> Result<()> {
 
         Commands::Explorer(cmd) => command::explorer::execute(cmd)?,
 
+        Commands::Sync(cmd) => command::sync::execute(cmd)?,
+
         Commands::Repair(cmd) => {
             command::repair::execute(cmd)?;
         }

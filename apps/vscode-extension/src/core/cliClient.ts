@@ -3,7 +3,7 @@ import { promisify } from 'node:util';
 
 import * as vscode from 'vscode';
 
-import type { NoteView, RepairSuggestion, WorkspaceHealth, WorkspaceStats } from '../types';
+import type { NoteView, RepairSuggestion, SyncResult, WorkspaceHealth, WorkspaceStats } from '../types';
 import { parseJson } from '../utils/parser';
 
 const execFileAsync = promisify(execFile);
@@ -142,6 +142,11 @@ export class CliClient {
       'json',
     ]);
     return parseJson<number>(stdout);
+  }
+
+  public async sync(workspaceRoot: string): Promise<SyncResult> {
+    const stdout = await this.execInWorkspace(workspaceRoot, ['sync', '--format', 'json']);
+    return parseJson<SyncResult>(stdout);
   }
 
   public async checkGitignore(workspaceRoot: string): Promise<{ ignored: boolean }> {

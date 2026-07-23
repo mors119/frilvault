@@ -45,9 +45,9 @@ export function registerSourceRenameHandler(
       }
 
       try {
-        const repaired = await cliClient.applyRepairs(workspaceRoot);
+        const result = await cliClient.sync(workspaceRoot);
 
-        if (repaired > 0) {
+        if (result.notes_synced || result.repairs_applied > 0) {
           refreshNotesPanel();
           await refreshDecorations();
         }
