@@ -95,23 +95,23 @@ suite('Extension Test Suite', () => {
     assert.strictEqual(children.length, 0);
   });
 
-  test('Enablement state defaults to enabled and persists per workspace', async () => {
+  test('Enablement state defaults to disabled and persists per workspace', async () => {
     const workspace = createTestWorkspace();
     const workspaceState = createMockWorkspaceState();
 
-    assert.strictEqual(isFrilVaultEnabled(workspaceState, workspace.root), true);
-
-    await setFrilVaultEnabled(workspaceState, workspace.root, false);
-
-    assert.strictEqual(
-      workspaceState.get<Record<string, boolean>>(FRILVAULT_ENABLED_KEY)?.[workspace.root],
-      false,
-    );
     assert.strictEqual(isFrilVaultEnabled(workspaceState, workspace.root), false);
 
     await setFrilVaultEnabled(workspaceState, workspace.root, true);
 
+    assert.strictEqual(
+      workspaceState.get<Record<string, boolean>>(FRILVAULT_ENABLED_KEY)?.[workspace.root],
+      true,
+    );
     assert.strictEqual(isFrilVaultEnabled(workspaceState, workspace.root), true);
+
+    await setFrilVaultEnabled(workspaceState, workspace.root, false);
+
+    assert.strictEqual(isFrilVaultEnabled(workspaceState, workspace.root), false);
   });
 
   test('FrilVault Notes provider reads the active editor file', async () => {
