@@ -90,6 +90,11 @@ jobs:
         with:
           ref: ${{ github.event.release.tag_name }}
 
+      - name: Clean untrusted Homebrew taps
+        if: runner.os == 'macOS'
+        shell: bash
+        run: brew untap aws/tap || true
+
       - name: Set up Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -161,7 +166,7 @@ jobs:
             --out "frilvault-${{ needs.verify-release.outputs.extension_version }}-${{ matrix.target }}.vsix"
 
       - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: vsix-${{ matrix.target }}
           path: apps/vscode-extension/frilvault-${{ needs.verify-release.outputs.extension_version }}-${{ matrix.target }}.vsix
@@ -178,7 +183,7 @@ jobs:
 
     steps:
       - name: Download VSIX artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           pattern: vsix-*
           path: dist/release
