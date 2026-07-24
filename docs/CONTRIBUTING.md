@@ -58,13 +58,11 @@ If `npm test` aborts with `SIGABRT` under `vscode-test`, treat that as unresolve
 The repository separates release asset generation from Marketplace publishing.
 
 - `.github/workflows/release.yml` runs from a published GitHub Release and produces platform-specific VSIX artifacts
-- `.github/workflows/publish.yml` is a manual workflow for Marketplace publishing
+- `.github/workflows/publish.yml` is a manual workflow for Marketplace publishing with `VSCE_PAT`
 
-If you publish manually instead of using `publish.yml`, use a generated VSIX and:
+Marketplace users do not choose a platform manually. The Marketplace serves the matching VSIX for the user's platform.
 
-```bash
-npx @vscode/vsce publish --packagePath <VSIX_FILE>
-```
+GitHub Release users download the matching VSIX asset and install it with `Extensions: Install from VSIX...` in VS Code.
 
 Avoid introducing a separate docs build system unless the project clearly needs public documentation hosting.
 

@@ -3,7 +3,7 @@
 This document defines the release workflow for FrilVault.
 Use [README.md](README.md) for the directory map, [TEMPLATE.md](TEMPLATE.md) for new release notes, and versioned files like [v0.0.md](v0.0.md) for published history.
 
-Repository reality as of July 23, 2026:
+Repository reality as of July 24, 2026:
 
 - the active source trees are `crates/frilvault-core`, `apps/frilvault-cli`, and `apps/vscode-extension`
 - there is no desktop application source tree in this repository checkout
@@ -70,7 +70,6 @@ Confirm:
 - workspace linting passes
 - workspace tests pass
 - release build succeeds
-- desktop package configuration is correct
 - version numbers are consistent
 - lockfiles are current
 - user-facing documentation is current
@@ -90,17 +89,16 @@ For the current repository, also confirm:
 
 Search for all version declarations before changing them.
 
-Typical locations may include:
+Typical locations for the current repository include:
 
 ```text
 Cargo.toml
 Cargo.lock
-package.json
-package-lock.json
-tauri.conf.json
-tauri.conf.json5
-tauri.conf.toml
-CHANGELOG.md
+apps/vscode-extension/package.json
+apps/vscode-extension/package-lock.json
+apps/vscode-extension/CHANGELOG.md
+docs/RELEASES/v0.0.md
+README.md
 ```
 
 Do not assume every listed file exists.
@@ -128,41 +126,17 @@ Recommended structure:
 
 ### Added
 
-- First desktop release.
+- VS Code extension release.
 - Local FrilVault workspace support.
-- Note display for the current source file.
+- Note creation and viewing inside the editor.
 
-### Known limitations
+### Other
 
-- Automatic updates are not available.
-- Some advanced symbol repair features are deferred.
+- Installation notes
+- Supported platforms
 ```
 
 Describe outcomes, not internal commit history.
-
-## Release Branch
-
-For a small project, release directly from a short-lived branch:
-
-```text
-release/<version>
-```
-
-Example:
-
-```text
-release/0.0.1
-```
-
-The release branch should contain only release preparation:
-
-- version updates
-- changelog updates
-- release metadata
-- packaging fixes required for release
-- documentation corrections required for installation
-
-Do not add unrelated product features to the release branch.
 
 ## Release Validation
 
@@ -177,7 +151,7 @@ cargo test --workspace --all-features
 cargo build --workspace --release
 ```
 
-Run relevant frontend, extension, and desktop commands defined by their actual package files.
+Run relevant frontend and extension commands defined by their actual package files.
 
 For the current VS Code extension checkout, the relevant scripts are:
 
@@ -192,82 +166,60 @@ Record unsupported platform validation explicitly.
 
 If `npm test` exits with `SIGABRT` under `vscode-test`, do not treat the extension as release-ready until the failure is either fixed or explicitly accepted as an external environment limitation by the maintainer and recorded in the release checklist.
 
-## Marketplace Publishing Workflow
+## Release And Marketplace Flow
 
-Keep release asset generation and Marketplace publishing as separate workflows.
+Keep GitHub Release asset generation and Marketplace publishing as separate workflows.
 
-Recommended flow:
+Actual flow:
 
 ```text
-GitHub Release -> published -> release.yml -> VSIX assets on the release
-workflow_dispatch -> publish.yml -> Visual Studio Marketplace
+Merge reviewed changes to main
+-> tag the release commit
+-> create and publish a GitHub Release
+-> release.yml builds CLI-backed VSIX assets and attaches them to the Release
+-> run publish.yml manually
+-> publish.yml downloads the Release assets and publishes them to the Marketplace
 ```
 
-The release workflow should:
+### GitHub Release Assets
 
-1. verify that the GitHub release tag matches `apps/vscode-extension/package.json`
-2. build target-specific `flvt` binaries and VSIX packages for:
+`release.yml` runs on `release.published` and:
+
+1. verifies that the GitHub release tag matches `apps/vscode-extension/package.json`
+2. builds target-specific `flvt` binaries and VSIX packages for:
    - `darwin-arm64`
    - `darwin-x64`
    - `linux-x64`
    - `win32-x64`
-3. attach those VSIX files to the GitHub Release
+3. attaches those VSIX files to the GitHub Release
 
-The Marketplace workflow should:
+Expected Release asset names:
 
-1. be triggered manually with `workflow_dispatch`
-2. download the target-specific VSIX files from the selected GitHub Release
-3. publish those VSIX files to the Visual Studio Marketplace
+```text
+frilvault-<version>-darwin-arm64.vsix
+frilvault-<version>-darwin-x64.vsix
+frilvault-<version>-linux-x64.vsix
+frilvault-<version>-win32-x64.vsix
+```
 
-Use a Visual Studio Marketplace publisher token for the manual publish workflow.
+### Marketplace Publishing
+
+`publish.yml` is a separate manual workflow triggered with `workflow_dispatch`.
+
+It:
+
+1. checks out the selected release tag
+2. verifies that the tag matches `apps/vscode-extension/package.json`
+3. downloads the VSIX files attached to that GitHub Release
+4. publishes each VSIX to the single `frillab.frilvault` Marketplace listing
 
 Required GitHub Actions configuration:
 
-- secret: `VSCE_PAT`
+- repository secret: `VSCE_PAT`
 
-The publisher remains a single Marketplace extension identity. Platform-specific VSIX files do not create separate extension listings.
+The `VSCE_PAT` token must belong to an account with permission to publish updates for the `frillab` publisher.
 
-## Release Pull Request
-
-Open a dedicated Pull Request.
-
-Suggested title:
-
-```text
-release: prepare v0.0.1
-```
-
-Suggested body:
-
-```markdown
-## Release
-
-`v0.0.1`
-
-## Included
-
-- List the user-visible features.
-- List important fixes.
-- List supported platforms.
-
-## Deferred
-
-- List non-blocking work moved to later releases.
-
-## Validation
-
-- [x] Formatting
-- [x] Linting
-- [x] Tests
-- [x] Release build
-- [ ] Platform-specific manual checks
-
-## Known limitations
-
-- Document current limitations.
-```
-
-Merge using the repository's normal reviewed workflow.
+Marketplace users do not select `darwin-arm64`, `darwin-x64`, `linux-x64`, or `win32-x64` manually. Visual Studio Marketplace serves the matching package for the user's platform.
 
 ## Tagging
 
@@ -299,55 +251,24 @@ git push upstream frilvault-v0.0.1
 
 Tagging and pushing to the canonical repository require explicit maintainer approval.
 
-When the GitHub Actions release workflow creates tags automatically, follow the workflow's documented trigger instead of creating a duplicate tag manually.
-
 ## GitHub Release
 
-Create a draft first:
+Create the release from the verified tag:
 
 ```bash
 gh release create frilvault-v0.0.1 \
   --repo FrilLab/frilvault \
-  --draft \
   --generate-notes \
   --title "FrilVault v0.0.1"
 ```
 
-Upload artifacts when they are not attached automatically:
+The workflow-triggering event is GitHub Release publication. After publishing:
 
-```bash
-gh release upload frilvault-v0.0.1 \
-  <ARTIFACTS> \
-  --repo FrilLab/frilvault \
-  --clobber
-```
+- verify that `release.yml` started
+- verify that all four VSIX assets were attached
+- confirm the asset names match the expected platform targets
 
-Use `--clobber` only when intentionally replacing incorrect draft artifacts.
-
-Verify:
-
-- release points to the expected tag
-- artifact names include platform and architecture
-- artifacts open or execute as expected
-- checksums match
-- release notes explain installation
-- known limitations are included
-
-Publish only after explicit maintainer approval.
-
-## Suggested Artifact Naming
-
-Use predictable names:
-
-```text
-frilvault-0.0.2-darwin-arm64.vsix
-frilvault-0.0.2-darwin-x64.vsix
-frilvault-0.0.2-linux-x64.vsix
-frilvault-0.0.2-win32-x64.vsix
-frilvault-0.0.2-checksums.txt
-```
-
-Only publish platforms that were actually built and validated.
+If you prefer a draft-first flow in the GitHub UI, publish the draft only after the notes and target tag have been reviewed. `release.yml` will not run until the Release is published.
 
 ## Release Notes
 
@@ -362,75 +283,14 @@ Release notes should answer:
 
 Avoid copying raw commit messages without editing.
 
-## Post-Release Verification
+## Manual Marketplace Publish
 
-After publication:
+Publish to the Marketplace only after the GitHub Release assets have been verified.
 
-- download the public artifacts
-- verify installation from the public release page
-- start the application
-- create or open a local vault
-- verify the primary release path
-- confirm the tag and release are visible
-- confirm release notes are correct
-- open issues for newly discovered defects
-- update the next milestone
+Dispatch `publish.yml` with:
 
-Do not silently replace a published release to hide a defect. Document the problem and issue a corrected release when necessary.
+- `tag=frilvault-v0.0.2`
 
-## Rollback and Correction
+The workflow downloads the Release assets, verifies that all four VSIX packages exist, and publishes them with `VSCE_PAT`.
 
-If a draft release is wrong:
-
-- keep it as a draft
-- replace the incorrect artifacts
-- correct the release notes
-- rerun validation
-
-If a published release is defective:
-
-- document the defect
-- avoid deleting the release unless absolutely necessary
-- prepare a patch version
-- publish corrected artifacts under the new version
-
-Destructive release or tag operations require explicit maintainer approval.
-
-## First Release Recommendation
-
-For the current repository, prioritize:
-
-- a working Rust core and CLI
-- stable local vault behavior
-- current-file note display in the VS Code extension
-- clear installation and validation instructions
-- release artifacts only for surfaces that actually exist in the repository
-
-Defer when necessary:
-
-- automatic application updates
-- advanced cache and indexing
-- file watchers
-- rename and repair automation
-- image attachments
-- advanced symbol resolution
-
-## Current Release Assessment
-
-As of July 23, 2026, this checkout is not ready for a repository-level release that includes the VS Code extension.
-
-Release blockers currently visible in the source tree and validation results:
-
-- `apps/vscode-extension/src/features/inline-editor/editor.ts` and `apps/vscode-extension/src/features/gitignore/prompt.ts`
-  a successful note save can still be surfaced as a failure if the post-save `.gitignore` check or prompt path throws
-- `apps/vscode-extension/src/features/uri/handler.ts`
-  malformed `frilvault://` URIs can escape the handler's normal user-facing error path during query decoding
-- `apps/vscode-extension/src/features/inline-editor/codelens.ts`
-  path matching is more fragile than the shared path helpers and is risky for Windows or nested configured roots
-- `apps/vscode-extension`
-  `npm test` currently aborts with `SIGABRT` under `vscode-test`, so the extension release gate is not green
-
-Non-blocking cleanup items:
-
-- `apps/vscode-extension/src/core/nodeBridge.ts` remains inactive legacy scaffolding
-- `apps/vscode-extension/src/features/add-note/*` is legacy command code that is no longer part of active command registration
+Only publish platforms that were actually built and attached to the Release.
