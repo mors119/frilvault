@@ -79,7 +79,7 @@ flvt repair --apply
 - [Repository Rules](AGENTS.md)
 - [GitHub Workflow](docs/github-workflow.md)
 - [Testing](docs/testing.md)
-- [Release Process](docs/release-process.md)
+- [Release Documents](docs/RELEASES/README.md)
 
 ## Development
 
