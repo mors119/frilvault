@@ -89,6 +89,17 @@ jobs:
             fi
           done
 
+      - name: Verify Marketplace token is available
+        shell: bash
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          if [ -z "$VSCE_PAT" ]; then
+            echo "::error::VSCE_PAT is not available to this workflow."
+            echo "::error::Check whether it is stored as a repository secret or an environment secret."
+            exit 1
+          fi
+
       - name: Publish platform packages
         working-directory: apps/vscode-extension
         env:
