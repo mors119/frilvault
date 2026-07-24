@@ -1,147 +1,81 @@
-# FrilVault VS Code Extension
+# FrilVault
 
-VS Code integration for FrilVault.
+FrilVault is a local-first developer knowledge layer that attaches persistent
+notes to source code without modifying the source file.
 
-## Knowledge Layer Foundation
+## Features
 
-Epic #123 introduces shared current-file note state for the VS Code extension.
-The sidebar, gutter decorations, and hover preview all read from one
-`CurrentFileNotesStore` cache instead of issuing separate CLI queries.
-
-Note mutations call a single invalidation path so every affected view refreshes
-together after add, sync, or repair operations.
-
-## Multi-root Workspaces
-
-FrilVault currently targets one workspace root at a time:
-
-- By default it uses the first folder in a multi-root workspace.
-- Set `frilvault.workspaceRoot` to pin FrilVault to a specific folder when
-  several roots are open.
-- Files outside the selected root are ignored safely and do not trigger vault
-  creation.
-- Each workspace root keeps its own enable/disable preference.
-
-## Current Scope
-
-- `FrilVault: Add Note`
-- `FrilVault Notes` side panel for the active editor
-- gutter decorations for line notes
-- note open from the side panel
-- note edit and delete flows
-- search notes
-- workspace stats
-- workspace health
-- repair apply
-
-## Current Integration Model
-
-The extension uses the `flvt` CLI as its runtime boundary:
-
-```text
-VS Code UI
-↓
-Extension services
-↓
-CliClient
-↓
-FrilVault CLI / core
-↓
-JSON persistence
-```
-
-`FrilVault: Add Note` currently opens the inline note editor path. The older `features/add-note` command/service implementation remains in the repository as legacy code and is not the active command registration path.
-
-Native bridge files also remain in the repository as scaffolding, but the active extension runtime does not instantiate `src/core/nodeBridge.ts`.
-
-## Feature Structure
-
-```text
-src/features
-├── current-file
-├── decorations
-├── enablement
-├── hover
-├── inline-editor
-└── notes-panel
-```
+- Add notes to source lines and symbols
+- View notes directly inside VS Code
+- Edit and delete notes from the editor
+- Navigate between code and notes
+- Search notes across the current workspace
+- Store all note data locally as JSON
+- Keep project knowledge inside `.vault`
 
 ## Requirements
 
-- Rust toolchain with `cargo`
-- Node.js
-- VS Code
-- an accessible `flvt` binary for CLI-backed features
+FrilVault ships with a bundled `flvt` CLI inside each platform-specific VSIX.
 
-If `flvt` is not on `PATH`, set `frilvault.cliPath` in VS Code settings.
+Supported packaged targets:
 
-## Build
+- `darwin-arm64`
+- `darwin-x64`
+- `linux-x64`
+- `win32-x64`
 
-```bash
-npm run check-types
-npm run lint
-npm run compile
-npm test
-```
+`frilvault.cliPath` is now an advanced override for custom builds.
 
-This builds the extension bundle at `dist/extension.js`.
+## Getting Started
 
-Use `npm run check-types`, not `npm run typecheck`; the latter script does not exist in the current package.
+1. Install the FrilVault extension.
+2. Open a project in VS Code.
+3. Run `FrilVault: Turn On` for the workspace.
+4. Run `FrilVault: Add Note`.
+5. Enter a note in the inline editor.
 
-## Test
+## Commands
 
-```bash
-npm test
-```
+| Command | Description |
+| --- | --- |
+| `FrilVault: Add Note` | Add a note at the current line or symbol |
+| `FrilVault: Show Notes for Current File` | Show notes for the active file |
+| `FrilVault: Search Notes` | Search notes in the current workspace |
+| `FrilVault: Show Workspace Stats` | Show workspace note statistics |
+| `FrilVault: Show Workspace Health` | Show missing-file health information |
+| `FrilVault: Apply Repairs` | Apply note repair suggestions for renamed or moved files |
 
-If `npm test` exits with `SIGABRT` after reusing a cached VS Code test install,
-clear the cached Electron host and retry:
+## Data Storage
 
-```bash
-rm -rf .vscode-test
-npm test
-```
-
-Current integration tests cover:
-
-- CLI JSON parsing
-- active-editor notes panel behavior
-- legacy add-note command coverage
-- post-save boundary handling
-- notes view registration idempotency and disposal
-
-## Extension Development Host
-
-When debugging this extension, disable or uninstall the marketplace FrilVault
-extension first. VS Code cannot register the same contributed view id
-(`frilvault.notes`) twice, so running the development extension alongside an
-installed copy produces repeated errors such as:
+FrilVault stores project data locally under:
 
 ```text
-Cannot register multiple views with same id `frilvault.notes`
+.vault/
 ```
 
-After changing extension code, reload the Extension Development Host window so
-activation and disposables run cleanly. Shared view and command identifiers
-live in `src/constants/ids.ts` and must stay aligned with `package.json`.
+No cloud account is required.
 
-## Notes
+## Known Limitations
 
-- line-note UX is the most complete path today
-- symbol anchors exist in the shared model, but editor UX around them is still limited
-- the current release gate is not fully green while `npm test` still aborts with `SIGABRT` under `vscode-test`
+- FrilVault targets one workspace root at a time, so multi-root workspace support is limited
+- This is an early preview release
 
-## Hover and Clipboard
+## Roadmap
 
-FrilVault renders note hovers through a single registered hover provider. Gutter
-and inline decorations do not attach duplicate hover messages, so each note
-appears once when you hover editor content.
+- Bundle or simplify CLI installation for extension users
+- Improve multi-root workspace behavior
+- Expand editor UX for symbol-anchored notes
 
-Note content and interactive action links are built as separate Markdown
-sections. FrilVault copy commands (`Copy Link`, `Copy Content`, `Copy Markdown`)
-write only the intended payload and never include hover action labels.
+## Privacy
 
-VS Code controls manual text selection inside the native hover. If you select
-and copy the entire hover yourself, action link text may be included. FrilVault
-does not patch that native behavior; use the provided copy commands for clean
-clipboard output.
+FrilVault does not upload source code or note content to an external service.
+
+## Issues
+
+Report bugs and feature requests through the GitHub issue tracker:
+
+https://github.com/FrilLab/frilvault/issues
+
+## License
+
+MIT

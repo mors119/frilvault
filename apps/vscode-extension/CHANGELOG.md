@@ -1,21 +1,30 @@
-# Change Log
+# Changelog
 
 All notable changes to the FrilVault VS Code extension are documented here.
 
-## [Unreleased]
+## 0.0.1 - 2026-07-23
 
 ### Added
 
-- `FrilVault: Add Note` command
-- `FrilVault Notes` side panel
-- gutter decorations for line notes
-- note open from TreeView
-- workspace search, stats, health, and repair commands
-- CLI-backed feature folders for add note, notes panel, and decorations
-- Node-API bridge packaging through `frilvault-node`
-- VS Code integration tests for add note and notes panel flows
+- Initial VS Code Marketplace release
+- Line-anchored and symbol-anchored notes
+- Inline note creation and editing
+- Current-file notes view
+- Workspace note search
+- Gutter actions for viewing, editing, deleting, and copying note links
+- Local JSON-based persistence through the FrilVault CLI
 
-### Changed
+### Fixed
 
-- `flvt list` integration now uses `--format json`
-- extension documentation updated to match the current MVP architecture
+- Auto-save race conditions during active typing
+- Save serialization for overlapping inline editor writes
+- IME-aware auto-save behavior for in-progress composition
+- Stale save completion handling for newer drafts
+- Bundle the `flvt` CLI into platform-specific VSIX packages
+- Prefer the bundled CLI by default with a custom `frilvault.cliPath` override
+- Replace generic CLI startup failures with actionable runtime errors and output-channel diagnostics
+
+### Known limitations
+
+- Targets one workspace root at a time in multi-root workspaces
+- Early preview release

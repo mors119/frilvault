@@ -6,12 +6,13 @@
 2. Open `apps/vscode-extension` in VS Code.
 3. Run `npm run compile`.
 4. Press `F5` to launch an Extension Development Host.
+5. Run `FrilVault: Turn On` inside the test workspace.
 
 ## Configure the CLI
 
-CLI-backed features need `flvt`.
+Marketplace and target-specific VSIX builds bundle `flvt` automatically.
 
-If `flvt` is not on `PATH`, set:
+Set `frilvault.cliPath` only when you want to override the bundled binary:
 
 ```json
 {
@@ -37,4 +38,4 @@ npm test
 
 - the side panel tracks the current active editor
 - gutter decorations refresh when notes change or when the active editor changes
-- all extension flows use the `flvt` CLI through `CliClient`
+- all extension flows use the bundled or overridden `flvt` CLI through `CliClient`

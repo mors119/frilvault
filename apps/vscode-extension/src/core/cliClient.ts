@@ -1,18 +1,46 @@
+import { constants as fsConstants, existsSync } from 'node:fs';
+import { access } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
-import * as vscode from 'vscode';
-
 import type { NoteView, RepairSuggestion, SyncResult, WorkspaceHealth, WorkspaceStats } from '../types';
 import { parseJson } from '../utils/parser';
+import {
+  getConfiguredCliPath,
+  resolveCliPath,
+  type CliResolution,
+} from './bundledCli';
 
 const execFileAsync = promisify(execFile);
+const VERSION_PATTERN = /\b(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)\b/;
 
-export function getConfiguredCliPath(): string {
-  return vscode.workspace
-    .getConfiguration('frilvault')
-    .get<string>('cliPath', 'flvt')
-    .trim();
+type ExecFileResult = {
+  stdout: string;
+  stderr: string;
+};
+
+type ExecFileLike = (
+  file: string,
+  args: string[],
+  options: {
+    cwd: string;
+  },
+) => Promise<ExecFileResult>;
+
+export interface OutputChannelLike {
+  appendLine(value: string): void;
+}
+
+export interface CliClientDependencies {
+  getConfiguredCliPath?: () => string;
+  extensionPath?: string;
+  extensionVersion?: string;
+  outputChannel?: OutputChannelLike;
+  platform?: NodeJS.Platform;
+  arch?: string;
+  execFile?: ExecFileLike;
+  access?: (path: string, mode: number) => Promise<void>;
+  existsSync?: (path: string) => boolean;
 }
 
 export interface AddLineNoteInput {
@@ -53,16 +81,36 @@ export interface SearchNotesInput {
 /**
  * Executes FrilVault CLI commands on behalf of the extension.
  *
- * Each method runs `flvt` in the workspace root and parses JSON responses into
- * typed DTOs. Failures from the child process are surfaced as thrown errors.
- *
- * extension을 대신해 FrilVault CLI command를 실행합니다.
- *
- * 각 메서드는 workspace root에서 `flvt`를 실행하고 JSON 응답을 typed DTO로
- * 파싱합니다. child process 실패는 throw된 error로 전달됩니다.
+ * Each method resolves the CLI path, validates compatibility, runs the
+ * command in the workspace root, and parses JSON responses into typed DTOs.
  */
 export class CliClient {
-  public constructor(private readonly getCliPath = getConfiguredCliPath) {}
+  private readonly dependencies: Required<
+    Pick<CliClientDependencies, 'platform' | 'arch' | 'execFile' | 'access' | 'existsSync'>
+  > &
+    Omit<CliClientDependencies, 'platform' | 'arch' | 'execFile' | 'access' | 'existsSync'>;
+  private readonly verifiedCliPaths = new Map<string, Promise<void>>();
+
+  public constructor(
+    dependencies: CliClientDependencies | (() => string) = {},
+  ) {
+    const normalized =
+      typeof dependencies === 'function'
+        ? { getConfiguredCliPath: dependencies }
+        : dependencies;
+
+    this.dependencies = {
+      getConfiguredCliPath: normalized.getConfiguredCliPath,
+      extensionPath: normalized.extensionPath,
+      extensionVersion: normalized.extensionVersion,
+      outputChannel: normalized.outputChannel,
+      platform: normalized.platform ?? process.platform,
+      arch: normalized.arch ?? process.arch,
+      execFile: normalized.execFile ?? execFileAsync,
+      access: normalized.access ?? access,
+      existsSync: normalized.existsSync ?? existsSync,
+    };
+  }
 
   public async addLineNote(input: AddLineNoteInput): Promise<NoteView> {
     const args = [
@@ -257,19 +305,235 @@ export class CliClient {
   }
 
   private async execInWorkspace(workspaceRoot: string, args: string[]): Promise<string> {
-    // Run the CLI in the workspace root so relative `--file` paths resolve correctly.
-    // workspace root에서 CLI를 실행해 상대 `--file` 경로가 올바르게 해석되게 합니다.
+    const resolution = this.resolveCli();
+
+    if (!resolution.cliPath) {
+      this.logResolution(resolution);
+      throw new Error(this.formatMissingCliMessage());
+    }
+
+    const resolvedCli = { ...resolution, cliPath: resolution.cliPath };
+
+    await this.ensureCliCompatibility(workspaceRoot, resolvedCli);
+    this.logResolution(resolvedCli, args);
+
     try {
-      const { stdout } = await execFileAsync(this.getCliPath(), args, {
+      const result = await this.dependencies.execFile(resolvedCli.cliPath, args, {
         cwd: workspaceRoot,
       });
 
-      return stdout.trim();
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Failed to execute FrilVault CLI.';
+      if (result.stderr.trim().length > 0) {
+        this.log(`stderr: ${result.stderr.trim()}`);
+      }
 
-      throw new Error(message);
+      return result.stdout.trim();
+    } catch (error) {
+      this.logExecutionError(error);
+      throw this.formatCommandError(error, resolvedCli);
     }
   }
+
+  private resolveCli(): CliResolution {
+    const configuredCliPath =
+      this.dependencies.getConfiguredCliPath?.() ?? getConfiguredCliPath();
+
+    return resolveCliPath({
+      configuredCliPath,
+      extensionPath: this.dependencies.extensionPath,
+      platform: this.dependencies.platform,
+      existsSync: this.dependencies.existsSync,
+    });
+  }
+
+  private async ensureCliCompatibility(
+    workspaceRoot: string,
+    resolution: CliResolution & { cliPath: string },
+  ): Promise<void> {
+    let verification = this.verifiedCliPaths.get(resolution.cliPath);
+
+    if (!verification) {
+      verification = this.verifyCliCompatibility(workspaceRoot, resolution);
+      this.verifiedCliPaths.set(resolution.cliPath, verification);
+    }
+
+    try {
+      await verification;
+    } catch (error) {
+      this.verifiedCliPaths.delete(resolution.cliPath);
+      throw error;
+    }
+  }
+
+  private async verifyCliCompatibility(
+    workspaceRoot: string,
+    resolution: CliResolution & { cliPath: string },
+  ): Promise<void> {
+    await this.ensureExecutablePermission(resolution);
+
+    try {
+      const versionResult = await this.dependencies.execFile(resolution.cliPath, ['--version'], {
+        cwd: workspaceRoot,
+      });
+      const stdout = versionResult.stdout.trim();
+      const stderr = versionResult.stderr.trim();
+
+      this.log(
+        `version check: path=${resolution.cliPath} source=${resolution.source} stdout=${stdout || '<empty>'}`,
+      );
+
+      if (stderr.length > 0) {
+        this.log(`version stderr: ${stderr}`);
+      }
+
+      const actualVersion = extractSemver(stdout);
+      const expectedVersion = this.dependencies.extensionVersion;
+
+      if (expectedVersion && actualVersion && actualVersion !== expectedVersion) {
+        throw new Error(
+          `FrilVault CLI version mismatch. Expected ${expectedVersion}, found ${actualVersion}.`,
+        );
+      }
+    } catch (error) {
+      this.logExecutionError(error);
+      throw this.formatStartupError(error, resolution);
+    }
+  }
+
+  private async ensureExecutablePermission(
+    resolution: CliResolution & { cliPath: string },
+  ): Promise<void> {
+    if (this.dependencies.platform === 'win32') {
+      return;
+    }
+
+    await this.dependencies.access(resolution.cliPath, fsConstants.X_OK).catch((error) => {
+      throw this.formatStartupError(error, resolution);
+    });
+  }
+
+  private formatMissingCliMessage(): string {
+    return [
+      'FrilVault CLI could not be started.',
+      `No bundled CLI was found for ${this.dependencies.platform}-${this.dependencies.arch}.`,
+      'Set `frilvault.cliPath` to a compatible executable or package the platform CLI into the VSIX.',
+    ].join(' ');
+  }
+
+  private formatStartupError(
+    error: unknown,
+    resolution: CliResolution & { cliPath: string },
+  ): Error {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+
+    if (message.startsWith('FrilVault CLI version mismatch.')) {
+      return new Error(message);
+    }
+
+    if (isMissingExecutableError(error)) {
+      if (resolution.source === 'configured') {
+        return new Error(
+          `FrilVault CLI could not be started. The configured \`frilvault.cliPath\` could not be found: ${resolution.cliPath}.`,
+        );
+      }
+
+      return new Error(this.formatMissingCliMessage());
+    }
+
+    if (isPermissionError(error)) {
+      return new Error(
+        `FrilVault CLI could not be started. The resolved executable is not runnable: ${resolution.cliPath}.`,
+      );
+    }
+
+    return new Error(
+      `FrilVault CLI could not be started. Check the "FrilVault CLI" output channel for details. (${message})`,
+    );
+  }
+
+  private formatCommandError(
+    error: unknown,
+    resolution: CliResolution & { cliPath: string },
+  ): Error {
+    if (isSpawnFailure(error)) {
+      return this.formatStartupError(error, resolution);
+    }
+
+    const stderr = readExecErrorStream(error, 'stderr');
+    if (stderr) {
+      return new Error(stderr);
+    }
+
+    const message =
+      error instanceof Error ? error.message : 'Failed to execute FrilVault CLI.';
+
+    return new Error(message);
+  }
+
+  private logResolution(resolution: CliResolution, args: string[] = []): void {
+    this.log(
+      [
+        `platform=${this.dependencies.platform}`,
+        `arch=${this.dependencies.arch}`,
+        `source=${resolution.source}`,
+        `path=${resolution.cliPath ?? '<missing>'}`,
+        `args=${args.join(' ') || '<none>'}`,
+      ].join(' '),
+    );
+  }
+
+  private logExecutionError(error: unknown): void {
+    const message = error instanceof Error ? error.message : String(error);
+    const stderr = readExecErrorStream(error, 'stderr');
+    const stdout = readExecErrorStream(error, 'stdout');
+
+    this.log(`error: ${message}`);
+
+    if (stdout) {
+      this.log(`stdout: ${stdout}`);
+    }
+
+    if (stderr) {
+      this.log(`stderr: ${stderr}`);
+    }
+  }
+
+  private log(message: string): void {
+    this.dependencies.outputChannel?.appendLine(`[FrilVault CLI] ${message}`);
+  }
+}
+
+function extractSemver(raw: string): string | undefined {
+  return raw.match(VERSION_PATTERN)?.[1];
+}
+
+function isSpawnFailure(error: unknown): boolean {
+  return isMissingExecutableError(error) || isPermissionError(error);
+}
+
+function isMissingExecutableError(error: unknown): boolean {
+  return readExecErrorCode(error) === 'ENOENT';
+}
+
+function isPermissionError(error: unknown): boolean {
+  return readExecErrorCode(error) === 'EACCES';
+}
+
+function readExecErrorCode(error: unknown): string | undefined {
+  if (!error || typeof error !== 'object') {
+    return undefined;
+  }
+
+  return 'code' in error && typeof error.code === 'string' ? error.code : undefined;
+}
+
+function readExecErrorStream(
+  error: unknown,
+  key: 'stdout' | 'stderr',
+): string | undefined {
+  if (!error || typeof error !== 'object' || !(key in error)) {
+    return undefined;
+  }
+
+  const value = (error as Record<'stdout' | 'stderr', unknown>)[key];
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
