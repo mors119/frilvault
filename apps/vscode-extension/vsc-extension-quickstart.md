@@ -20,6 +20,19 @@ Set `frilvault.cliPath` only when you want to override the bundled binary:
 }
 ```
 
+## Publish
+
+GitHub Release packaging and Marketplace publishing are separate steps.
+
+- `.github/workflows/release.yml` builds target-specific VSIX assets from a published GitHub Release
+- `.github/workflows/publish.yml` is the manual Marketplace publishing workflow
+
+For a manual local publish, use a generated VSIX:
+
+```bash
+npx @vscode/vsce publish --packagePath frilvault-0.0.2-darwin-arm64.vsix
+```
+
 ## Useful Commands
 
 - `FrilVault: Add Note`

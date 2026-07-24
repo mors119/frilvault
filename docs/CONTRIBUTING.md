@@ -53,6 +53,19 @@ If `npm test` aborts with `SIGABRT` under `vscode-test`, treat that as unresolve
 - `AGENTS.md` captures repository-wide agent-facing rules
 - `docs/github-workflow.md`, `docs/testing.md`, and `docs/RELEASES/PROCESS.md` define the detailed workflow
 
+## Release And Publish
+
+The repository separates release asset generation from Marketplace publishing.
+
+- `.github/workflows/release.yml` runs from a published GitHub Release and produces platform-specific VSIX artifacts
+- `.github/workflows/publish.yml` is a manual workflow for Marketplace publishing
+
+If you publish manually instead of using `publish.yml`, use a generated VSIX and:
+
+```bash
+npx @vscode/vsce publish --packagePath <VSIX_FILE>
+```
+
 Avoid introducing a separate docs build system unless the project clearly needs public documentation hosting.
 
 ## Pull Request Checklist

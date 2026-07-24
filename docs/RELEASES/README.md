@@ -15,6 +15,15 @@ The template intentionally stays close to [v0.0.md](v0.0.md) so new notes remain
 2. Follow [PROCESS.md](PROCESS.md) for the release workflow and validation steps.
 3. Move the finished note into the matching versioned history file.
 
+## Workflow Split
+
+The current release automation is intentionally split:
+
+- `release.yml` builds and uploads VSIX assets when a GitHub Release is published
+- `publish.yml` is a separate manual workflow for Visual Studio Marketplace publishing
+
+This keeps Marketplace failures from blocking GitHub Release asset creation.
+
 ## Notes
 
 - Keep process changes in [PROCESS.md](PROCESS.md), not in versioned history files.

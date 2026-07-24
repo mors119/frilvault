@@ -47,13 +47,33 @@ The repository is not yet release-ready as a whole because the VS Code extension
 - CodeLens path matching is brittle for nested configured roots and Windows-style paths
 - `npm test` currently aborts with `SIGABRT` under `vscode-test`
 
+## Release Automation
+
+The repository uses a split release flow for the VS Code extension:
+
+- `release.yml` runs when a GitHub Release is published and builds platform-specific VSIX assets
+- `publish.yml` is a manual workflow that publishes those release artifacts to the Visual Studio Marketplace
+
+Current VSIX targets:
+
+- `darwin-arm64`
+- `darwin-x64`
+- `linux-x64`
+- `win32-x64`
+
+Marketplace publishing can also be done manually from a downloaded VSIX:
+
+```bash
+npx @vscode/vsce publish --packagePath frilvault-0.0.2-darwin-arm64.vsix
+```
+
 ## Storage Model
 
 ```text
 .vault/
 ├── notes/
 ├── index/
-└── workspace.json
+└── workspace.yml
 ```
 
 FrilVault does not rewrite or annotate source files.

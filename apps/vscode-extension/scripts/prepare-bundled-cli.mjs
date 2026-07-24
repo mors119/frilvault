@@ -45,14 +45,14 @@ async function prepareBundledCli({
   extensionDir,
   target,
 }) {
-  const destinationDir = path.join(extensionDir, 'bin');
+  const destinationRoot = path.join(extensionDir, 'bin');
+  const destinationDir = path.join(destinationRoot, target);
   const destinationPath = path.join(
     destinationDir,
     target.startsWith('win32-') ? 'flvt.exe' : 'flvt',
   );
 
-  await fs.rm(path.join(destinationDir, 'flvt'), { force: true });
-  await fs.rm(path.join(destinationDir, 'flvt.exe'), { force: true });
+  await fs.rm(destinationRoot, { recursive: true, force: true });
 
   await fs.mkdir(destinationDir, { recursive: true });
   await fs.copyFile(cliBinary, destinationPath);

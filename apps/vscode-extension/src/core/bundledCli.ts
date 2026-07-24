@@ -14,6 +14,7 @@ export interface ResolveCliPathInput {
   configuredCliPath: string;
   extensionPath?: string;
   platform?: NodeJS.Platform;
+  arch?: NodeJS.Architecture;
   existsSync?: (filePath: string) => boolean;
 }
 
@@ -28,11 +29,36 @@ export function bundledCliFileName(platform = process.platform): string {
   return platform === 'win32' ? 'flvt.exe' : 'flvt';
 }
 
+export function bundledCliTarget(
+  platform = process.platform,
+  arch: NodeJS.Architecture = process.arch,
+): string {
+  if (platform === 'darwin' && (arch === 'arm64' || arch === 'x64')) {
+    return `${platform}-${arch}`;
+  }
+
+  if (platform === 'linux' && arch === 'x64') {
+    return `${platform}-${arch}`;
+  }
+
+  if (platform === 'win32' && arch === 'x64') {
+    return `${platform}-${arch}`;
+  }
+
+  throw new Error(`Unsupported platform: ${platform}-${arch}`);
+}
+
 export function resolveBundledCliPath(
   extensionPath: string,
   platform = process.platform,
+  arch: NodeJS.Architecture = process.arch,
 ): string {
-  return path.join(extensionPath, 'bin', bundledCliFileName(platform));
+  return path.join(
+    extensionPath,
+    'bin',
+    bundledCliTarget(platform, arch),
+    bundledCliFileName(platform),
+  );
 }
 
 export function resolveCliPath(input: ResolveCliPathInput): CliResolution {
@@ -51,6 +77,7 @@ export function resolveCliPath(input: ResolveCliPathInput): CliResolution {
   const bundledCliPath = resolveBundledCliPath(
     input.extensionPath,
     input.platform ?? process.platform,
+    input.arch ?? process.arch,
   );
 
   if (existsSync(bundledCliPath)) {

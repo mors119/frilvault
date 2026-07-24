@@ -1,8 +1,0 @@
-version: 1
-workspace:
-  name: frilvault
-settings:
-  search:
-    case_sensitive: false
-created_at: "2026-06-18T05:15:18.044864Z"
-updated_at: "2026-06-18T05:15:18.044864Z"
