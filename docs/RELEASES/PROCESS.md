@@ -1,6 +1,7 @@
 # Release Process
 
 This document defines the release workflow for FrilVault.
+Use [README.md](README.md) for the directory map, [TEMPLATE.md](TEMPLATE.md) for new release notes, and versioned files like [v0.0.md](v0.0.md) for published history.
 
 Repository reality as of July 23, 2026:
 

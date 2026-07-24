@@ -58,7 +58,15 @@ const codeLensRefreshEmitter = new vscode.EventEmitter<void>();
  * FrilVault command, provider, workspace listener를 등록합니다.
  */
 export function activate(context: vscode.ExtensionContext): void {
-  const cliClient = new CliClient();
+  const cliOutputChannel = vscode.window.createOutputChannel('FrilVault CLI');
+  const cliClient = new CliClient({
+    extensionPath: context.extensionPath,
+    extensionVersion:
+      (context.extension.packageJSON as { frilvaultBundledCliVersion?: string; version?: string })
+        .frilvaultBundledCliVersion
+      ?? context.extension.packageJSON.version,
+    outputChannel: cliOutputChannel,
+  });
 
   const isEnabled = () => {
     const workspaceRoot = tryGetWorkspaceRoot();
@@ -150,6 +158,7 @@ export function activate(context: vscode.ExtensionContext): void {
   };
 
   context.subscriptions.push(
+    cliOutputChannel,
     store,
     decorator,
     registerFrilVaultHoverProvider(context, hoverProvider),

@@ -85,7 +85,7 @@ Follow the detailed repository workflow in:
 
 - [`docs/github-workflow.md`](docs/github-workflow.md)
 - [`docs/testing.md`](docs/testing.md)
-- [`docs/release-process.md`](docs/release-process.md)
+- [`docs/RELEASES/PROCESS.md`](docs/RELEASES/PROCESS.md)
 
 When instructions conflict, use this priority:
 

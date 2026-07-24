@@ -47,7 +47,7 @@ suite('Extension Test Suite', () => {
       .update('workspaceRoot', '', vscode.ConfigurationTarget.Global);
     await vscode.workspace
       .getConfiguration('frilvault')
-      .update('cliPath', 'flvt', vscode.ConfigurationTarget.Global);
+      .update('cliPath', '', vscode.ConfigurationTarget.Global);
   });
 
   teardown(() => {
@@ -409,6 +409,11 @@ const state = fs.existsSync(stateFile)
 function valueOf(flag) {
   const index = args.indexOf(flag);
   return index >= 0 ? args[index + 1] : undefined;
+}
+
+if (command === '--version') {
+  process.stdout.write('flvt 0.1.0');
+  process.exit(0);
 }
 
 if (command === 'list') {

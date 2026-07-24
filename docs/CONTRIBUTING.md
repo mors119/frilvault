@@ -51,7 +51,7 @@ If `npm test` aborts with `SIGABRT` under `vscode-test`, treat that as unresolve
 - `docs/ARCHITECTURE.md` explains current system shape
 - `docs/ROADMAP.md` tracks intended direction
 - `AGENTS.md` captures repository-wide agent-facing rules
-- `docs/github-workflow.md`, `docs/testing.md`, and `docs/release-process.md` define the detailed workflow
+- `docs/github-workflow.md`, `docs/testing.md`, and `docs/RELEASES/PROCESS.md` define the detailed workflow
 
 Avoid introducing a separate docs build system unless the project clearly needs public documentation hosting.
 
