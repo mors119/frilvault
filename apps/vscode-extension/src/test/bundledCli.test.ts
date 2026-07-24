@@ -4,6 +4,7 @@ import { suite, test } from 'mocha';
 
 import {
   bundledCliFileName,
+  bundledCliTarget,
   resolveBundledCliPath,
   resolveCliPath,
 } from '../core/bundledCli';
@@ -26,11 +27,13 @@ suite('bundledCli', () => {
     const resolved = resolveCliPath({
       configuredCliPath: '',
       extensionPath: '/extension',
-      existsSync: (filePath) => filePath === '/extension/bin/flvt',
+      platform: 'darwin',
+      arch: 'arm64',
+      existsSync: (filePath) => filePath === '/extension/bin/darwin-arm64/flvt',
     });
 
     assert.deepStrictEqual(resolved, {
-      cliPath: '/extension/bin/flvt',
+      cliPath: '/extension/bin/darwin-arm64/flvt',
       source: 'bundled',
     });
   });
@@ -47,6 +50,17 @@ suite('bundledCli', () => {
 
   test('uses the .exe suffix for Windows bundles', () => {
     assert.strictEqual(bundledCliFileName('win32'), 'flvt.exe');
-    assert.strictEqual(resolveBundledCliPath('/extension', 'win32'), '/extension/bin/flvt.exe');
+    assert.strictEqual(bundledCliTarget('win32', 'x64'), 'win32-x64');
+    assert.strictEqual(
+      resolveBundledCliPath('/extension', 'win32', 'x64'),
+      '/extension/bin/win32-x64/flvt.exe',
+    );
+  });
+
+  test('throws for unsupported host targets', () => {
+    assert.throws(
+      () => bundledCliTarget('linux', 'arm64'),
+      /Unsupported platform: linux-arm64/,
+    );
   });
 });

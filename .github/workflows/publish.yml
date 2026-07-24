@@ -1,0 +1,110 @@
+name: Publish Marketplace
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: GitHub release tag to publish
+        required: true
+        type: string
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  publish:
+    name: Publish Visual Studio Marketplace
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out selected tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/vscode-extension/package-lock.json
+
+      - name: Install extension dependencies
+        working-directory: apps/vscode-extension
+        run: npm ci
+
+      - name: Read extension version
+        id: version
+        working-directory: apps/vscode-extension
+        shell: bash
+        run: |
+          extension_version=$(node -p "require('./package.json').version")
+          echo "extension_version=$extension_version" >> "$GITHUB_OUTPUT"
+
+      - name: Validate selected tag
+        shell: bash
+        run: |
+          expected_tag="frilvault-v${{ steps.version.outputs.extension_version }}"
+          actual_tag="${{ inputs.tag }}"
+
+          if [ "$expected_tag" != "$actual_tag" ]; then
+            echo "::error::Expected '$expected_tag', received '$actual_tag'."
+            exit 1
+          fi
+
+      - name: Download VSIX files from GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          mkdir -p dist/release
+
+          gh release download "${{ inputs.tag }}" \
+            --pattern "*.vsix" \
+            --dir dist/release
+
+      - name: Show downloaded packages
+        run: ls -lah dist/release
+
+      - name: Verify expected packages
+        shell: bash
+        run: |
+          version="${{ steps.version.outputs.extension_version }}"
+
+          expected_files=(
+            "frilvault-${version}-darwin-arm64.vsix"
+            "frilvault-${version}-darwin-x64.vsix"
+            "frilvault-${version}-linux-x64.vsix"
+            "frilvault-${version}-win32-x64.vsix"
+          )
+
+          for file in "${expected_files[@]}"; do
+            if [ ! -f "dist/release/$file" ]; then
+              echo "::error::Missing dist/release/$file"
+              exit 1
+            fi
+          done
+
+      - name: Publish platform packages
+        working-directory: apps/vscode-extension
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        shell: bash
+        run: |
+          version="${{ steps.version.outputs.extension_version }}"
+
+          npx @vscode/vsce publish \
+            --packagePath "../../dist/release/frilvault-${version}-darwin-arm64.vsix"
+
+          npx @vscode/vsce publish \
+            --packagePath "../../dist/release/frilvault-${version}-darwin-x64.vsix"
+
+          npx @vscode/vsce publish \
+            --packagePath "../../dist/release/frilvault-${version}-linux-x64.vsix"
+
+          npx @vscode/vsce publish \
+            --packagePath "../../dist/release/frilvault-${version}-win32-x64.vsix"

@@ -40,7 +40,9 @@ const listedFiles = execFileSync(vsceBinary, ['ls'], {
   encoding: 'utf8',
 });
 
-const expectedBundledPath = target.startsWith('win32-') ? 'bin/flvt.exe' : 'bin/flvt';
+const expectedBundledPath = target.startsWith('win32-')
+  ? `bin/${target}/flvt.exe`
+  : `bin/${target}/flvt`;
 if (!listedFiles.includes(expectedBundledPath)) {
   throw new Error(`VSIX contents are missing ${expectedBundledPath}.`);
 }

@@ -24,12 +24,12 @@ The first objective is to publish a small, usable release. Do not delay a releas
 
 ## Versioning
 
-Use semantic version tags:
+Use semantic version tags with the extension prefix:
 
 ```text
-v0.0.1
-v0.0.2
-v0.1.0
+frilvault-v0.0.1
+frilvault-v0.0.2
+frilvault-v0.1.0
 ```
 
 General interpretation before `v1.0.0`:
@@ -192,6 +192,41 @@ Record unsupported platform validation explicitly.
 
 If `npm test` exits with `SIGABRT` under `vscode-test`, do not treat the extension as release-ready until the failure is either fixed or explicitly accepted as an external environment limitation by the maintainer and recorded in the release checklist.
 
+## Marketplace Publishing Workflow
+
+Keep release asset generation and Marketplace publishing as separate workflows.
+
+Recommended flow:
+
+```text
+GitHub Release -> published -> release.yml -> VSIX assets on the release
+workflow_dispatch -> publish.yml -> Visual Studio Marketplace
+```
+
+The release workflow should:
+
+1. verify that the GitHub release tag matches `apps/vscode-extension/package.json`
+2. build target-specific `flvt` binaries and VSIX packages for:
+   - `darwin-arm64`
+   - `darwin-x64`
+   - `linux-x64`
+   - `win32-x64`
+3. attach those VSIX files to the GitHub Release
+
+The Marketplace workflow should:
+
+1. be triggered manually with `workflow_dispatch`
+2. download the target-specific VSIX files from the selected GitHub Release
+3. publish those VSIX files to the Visual Studio Marketplace
+
+Use a Visual Studio Marketplace publisher token for the manual publish workflow.
+
+Required GitHub Actions configuration:
+
+- secret: `VSCE_PAT`
+
+The publisher remains a single Marketplace extension identity. Platform-specific VSIX files do not create separate extension listings.
+
 ## Release Pull Request
 
 Open a dedicated Pull Request.
@@ -258,8 +293,8 @@ Do not tag an uncommitted or unreviewed working tree.
 Tag format:
 
 ```bash
-git tag -a v0.0.1 -m "FrilVault v0.0.1"
-git push upstream v0.0.1
+git tag -a frilvault-v0.0.1 -m "FrilVault v0.0.1"
+git push upstream frilvault-v0.0.1
 ```
 
 Tagging and pushing to the canonical repository require explicit maintainer approval.
@@ -271,7 +306,7 @@ When the GitHub Actions release workflow creates tags automatically, follow the 
 Create a draft first:
 
 ```bash
-gh release create v0.0.1 \
+gh release create frilvault-v0.0.1 \
   --repo FrilLab/frilvault \
   --draft \
   --generate-notes \
@@ -281,7 +316,7 @@ gh release create v0.0.1 \
 Upload artifacts when they are not attached automatically:
 
 ```bash
-gh release upload v0.0.1 \
+gh release upload frilvault-v0.0.1 \
   <ARTIFACTS> \
   --repo FrilLab/frilvault \
   --clobber
@@ -305,11 +340,11 @@ Publish only after explicit maintainer approval.
 Use predictable names:
 
 ```text
-frilvault-v0.0.1-macos-aarch64.dmg
-frilvault-v0.0.1-macos-x86_64.dmg
-frilvault-v0.0.1-windows-x86_64.msi
-frilvault-v0.0.1-linux-x86_64.AppImage
-frilvault-v0.0.1-checksums.txt
+frilvault-0.0.2-darwin-arm64.vsix
+frilvault-0.0.2-darwin-x64.vsix
+frilvault-0.0.2-linux-x64.vsix
+frilvault-0.0.2-win32-x64.vsix
+frilvault-0.0.2-checksums.txt
 ```
 
 Only publish platforms that were actually built and validated.

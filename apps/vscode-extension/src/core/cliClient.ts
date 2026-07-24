@@ -37,7 +37,7 @@ export interface CliClientDependencies {
   extensionVersion?: string;
   outputChannel?: OutputChannelLike;
   platform?: NodeJS.Platform;
-  arch?: string;
+  arch?: NodeJS.Architecture;
   execFile?: ExecFileLike;
   access?: (path: string, mode: number) => Promise<void>;
   existsSync?: (path: string) => boolean;

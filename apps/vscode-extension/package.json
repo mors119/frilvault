@@ -2,7 +2,7 @@
   "name": "frilvault",
   "displayName": "FrilVault",
   "description": "A local-first knowledge layer for attaching persistent notes to source code.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "frilvaultBundledCliVersion": "0.1.0",
   "publisher": "frillab",
   "license": "MIT",
@@ -312,7 +312,7 @@
     "test": "vscode-test",
     "vsix:list": "vsce ls",
     "vsix": "node scripts/package-target.mjs",
-    "publish:marketplace": "vsce publish"
+    "publish:marketplace": "vsce publish --packagePath"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",

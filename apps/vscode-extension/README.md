@@ -26,6 +26,19 @@ Supported packaged targets:
 
 `frilvault.cliPath` is now an advanced override for custom builds.
 
+## Release And Publish
+
+Release automation is split into two stages:
+
+1. `release.yml` builds platform-specific VSIX files and attaches them to a published GitHub Release.
+2. `publish.yml` is run manually when you want to publish those VSIX files to the Visual Studio Marketplace.
+
+If you publish manually from a local machine, use a generated VSIX:
+
+```bash
+npx @vscode/vsce publish --packagePath frilvault-0.0.2-darwin-arm64.vsix
+```
+
 ## Getting Started
 
 1. Install the FrilVault extension.
@@ -62,7 +75,6 @@ No cloud account is required.
 
 ## Roadmap
 
-- Bundle or simplify CLI installation for extension users
 - Improve multi-root workspace behavior
 - Expand editor UX for symbol-anchored notes
 

@@ -11,7 +11,9 @@ suite('CliClient', () => {
     const cliClient = new CliClient({
       extensionPath: '/extension',
       extensionVersion: '0.1.0',
-      existsSync: (filePath) => filePath === '/extension/bin/flvt',
+      platform: 'darwin',
+      arch: 'arm64',
+      existsSync: (filePath) => filePath === '/extension/bin/darwin-arm64/flvt',
       execFile: async (file, args) => {
         calls.push(`${file} ${args.join(' ')}`);
 
@@ -32,10 +34,10 @@ suite('CliClient', () => {
 
     assert.deepStrictEqual(notes, []);
     assert.deepStrictEqual(calls, [
-      '/extension/bin/flvt --version',
-      '/extension/bin/flvt list --file src/sample.ts --format json',
+      '/extension/bin/darwin-arm64/flvt --version',
+      '/extension/bin/darwin-arm64/flvt list --file src/sample.ts --format json',
     ]);
-    assert.ok(logs.some((line) => line.includes('path=/extension/bin/flvt')));
+    assert.ok(logs.some((line) => line.includes('path=/extension/bin/darwin-arm64/flvt')));
   });
 
   test('prefers a custom cliPath override over the bundled CLI', async () => {
@@ -67,6 +69,8 @@ suite('CliClient', () => {
   test('reports a clear error when no bundled CLI is available', async () => {
     const cliClient = new CliClient({
       extensionPath: '/extension',
+      platform: 'darwin',
+      arch: 'arm64',
       existsSync: () => false,
     });
 
@@ -86,6 +90,8 @@ suite('CliClient', () => {
   test('reports non-executable bundled binaries before spawning', async () => {
     const cliClient = new CliClient({
       extensionPath: '/extension',
+      platform: 'darwin',
+      arch: 'arm64',
       existsSync: () => true,
       access: async () => {
         const error = new Error('permission denied') as Error & { code?: string };
@@ -110,6 +116,8 @@ suite('CliClient', () => {
     const cliClient = new CliClient({
       extensionPath: '/extension',
       extensionVersion: '0.0.1',
+      platform: 'darwin',
+      arch: 'arm64',
       existsSync: () => true,
       execFile: async (_file, args) => {
         if (args[0] === '--version') {
