@@ -192,6 +192,40 @@ Record unsupported platform validation explicitly.
 
 If `npm test` exits with `SIGABRT` under `vscode-test`, do not treat the extension as release-ready until the failure is either fixed or explicitly accepted as an external environment limitation by the maintainer and recorded in the release checklist.
 
+## Marketplace Publishing Workflow
+
+The repository release workflow is triggered only when a GitHub Release is published.
+
+Expected trigger:
+
+```text
+GitHub Release -> published
+```
+
+The workflow should not publish on ordinary branch pushes or Pull Requests.
+
+For the VS Code extension, the release workflow is expected to:
+
+1. verify that the GitHub release tag matches `apps/vscode-extension/package.json`
+2. build target-specific `flvt` binaries and VSIX packages for:
+   - `darwin-arm64`
+   - `darwin-x64`
+   - `linux-x64`
+   - `win32-x64`
+3. attach those VSIX files to the GitHub Release
+4. publish those VSIX files to the Visual Studio Marketplace
+
+Use Microsoft Entra ID based publishing instead of Personal Access Tokens.
+
+Required GitHub Actions configuration:
+
+- environment: `marketplace-production`
+- secrets: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`
+
+The Azure identity used by the workflow must already be authorized as a Contributor on the Marketplace publisher.
+
+The publisher remains a single Marketplace extension identity. Platform-specific VSIX files do not create separate extension listings.
+
 ## Release Pull Request
 
 Open a dedicated Pull Request.
