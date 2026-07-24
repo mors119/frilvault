@@ -26,6 +26,17 @@ Supported packaged targets:
 
 `frilvault.cliPath` is now an advanced override for custom builds.
 
+## Install
+
+You can install FrilVault in either of these ways:
+
+1. Visual Studio Marketplace
+2. GitHub Release VSIX
+
+Marketplace users do not choose a platform manually. The Marketplace serves the matching package for the current operating system and CPU architecture.
+
+If you install from GitHub Release, download the matching VSIX and use `Extensions: Install from VSIX...` in VS Code.
+
 ## Release And Publish
 
 Release automation is split into two stages:
@@ -33,11 +44,7 @@ Release automation is split into two stages:
 1. `release.yml` builds platform-specific VSIX files and attaches them to a published GitHub Release.
 2. `publish.yml` is run manually when you want to publish those VSIX files to the Visual Studio Marketplace.
 
-If you publish manually from a local machine, use a generated VSIX:
-
-```bash
-npx @vscode/vsce publish --packagePath frilvault-0.0.2-darwin-arm64.vsix
-```
+`publish.yml` uses `VSCE_PAT` and publishes the existing Release assets to the single Marketplace listing.
 
 ## Getting Started
 

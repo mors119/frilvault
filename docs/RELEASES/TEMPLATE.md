@@ -8,22 +8,27 @@ This template keeps the same lightweight release-note shape as [v0.0.md](v0.0.md
 
 ## vX.Y.Z
 
-### Summary
-
-- Short description of the release.
-
-### Fixed
+### New Features
 
 - Placeholder
 
-### Changed
+### Improvements
 
 - Placeholder
+
+### Bug Fixes
+
+- Placeholder
+
+### Other Changes
+
+- Placeholder
+
+### Install
+
+- Marketplace installation notes
+- GitHub Release VSIX installation notes
 
 ### Upgrade Notes
-
-- Placeholder
-
-### Known Issue
 
 - Placeholder

@@ -36,36 +36,50 @@ FrilVault is a local-first workspace knowledge layer. Notes live under `.vault/`
 
 The current checkout contains a CLI and a VS Code extension. Repository guidance still reserves room for a future desktop application, but there is no desktop application source tree in the current layout.
 
-## Current Release Status
+## Install
 
-As of July 23, 2026, the Rust workspace is passing its format, lint, test, and release-build checks.
+The current public release is `v0.0.2` for the VS Code extension.
 
-The repository is not yet release-ready as a whole because the VS Code extension still has open release blockers:
+### Option 1: Visual Studio Marketplace
 
-- a post-save `.gitignore` prompt failure can be surfaced to the user as if note persistence failed
-- malformed FrilVault note URIs can still escape the extension's normal error handling path
-- CodeLens path matching is brittle for nested configured roots and Windows-style paths
-- `npm test` currently aborts with `SIGABRT` under `vscode-test`
+Install `FrilVault` from the Visual Studio Marketplace inside VS Code.
 
-## Release Automation
+Marketplace users do not need to choose a platform manually. The Marketplace serves the matching package for the current operating system and CPU architecture.
+
+### Option 2: GitHub Release VSIX
+
+Download a platform-specific VSIX from the GitHub Release page:
+
+https://github.com/FrilLab/frilvault/releases
+
+Then install it in VS Code with `Extensions: Install from VSIX...`.
+
+### Supported Platforms
+
+| Platform | VSIX target |
+| --- | --- |
+| macOS Apple Silicon | `darwin-arm64` |
+| macOS Intel | `darwin-x64` |
+| Windows x64 | `win32-x64` |
+| Linux x64 | `linux-x64` |
+
+## Release Distribution
 
 The repository uses a split release flow for the VS Code extension:
 
 - `release.yml` runs when a GitHub Release is published and builds platform-specific VSIX assets
-- `publish.yml` is a manual workflow that publishes those release artifacts to the Visual Studio Marketplace
+- `publish.yml` is a manual workflow that downloads those Release assets and publishes them to the Visual Studio Marketplace with `VSCE_PAT`
 
-Current VSIX targets:
+Each published GitHub Release attaches these VSIX packages:
 
-- `darwin-arm64`
-- `darwin-x64`
-- `linux-x64`
-- `win32-x64`
+- `frilvault-<version>-darwin-arm64.vsix`
+- `frilvault-<version>-darwin-x64.vsix`
+- `frilvault-<version>-linux-x64.vsix`
+- `frilvault-<version>-win32-x64.vsix`
 
-Marketplace publishing can also be done manually from a downloaded VSIX:
+## Current Notes
 
-```bash
-npx @vscode/vsce publish --packagePath frilvault-0.0.2-darwin-arm64.vsix
-```
+FrilVault `v0.0.2` removes the separate CLI installation requirement for supported VS Code installs by bundling `flvt` inside each platform-specific package.
 
 ## Storage Model
 
